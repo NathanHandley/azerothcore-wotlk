@@ -178,7 +178,7 @@ Database.Reconnect.Attempts = 20
 #        Example:     "@prefix@\home\youruser\azerothcore\data"
 #        Default:     "."
 
-DataDir = "."
+DataDir = "/datapool/WorldOfWarcraft/Server/azerothcore/data/"
 
 #
 #    LogsDir
@@ -188,7 +188,7 @@ DataDir = "."
 #        Example:     "/home/youruser/azerothcore/logs"
 #        Default:     "" - (Log files will be stored in the current path)
 
-LogsDir = ""
+LogsDir = "/datapool/WorldOfWarcraft/Server/azerothcore/logs/"
 
 #
 #    TempDir
@@ -198,7 +198,7 @@ LogsDir = ""
 #        Example:     "/home/youruser/azerothcore/temp"
 #        Default:     "" - (Temp files will be stored in the current path)
 
-TempDir = ""
+TempDir = "/datapool/WorldOfWarcraft/Server/azerothcore/"
 
 #
 #    CMakeCommand
@@ -829,7 +829,7 @@ Metric.OverallStatusInterval = 1
 #        Description: Set to date of project's birth in UNIX time. By default Thu Oct 2, 2008
 #        Default:     1222964635
 
-BirthdayTime = 1222964635
+BirthdayTime = 1450112400
 
 #
 #    PlayerLimit
@@ -1254,9 +1254,9 @@ Visibility.GroupMode = 1
 #                     120 - (Visibility.Distance.Instances)
 #                     180 - (Visibility.Distance.BGArenas)
 
-Visibility.Distance.Continents = 90
-Visibility.Distance.Instances = 120
-Visibility.Distance.BGArenas = 180
+Visibility.Distance.Continents = 150
+Visibility.Distance.Instances = 170
+Visibility.Distance.BGArenas = 200
 
 #
 #    Visibility.Notify.Period.OnContinents
@@ -1679,7 +1679,7 @@ PlayerStart.MapsExplored = 0
 #                     3  - (Enabled, Admins)
 #                     4  - (Disabled)
 
-InstantLogout = 1
+InstantLogout = 0
 
 #
 #    CastUnstuck
@@ -1716,7 +1716,7 @@ PlayerSave.Stats.MinLevel = 0
 #        Default:     1 - (Enabled, Only save on logout)
 #                     0 - (Disabled, Save on every player save)
 
-PlayerSave.Stats.SaveOnlyOnLogout = 1
+PlayerSave.Stats.SaveOnlyOnLogout = 0
 
 #
 #    CleanCharacterDB
@@ -1724,7 +1724,7 @@ PlayerSave.Stats.SaveOnlyOnLogout = 1
 #        Default:     0 - (Disabled)
 #                     1 - (Enable)
 
-CleanCharacterDB = 0
+CleanCharacterDB = 1
 
 #
 #    PersistentCharacterCleanFlags
@@ -1821,7 +1821,7 @@ StrictNames.Reserved = 1
 #       Default:     1 - Enabled
 #                    0 - Disabled
 
-StrictNames.Profanity = 1
+StrictNames.Profanity = 0
 
 #
 #    StrictPlayerNames
@@ -1835,7 +1835,7 @@ StrictNames.Profanity = 1
 #                         placed in clientdir/Fonts.)
 #                     3 - (Enabled, Basic Latin characters + server timezone specific)
 
-StrictPlayerNames = 0
+StrictPlayerNames = 1
 
 #
 #    StrictPetNames
@@ -1849,7 +1849,7 @@ StrictPlayerNames = 0
 #                         placed in clientdir/Fonts.)
 #                     3 - (Enabled, Basic Latin characters + server timezone specific)
 
-StrictPetNames = 0
+StrictPetNames = 1
 
 #
 #    CharacterCreating.Disabled
@@ -1963,7 +1963,7 @@ SkipCinematics = 0
 #        Default:     0
 #                     100 - (1 Silver)
 
-StartPlayerMoney = 0
+StartPlayerMoney = 100000
 
 #
 #    StartHeroicPlayerMoney
@@ -1971,7 +1971,7 @@ StartPlayerMoney = 0
 #        Default:     2000
 #                     2000 - (20 Silver)
 
-StartHeroicPlayerMoney = 2000
+StartHeroicPlayerMoney = 200000
 
 #
 #     PlayerStart.String
@@ -2000,14 +2000,14 @@ EnablePlayerSettings = 0
 #        Range:       1-255
 #        Default:     80
 
-MaxPlayerLevel = 80
+MaxPlayerLevel = 83
 
 #
 #    MinDualSpecLevel
 #        Description: Level requirement for Dual Talent Specialization
 #        Default:     40
 
-MinDualSpecLevel = 40
+MinDualSpecLevel = 10
 
 #
 #    WaterBreath.Timer
@@ -2045,14 +2045,14 @@ Rate.Damage.Fall = 1
 #        Description: Talent point rate.
 #        Default:     1
 
-Rate.Talent = 1
+Rate.Talent = 2
 
 #
 #    Rate.Talent.Pet
 #        Description: Pet Talent point rate.
 #        Default:     1
 
-Rate.Talent.Pet = 1
+Rate.Talent.Pet = 2
 
 #
 #    Rate.Health
@@ -2096,7 +2096,7 @@ Rate.Loyalty           = 1
 #                     1 - (Rate.Rest.Offline.InWilderness)
 
 Rate.Rest.InGame                 = 1
-Rate.Rest.Offline.InTavernOrCity = 1
+Rate.Rest.Offline.InTavernOrCity = 2
 Rate.Rest.Offline.InWilderness   = 1
 
 #
@@ -2137,7 +2137,7 @@ LevelReq.Trade = 1
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-NoResetTalentsCost = 0
+NoResetTalentsCost = 1
 
 #
 #    ToggleXP.Cost
@@ -2145,7 +2145,7 @@ NoResetTalentsCost = 0
 #        Default:     100000 - (10 Gold)
 #
 
-ToggleXP.Cost = 100000
+ToggleXP.Cost = 10000
 
 #
 ###################################################################################################
@@ -2158,7 +2158,7 @@ ToggleXP.Cost = 100000
 #        Range:       0-11
 #        Default:     2
 
-MaxPrimaryTradeSkill = 2
+MaxPrimaryTradeSkill = 11
 
 #
 #    SkillChance.Prospecting
@@ -2315,11 +2315,11 @@ MaxGroupXPDistance = 74
 #                     1 - (Rate.XP.Explore)
 #                     1 - (Rate.XP.Pet)
 
-Rate.XP.Kill      = 1
-Rate.XP.Quest     = 1
-Rate.XP.Quest.DF  = 1
-Rate.XP.Explore   = 1
-Rate.XP.Pet       = 1
+Rate.XP.Kill      = 2
+Rate.XP.Quest     = 2
+Rate.XP.Quest.DF  = 2
+Rate.XP.Explore   = 2
+Rate.XP.Pet       = 2
 
 #
 #    Rate.XP.BattlegroundKill...
@@ -2327,12 +2327,12 @@ Rate.XP.Pet       = 1
 #                     Only works if Battleground.GiveXPForKills = 1
 #        Default:     1
 
-Rate.XP.BattlegroundKillAV   = 1
-Rate.XP.BattlegroundKillWSG  = 1
-Rate.XP.BattlegroundKillAB   = 1
-Rate.XP.BattlegroundKillEOTS = 1
-Rate.XP.BattlegroundKillSOTA = 1
-Rate.XP.BattlegroundKillIC   = 1
+Rate.XP.BattlegroundKillAV   = 2
+Rate.XP.BattlegroundKillWSG  = 2
+Rate.XP.BattlegroundKillAB   = 2
+Rate.XP.BattlegroundKillEOTS = 2
+Rate.XP.BattlegroundKillSOTA = 2
+Rate.XP.BattlegroundKillIC   = 2
 
 #
 #    Rate.Pet.LevelXP
@@ -2383,7 +2383,7 @@ HonorPointsAfterDuel = 0
 #        Description: Honor gain rate.
 #        Default:     1
 
-Rate.Honor = 1
+Rate.Honor = 2
 
 #
 #    MaxArenaPoints
@@ -2636,14 +2636,14 @@ DBC.EnforceItemAttributes = 1
 #                     1 - (Rate.Drop.Money)
 
 Rate.Drop.Item.Poor             = 1
-Rate.Drop.Item.Normal           = 1
-Rate.Drop.Item.Uncommon         = 1
-Rate.Drop.Item.Rare             = 1
-Rate.Drop.Item.Epic             = 1
-Rate.Drop.Item.Legendary        = 1
-Rate.Drop.Item.Artifact         = 1
-Rate.Drop.Item.Referenced       = 1
-Rate.Drop.Money                 = 1
+Rate.Drop.Item.Normal           = 2
+Rate.Drop.Item.Uncommon         = 2
+Rate.Drop.Item.Rare             = 2
+Rate.Drop.Item.Epic             = 2
+Rate.Drop.Item.Legendary        = 2
+Rate.Drop.Item.Artifact         = 2
+Rate.Drop.Item.Referenced       = 2
+Rate.Drop.Money                 = 2
 
 #    Rate.Drop.Item.ReferencedAmount
 #        Description: Multiplier for referenced loot amount. Makes many raid bosses (and others) drop additional loot.
@@ -2703,7 +2703,7 @@ QuestPOI.Enabled = 1
 #        Default:     4  - (Enabled, Hide quests that have 4 levels less than the character)
 #                     -1 - (Disabled, Show all available quest marks)
 
-Quests.LowLevelHideDiff = 4
+Quests.LowLevelHideDiff = -1
 
 #
 #    Quests.HighLevelHideDiff
@@ -2721,7 +2721,7 @@ Quests.HighLevelHideDiff = 7
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-Quests.IgnoreRaid = 0
+Quests.IgnoreRaid = 1
 
 #
 #    Quests.IgnoreAutoAccept
@@ -2840,10 +2840,10 @@ WorldBossLevelDiff = 3
 #                     300  - (5 Minutes, Corpse.Decay.RAREELITE)
 #                     3600 - (1 Hour, Corpse.Decay.WORLDBOSS)
 
-Corpse.Decay.NORMAL    = 60
-Corpse.Decay.RARE      = 300
-Corpse.Decay.ELITE     = 300
-Corpse.Decay.RAREELITE = 300
+Corpse.Decay.NORMAL    = 300
+Corpse.Decay.RARE      = 600
+Corpse.Decay.ELITE     = 600
+Corpse.Decay.RAREELITE = 600
 Corpse.Decay.WORLDBOSS = 3600
 
 #
@@ -3095,7 +3095,7 @@ Instance.GMSummonPlayer = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-Instance.IgnoreLevel = 0
+Instance.IgnoreLevel = 1
 
 #
 #    Instance.IgnoreRaid
@@ -3103,7 +3103,7 @@ Instance.IgnoreLevel = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-Instance.IgnoreRaid = 0
+Instance.IgnoreRaid = 1
 
 #
 #    Instance.ResetTimeHour
@@ -3148,7 +3148,7 @@ Instance.UnloadDelay = 1800000
 #        Description: Controls the max amount of different instances player can enter within hour
 #        Default:     5
 
-AccountInstancesPerHour = 5
+AccountInstancesPerHour = 20
 
 #
 #   Instance.SharedNormalHeroicId
@@ -3237,7 +3237,7 @@ LFG.MaxKickCount = 2
 #        Default:     900 secs (15 minutes)
 #                     0 - Disabled
 
-LFG.KickPreventionTimer = 900
+LFG.KickPreventionTimer = 0
 
 #
 #    DungeonAccessRequirements.LFGLevelDBCOverride
@@ -3313,7 +3313,7 @@ Guild.BankEventLogRecordsCount = 25
 #        Range:       0-9
 #        Default:     9
 
-MinPetitionSigns = 9
+MinPetitionSigns = 0
 
 #
 #    Guild.CharterCost
@@ -3337,7 +3337,7 @@ Guild.AllowMultipleGuildMaster = 0
 #        Default:     0   (no tabs given for free)
 #                     1-6 (amount of tabs of the guild bank at guild creation)
 
-Guild.BankInitialTabs = 0
+Guild.BankInitialTabs = 6
 
 #
 #     Guild.BankTabCost0-5
@@ -3355,13 +3355,6 @@ Guild.BankTabCost2 = 5000000
 Guild.BankTabCost3 = 10000000
 Guild.BankTabCost4 = 25000000
 Guild.BankTabCost5 = 50000000#
-
-#
-#     Guild.MemberLimit
-#        Description: Do not allow inviting new players to the guild if the member limit is met or exceeded.
-#        Default:     0 - Disabled
-
-Guild.MemberLimit = 0
 
 #
 ###################################################################################################
@@ -3827,7 +3820,7 @@ MaxAllowedMMRDrop = 500
 #        Description: Time (in seconds) mail delivery is delayed when sending items.
 #        Default:     3600 - (1 hour)
 
-MailDeliveryDelay = 3600
+MailDeliveryDelay = 1
 
 #
 #     LevelReq.Mail
@@ -4074,7 +4067,7 @@ AllowTwoSide.Accounts = 1
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Calendar = 0
+AllowTwoSide.Interaction.Calendar = 1
 
 #
 #    AllowTwoSide.Interaction.Chat
@@ -4082,7 +4075,7 @@ AllowTwoSide.Interaction.Calendar = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Chat = 0
+AllowTwoSide.Interaction.Chat = 1
 
 #
 #    AllowTwoSide.Interaction.Emote
@@ -4090,7 +4083,7 @@ AllowTwoSide.Interaction.Chat = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Emote = 0
+AllowTwoSide.Interaction.Emote = 1
 
 #
 #    AllowTwoSide.Interaction.Channel
@@ -4098,7 +4091,7 @@ AllowTwoSide.Interaction.Emote = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Channel = 0
+AllowTwoSide.Interaction.Channel = 1
 
 #
 #    AllowTwoSide.Interaction.Group
@@ -4106,7 +4099,7 @@ AllowTwoSide.Interaction.Channel = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Group = 0
+AllowTwoSide.Interaction.Group = 1
 
 #
 #    AllowTwoSide.Interaction.Guild
@@ -4114,7 +4107,7 @@ AllowTwoSide.Interaction.Group = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Guild = 0
+AllowTwoSide.Interaction.Guild = 1
 
 #
 #    AllowTwoSide.Interaction.Arena
@@ -4122,7 +4115,7 @@ AllowTwoSide.Interaction.Guild = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Arena = 0
+AllowTwoSide.Interaction.Arena = 1
 
 #
 #    AllowTwoSide.Interaction.Auction
@@ -4130,7 +4123,7 @@ AllowTwoSide.Interaction.Arena = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Auction = 0
+AllowTwoSide.Interaction.Auction = 1
 
 #
 #    AllowTwoSide.Interaction.Mail
@@ -4138,7 +4131,7 @@ AllowTwoSide.Interaction.Auction = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Mail = 0
+AllowTwoSide.Interaction.Mail = 1
 
 #
 #    AllowTwoSide.WhoList
@@ -4146,7 +4139,7 @@ AllowTwoSide.Interaction.Mail = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.WhoList = 0
+AllowTwoSide.WhoList = 1
 
 #
 #    AllowTwoSide.AddFriend
@@ -4154,7 +4147,7 @@ AllowTwoSide.WhoList = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.AddFriend = 0
+AllowTwoSide.AddFriend = 1
 
 #
 #    AllowTwoSide.Trade
@@ -4162,7 +4155,7 @@ AllowTwoSide.AddFriend = 0
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Trade = 0
+AllowTwoSide.Trade = 1
 
 #
 #    TalentsInspecting
