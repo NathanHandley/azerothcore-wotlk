@@ -1,6 +1,6 @@
 ## Introduction
 
-This is a modified version of the AzerothCore-based World of Warcraft server code, based on Wrath of the Lich King (3.3.5a)
+This is a modified version of the AzerothCore (http://azerothcore.org/) based World of Warcraft server code, based on Wrath of the Lich King (3.3.5a)
 
 The original code is based on MaNGOS, TrinityCore, and SunwellCore and has since then had extensive development to improve stability, in-game mechanics, and modularity to the game. AC has also grown into a community-driven project with a significant number of contributors and developers. It is written in C++ and provides a solid foundation for creating private servers that mimic the mechanics and behavior of the official WoW servers.
 
