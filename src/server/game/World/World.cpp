@@ -627,21 +627,21 @@ void World::LoadConfigSettings(bool reload)
     }
 
     // Server scaled XP ratios
-    _int_configs[CONFIG_MIN_QUEST_SCALED_XP_RATIO] = sConfigMgr->GetIntDefault("MinQuestScaledXPRatio", 0);
+    _int_configs[CONFIG_MIN_QUEST_SCALED_XP_RATIO] = sConfigMgr->GetOption<int32>("MinQuestScaledXPRatio", 0);
     if (_int_configs[CONFIG_MIN_QUEST_SCALED_XP_RATIO] > 100)
     {
         LOG_ERROR("server.loading", "MinQuestScaledXPRatio (%i) must be in range 0..100. Set to 0.", _int_configs[CONFIG_MIN_QUEST_SCALED_XP_RATIO]);
         _int_configs[CONFIG_MIN_QUEST_SCALED_XP_RATIO] = 0;
     }
 
-    _int_configs[CONFIG_MIN_CREATURE_SCALED_XP_RATIO] = sConfigMgr->GetIntDefault("MinCreatureScaledXPRatio", 0);
+    _int_configs[CONFIG_MIN_CREATURE_SCALED_XP_RATIO] = sConfigMgr->GetOption<int32>("MinCreatureScaledXPRatio", 0);
     if (_int_configs[CONFIG_MIN_CREATURE_SCALED_XP_RATIO] > 100)
     {
         LOG_ERROR("server.loading", "MinCreatureScaledXPRatio (%i) must be in range 0..100. Set to 0.", _int_configs[CONFIG_MIN_CREATURE_SCALED_XP_RATIO]);
         _int_configs[CONFIG_MIN_CREATURE_SCALED_XP_RATIO] = 0;
     }
 
-    _int_configs[CONFIG_MIN_DISCOVERED_SCALED_XP_RATIO] = sConfigMgr->GetIntDefault("MinDiscoveredScaledXPRatio", 0);
+    _int_configs[CONFIG_MIN_DISCOVERED_SCALED_XP_RATIO] = sConfigMgr->GetOption<int32>("MinDiscoveredScaledXPRatio", 0);
     if (_int_configs[CONFIG_MIN_DISCOVERED_SCALED_XP_RATIO] > 100)
     {
         LOG_ERROR("server.loading", "MinDiscoveredScaledXPRatio (%i) must be in range 0..100. Set to 0.", _int_configs[CONFIG_MIN_DISCOVERED_SCALED_XP_RATIO]);
