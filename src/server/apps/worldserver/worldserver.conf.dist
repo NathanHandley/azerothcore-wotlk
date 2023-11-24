@@ -2096,7 +2096,7 @@ Rate.Loyalty           = 1
 #                     1 - (Rate.Rest.Offline.InWilderness)
 
 Rate.Rest.InGame                 = 1
-Rate.Rest.Offline.InTavernOrCity = 2
+Rate.Rest.Offline.InTavernOrCity = 1
 Rate.Rest.Offline.InWilderness   = 1
 
 #
@@ -4375,6 +4375,13 @@ TeleportTimeoutNear = 25
 #       Default:  45
 
 TeleportTimeoutFar = 45
+
+#
+#    DailyRBGArenaPoints.MinLevel
+#        Description: Allows gaining arena points on the first RBG win at level 70.
+#        Default: 71 - (Blizzlike)
+
+DailyRBGArenaPoints.MinLevel = 71
 
 #
 ###################################################################################################
