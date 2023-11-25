@@ -2360,7 +2360,7 @@ MinQuestScaledXPRatio = 100
 #                     100 (Creature kills always grant full experience upon kill)
 #        Default:     0 - (Creatures too low may grant no experience)
 
-MinCreatureScaledXPRatio = 100
+MinCreatureScaledXPRatio = 50
 
 #
 #    MinDiscoveredScaledXPRatio
