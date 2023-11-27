@@ -337,6 +337,9 @@ private:
 
     uint16 _eventIdForQuest; // pussywizard
 
+    // Helpers
+    static uint32 RoundXPValue(uint32 xp);
+
     // table data
 protected:
     uint32 Id;
