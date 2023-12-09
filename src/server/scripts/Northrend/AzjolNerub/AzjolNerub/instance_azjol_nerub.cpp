@@ -16,10 +16,8 @@
  */
 
 #include "AreaBoundary.h"
-#include "CreatureScript.h"
-#include "InstanceMapScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "SpellScriptLoader.h"
 #include "azjol_nerub.h"
 
 DoorData const doorData[] =

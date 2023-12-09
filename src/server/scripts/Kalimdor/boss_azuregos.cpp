@@ -15,13 +15,12 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
 #include "GameTime.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "ScriptedGossip.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "TaskScheduler.h"
 
 enum Say
@@ -230,4 +229,3 @@ void AddSC_boss_azuregos()
     RegisterSpellScript(spell_arcane_vacuum);
     RegisterSpellScript(spell_mark_of_frost_freeze);
 }
-

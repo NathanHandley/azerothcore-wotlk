@@ -15,9 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "SpellScriptLoader.h"
 #include "mechanar.h"
 
 enum Says
@@ -211,4 +210,3 @@ void AddSC_boss_nethermancer_sepethrea()
     RegisterMechanarCreatureAI(npc_raging_flames);
     RegisterSpellScript(spell_ragin_flames_inferno);
 }
-

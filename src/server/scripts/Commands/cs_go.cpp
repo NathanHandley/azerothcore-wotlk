@@ -23,16 +23,16 @@ Category: commandscripts
 EndScriptData */
 
 #include "Chat.h"
-#include "CommandScript.h"
 #include "GameGraveyard.h"
 #include "Language.h"
 #include "MapMgr.h"
 #include "ObjectMgr.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "TicketMgr.h"
 
-#include "boost/algorithm/string.hpp"
 #include <regex>
+#include "boost/algorithm/string.hpp"
 
 using namespace Acore::ChatCommands;
 
@@ -47,7 +47,6 @@ public:
         {
             { "creature",      HandleGoCreatureSpawnIdCommand,   SEC_MODERATOR,  Console::No },
             { "creature id",   HandleGoCreatureCIdCommand,       SEC_MODERATOR,  Console::No },
-            { "creature name", HandleGoCreatureNameCommand,      SEC_MODERATOR,  Console::No },
             { "gameobject",    HandleGoGameObjectSpawnIdCommand, SEC_MODERATOR,  Console::No },
             { "gameobject id", HandleGoGameObjectGOIdCommand,    SEC_MODERATOR,  Console::No },
             { "graveyard",     HandleGoGraveyardCommand,         SEC_MODERATOR,  Console::No },
@@ -75,7 +74,8 @@ public:
             mapId = player->GetMapId();
         if (!MapMgr::IsValidMapCoord(mapId, pos) || sObjectMgr->IsTransportMap(mapId))
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, pos.GetPositionX(), pos.GetPositionY(), mapId);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, pos.GetPositionX(), pos.GetPositionY(), mapId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -99,7 +99,8 @@ public:
 
         if (!spawnpoint)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
+            handler->SendSysMessage(LANG_COMMAND_GOCREATNOTFOUND);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -111,30 +112,8 @@ public:
         CreatureData const* spawnpoint = sObjectMgr->GetCreatureData(spawnId);
         if (!spawnpoint)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
-            return false;
-        }
-
-        return DoTeleport(handler, { spawnpoint->posX, spawnpoint->posY, spawnpoint->posZ }, spawnpoint->mapid);
-    }
-
-    static bool HandleGoCreatureNameCommand(ChatHandler* handler, Tail name)
-    {
-        if (!name.data())
-            return false;
-
-        QueryResult result = WorldDatabase.Query("SELECT entry FROM creature_template WHERE name = \"{}\" LIMIT 1" , name.data());
-        if (!result)
-        {
-            handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
-            return false;
-        }
-
-        uint32 entry = result->Fetch()[0].Get<uint32>();
-        CreatureData const* spawnpoint = GetCreatureData(handler, entry);
-        if (!spawnpoint)
-        {
-            handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
+            handler->SendSysMessage(LANG_COMMAND_GOCREATNOTFOUND);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -146,7 +125,8 @@ public:
         GameObjectData const* spawnpoint = sObjectMgr->GetGameObjectData(spawnId);
         if (!spawnpoint)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOOBJNOTFOUND);
+            handler->SendSysMessage(LANG_COMMAND_GOOBJNOTFOUND);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -159,7 +139,8 @@ public:
 
         if (!spawnpoint)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOOBJNOTFOUND);
+            handler->SendSysMessage(LANG_COMMAND_GOOBJNOTFOUND);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -171,13 +152,15 @@ public:
         GraveyardStruct const* gy = sGraveyard->GetGraveyard(gyId);
         if (!gy)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GRAVEYARDNOEXIST, gyId);
+            handler->PSendSysMessage(LANG_COMMAND_GRAVEYARDNOEXIST, gyId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
         if (!MapMgr::IsValidMapCoord(gy->Map, gy->x, gy->y, gy->z))
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, gy->x, gy->y, gy->Map);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, gy->x, gy->y, gy->Map);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -208,7 +191,8 @@ public:
 
         if (!MapMgr::IsValidMapCoord(mapId, x, y))
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -234,7 +218,8 @@ public:
         TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(nodeId);
         if (!node)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOTAXINODENOTFOUND, uint32(nodeId));
+            handler->PSendSysMessage(LANG_COMMAND_GOTAXINODENOTFOUND, uint32(nodeId));
+            handler->SetSentErrorMessage(true);
             return false;
         }
         return DoTeleport(handler, { node->x, node->y, node->z }, node->map_id);
@@ -245,7 +230,8 @@ public:
         AreaTrigger const* at = sObjectMgr->GetAreaTrigger(areaTriggerId);
         if (!at)
         {
-            handler->SendErrorMessage(LANG_COMMAND_GOAREATRNOTFOUND, uint32(areaTriggerId));
+            handler->PSendSysMessage(LANG_COMMAND_GOAREATRNOTFOUND, uint32(areaTriggerId));
+            handler->SetSentErrorMessage(true);
             return false;
         }
         return DoTeleport(handler, { at->x, at->y, at->z }, at->map);
@@ -262,7 +248,8 @@ public:
 
         if (x < 0 || x > 100 || y < 0 || y > 100 || !areaEntry)
         {
-            handler->SendErrorMessage(LANG_INVALID_ZONE_COORD, x, y, areaId);
+            handler->PSendSysMessage(LANG_INVALID_ZONE_COORD, x, y, areaId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -274,7 +261,8 @@ public:
 
         if (map->Instanceable())
         {
-            handler->SendErrorMessage(LANG_INVALID_ZONE_MAP, areaEntry->ID, areaEntry->area_name[handler->GetSessionDbcLocale()], map->GetId(), map->GetMapName());
+            handler->PSendSysMessage(LANG_INVALID_ZONE_MAP, areaEntry->ID, areaEntry->area_name[handler->GetSessionDbcLocale()], map->GetId(), map->GetMapName());
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -282,7 +270,8 @@ public:
 
         if (!MapMgr::IsValidMapCoord(zoneEntry->mapid, x, y))
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, x, y, zoneEntry->mapid);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, x, y, zoneEntry->mapid);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -354,7 +343,8 @@ public:
 
         if (mapId == MAPID_INVALID)
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -366,7 +356,8 @@ public:
 
         if (!MapMgr::IsValidMapCoord(mapId, x, y, z, o))
         {
-            handler->SendErrorMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->PSendSysMessage(LANG_INVALID_TARGET_COORD, x, y, mapId);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 
@@ -413,7 +404,8 @@ public:
                     CreatureData const* spawnpoint = GetCreatureData(handler, itr->first);
                     if (!spawnpoint)
                     {
-                        handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
+                        handler->SendSysMessage(LANG_COMMAND_GOCREATNOTFOUND);
+                        handler->SetSentErrorMessage(true);
                         return false;
                     }
 
@@ -431,7 +423,8 @@ public:
                     GameObjectData const* spawnpoint = GetGameObjectData(handler, itr->first);
                     if (!spawnpoint)
                     {
-                        handler->SendErrorMessage(LANG_COMMAND_GOOBJNOTFOUND);
+                        handler->SendSysMessage(LANG_COMMAND_GOOBJNOTFOUND);
+                        handler->SetSentErrorMessage(true);
                         return false;
                     }
 
@@ -450,7 +443,8 @@ public:
                     CreatureData const* spawnpoint = GetCreatureData(handler, itr->first);
                     if (!spawnpoint)
                     {
-                        handler->SendErrorMessage(LANG_COMMAND_GOCREATNOTFOUND);
+                        handler->SendSysMessage(LANG_COMMAND_GOCREATNOTFOUND);
+                        handler->SetSentErrorMessage(true);
                         return false;
                     }
 
@@ -468,7 +462,8 @@ public:
                     GameObjectData const* spawnpoint = GetGameObjectData(handler, itr->first);
                     if (!spawnpoint)
                     {
-                        handler->SendErrorMessage(LANG_COMMAND_GOOBJNOTFOUND);
+                        handler->SendSysMessage(LANG_COMMAND_GOOBJNOTFOUND);
+                        handler->SetSentErrorMessage(true);
                         return false;
                     }
 
@@ -478,7 +473,8 @@ public:
         }
         else
         {
-            handler->SendErrorMessage(LANG_CMD_GOQUEST_INVALID_SYNTAX);
+            handler->SendSysMessage(LANG_CMD_GOQUEST_INVALID_SYNTAX);
+            handler->SetSentErrorMessage(true);
             return false;
         }
 

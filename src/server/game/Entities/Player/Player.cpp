@@ -2192,14 +2192,14 @@ void Player::SetGameMaster(bool on)
     if (on)
     {
         m_ExtraFlags |= PLAYER_EXTRA_GM_ON;
-        if (GetSession()->IsGMAccount())
+        if (AccountMgr::IsGMAccount(GetSession()->GetSecurity()))
             SetFaction(FACTION_FRIENDLY);
         SetPlayerFlag(PLAYER_FLAGS_GM);
         SetUnitFlag2(UNIT_FLAG2_ALLOW_CHEAT_SPELLS);
 
         if (Pet* pet = GetPet())
         {
-            if (GetSession()->IsGMAccount())
+            if (AccountMgr::IsGMAccount(GetSession()->GetSecurity()))
                 pet->SetFaction(FACTION_FRIENDLY);
             pet->getHostileRefMgr().setOnlineOfflineState(false);
         }

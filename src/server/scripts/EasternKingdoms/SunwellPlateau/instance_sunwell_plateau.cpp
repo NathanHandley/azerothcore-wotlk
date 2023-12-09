@@ -15,10 +15,9 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "InstanceMapScript.h"
 #include "InstanceScript.h"
 #include "Player.h"
-#include "SpellScriptLoader.h"
+#include "ScriptMgr.h"
 #include "sunwell_plateau.h"
 
 DoorData const doorData[] =
@@ -304,4 +303,3 @@ void AddSC_instance_sunwell_plateau()
     new instance_sunwell_plateau();
     new spell_cataclysm_breath();
 }
-

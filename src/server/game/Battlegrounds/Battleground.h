@@ -45,7 +45,7 @@ class BattlegroundIC;
 struct PvPDifficultyEntry;
 struct GraveyardStruct;
 
-enum BattlegroundDesertionType : uint8
+enum BattlegroundDesertionType
 {
     BG_DESERTION_TYPE_LEAVE_BG          = 0, // player leaves the BG
     BG_DESERTION_TYPE_OFFLINE           = 1, // player is kicked from BG because offline

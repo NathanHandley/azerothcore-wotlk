@@ -15,10 +15,9 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "temple_of_ahnqiraj.h"
 
 enum Spells
@@ -490,4 +489,3 @@ void AddSC_bug_trio()
     RegisterSpellScript(spell_vem_knockback);
     RegisterSpellScript(spell_vem_vengeance);
 }
-

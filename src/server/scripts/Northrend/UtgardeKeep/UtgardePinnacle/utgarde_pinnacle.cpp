@@ -15,12 +15,11 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "utgarde_pinnacle.h"
+#include "ScriptMgr.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "Unit.h"
-#include "utgarde_pinnacle.h"
 
 enum UtgardeSpells
 {
@@ -73,4 +72,3 @@ void AddSC_utgarde_pinnacle()
 {
     RegisterSpellScript(spell_utgarde_pinnacle_beast_mark);
 }
-

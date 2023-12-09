@@ -15,10 +15,9 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
 #include "Opcodes.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "SpellScriptLoader.h"
 #include "magisters_terrace.h"
 
 enum Says
@@ -311,4 +310,3 @@ void AddSC_boss_felblood_kaelthas()
     RegisterMagistersTerraceCreatureAI(boss_felblood_kaelthas);
     RegisterSpellScript(spell_mt_phoenix_burn);
 }
-

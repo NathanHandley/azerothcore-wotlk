@@ -43,13 +43,13 @@ struct Realm;
 
 AC_GAME_API extern Realm realm;
 
-enum ShutdownMask : uint8
+enum ShutdownMask
 {
     SHUTDOWN_MASK_RESTART = 1,
     SHUTDOWN_MASK_IDLE    = 2,
 };
 
-enum ShutdownExitCode : uint8
+enum ShutdownExitCode
 {
     SHUTDOWN_EXIT_CODE = 0,
     ERROR_EXIT_CODE    = 1,

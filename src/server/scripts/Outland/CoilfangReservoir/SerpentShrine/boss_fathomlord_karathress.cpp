@@ -15,9 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
-#include "SpellScriptLoader.h"
 #include "TaskScheduler.h"
 #include "serpent_shrine.h"
 
@@ -577,4 +576,3 @@ void AddSC_boss_fathomlord_karathress()
     RegisterSpellScript(spell_karathress_power_of_tidalvess);
     RegisterSpellScript(spell_karathress_power_of_caribdis);
 }
-

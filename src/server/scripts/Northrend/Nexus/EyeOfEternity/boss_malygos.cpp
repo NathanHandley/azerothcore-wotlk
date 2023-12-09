@@ -16,8 +16,6 @@
  */
 
 #include "CombatAI.h"
-#include "CreatureScript.h"
-#include "GameObjectScript.h"
 #include "MoveSpline.h"
 #include "MoveSplineInit.h"
 #include "Opcodes.h"
@@ -26,7 +24,6 @@
 #include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "Vehicle.h"
 #include "eye_of_eternity.h"
 

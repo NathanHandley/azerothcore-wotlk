@@ -70,7 +70,7 @@ void WorldSession::HandleAddFriendOpcode(WorldPacket& recv_data)
             else
             {
                 Player* pFriend = ObjectAccessor::FindConnectedPlayer(friendGuid);
-                if (pFriend && pFriend->IsVisibleGloballyFor(GetPlayer()) && !pFriend->GetSession()->IsGMAccount())
+                if (pFriend && pFriend->IsVisibleGloballyFor(GetPlayer()) && !AccountMgr::IsGMAccount(pFriend->GetSession()->GetSecurity()))
                     friendResult = FRIEND_ADDED_ONLINE;
                 else
                     friendResult = FRIEND_ADDED_OFFLINE;

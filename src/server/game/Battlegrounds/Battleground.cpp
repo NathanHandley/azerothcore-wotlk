@@ -29,7 +29,6 @@
 #include "Creature.h"
 #include "CreatureTextMgr.h"
 #include "Formulas.h"
-#include "GameEventMgr.h"
 #include "GameGraveyard.h"
 #include "GridNotifiersImpl.h"
 #include "GroupMgr.h"

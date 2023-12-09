@@ -15,10 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
-#include "InstanceMapScript.h"
 #include "InstanceScript.h"
-#include "SpellScriptLoader.h"
+#include "ScriptMgr.h"
 #include "shadow_labyrinth.h"
 
 DoorData const doorData[] =
@@ -138,4 +136,3 @@ void AddSC_instance_shadow_labyrinth()
     new instance_shadow_labyrinth();
     RegisterSpellScript(spell_mark_of_malice);
 }
-

@@ -15,13 +15,12 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "AllSpellScript.h"
 #include "ScriptMgr.h"
 #include "ScriptMgrMacros.h"
 
 void ScriptMgr::OnCalcMaxDuration(Aura const* aura, int32& maxDuration)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnCalcMaxDuration(aura, maxDuration);
     });
@@ -29,7 +28,7 @@ void ScriptMgr::OnCalcMaxDuration(Aura const* aura, int32& maxDuration)
 
 bool ScriptMgr::CanModAuraEffectDamageDone(AuraEffect const* auraEff, Unit* target, AuraApplication const* aurApp, uint8 mode, bool apply)
 {
-    auto ret = IsValidBoolScript<AllSpellScript>([&](AllSpellScript* script)
+    auto ret = IsValidBoolScript<SpellSC>([&](SpellSC* script)
     {
         return !script->CanModAuraEffectDamageDone(auraEff, target, aurApp, mode, apply);
     });
@@ -44,7 +43,7 @@ bool ScriptMgr::CanModAuraEffectDamageDone(AuraEffect const* auraEff, Unit* targ
 
 bool ScriptMgr::CanModAuraEffectModDamagePercentDone(AuraEffect const* auraEff, Unit* target, AuraApplication const* aurApp, uint8 mode, bool apply)
 {
-    auto ret = IsValidBoolScript<AllSpellScript>([&](AllSpellScript* script)
+    auto ret = IsValidBoolScript<SpellSC>([&](SpellSC* script)
     {
         return !script->CanModAuraEffectModDamagePercentDone(auraEff, target, aurApp, mode, apply);
     });
@@ -59,7 +58,7 @@ bool ScriptMgr::CanModAuraEffectModDamagePercentDone(AuraEffect const* auraEff, 
 
 void ScriptMgr::OnSpellCheckCast(Spell* spell, bool strict, SpellCastResult& res)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnSpellCheckCast(spell, strict, res);
     });
@@ -67,7 +66,7 @@ void ScriptMgr::OnSpellCheckCast(Spell* spell, bool strict, SpellCastResult& res
 
 bool ScriptMgr::CanPrepare(Spell* spell, SpellCastTargets const* targets, AuraEffect const* triggeredByAura)
 {
-    auto ret = IsValidBoolScript<AllSpellScript>([&](AllSpellScript* script)
+    auto ret = IsValidBoolScript<SpellSC>([&](SpellSC* script)
     {
         return !script->CanPrepare(spell, targets, triggeredByAura);
     });
@@ -82,7 +81,7 @@ bool ScriptMgr::CanPrepare(Spell* spell, SpellCastTargets const* targets, AuraEf
 
 bool ScriptMgr::CanScalingEverything(Spell* spell)
 {
-    auto ret = IsValidBoolScript<AllSpellScript>([&](AllSpellScript* script)
+    auto ret = IsValidBoolScript<SpellSC>([&](SpellSC* script)
     {
         return script->CanScalingEverything(spell);
     });
@@ -97,7 +96,7 @@ bool ScriptMgr::CanScalingEverything(Spell* spell)
 
 bool ScriptMgr::CanSelectSpecTalent(Spell* spell)
 {
-    auto ret = IsValidBoolScript<AllSpellScript>([&](AllSpellScript* script)
+    auto ret = IsValidBoolScript<SpellSC>([&](SpellSC* script)
     {
         return !script->CanSelectSpecTalent(spell);
     });
@@ -112,7 +111,7 @@ bool ScriptMgr::CanSelectSpecTalent(Spell* spell)
 
 void ScriptMgr::OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint8 auraScaleMask, TargetInfo& targetInfo)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnScaleAuraUnitAdd(spell, target, effectMask, checkIfValid, implicit, auraScaleMask, targetInfo);
     });
@@ -120,7 +119,7 @@ void ScriptMgr::OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask
 
 void ScriptMgr::OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint8 auraScaleMask, bool& needErase)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnRemoveAuraScaleTargets(spell, targetInfo, auraScaleMask, needErase);
     });
@@ -128,7 +127,7 @@ void ScriptMgr::OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, u
 
 void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnBeforeAuraRankForLevel(spellInfo, latestSpellInfo, level);
     });
@@ -136,7 +135,7 @@ void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo c
 
 void ScriptMgr::OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, GameObject* gameObjTarget)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnDummyEffect(caster, spellID, effIndex, gameObjTarget);
     });
@@ -144,7 +143,7 @@ void ScriptMgr::OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex
 
 void ScriptMgr::OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, Creature* creatureTarget)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnDummyEffect(caster, spellID, effIndex, creatureTarget);
     });
@@ -152,16 +151,8 @@ void ScriptMgr::OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex
 
 void ScriptMgr::OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, Item* itemTarget)
 {
-    ExecuteScript<AllSpellScript>([&](AllSpellScript* script)
+    ExecuteScript<SpellSC>([&](SpellSC* script)
     {
         script->OnDummyEffect(caster, spellID, effIndex, itemTarget);
     });
 }
-
-AllSpellScript::AllSpellScript(char const* name)
-    : ScriptObject(name)
-{
-    ScriptRegistry<AllSpellScript>::AddScript(this);
-}
-
-template class AC_GAME_API ScriptRegistry<AllSpellScript>;

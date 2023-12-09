@@ -15,7 +15,6 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "DatabaseScript.h"
 #include "ScriptMgr.h"
 #include "ScriptMgrMacros.h"
 
@@ -34,10 +33,3 @@ void ScriptMgr::OnAfterDatabaseLoadCreatureTemplates(std::vector<CreatureTemplat
         script->OnAfterDatabaseLoadCreatureTemplates(creatureTemplates);
     });
 }
-
-DatabaseScript::DatabaseScript(const char* name) : ScriptObject(name)
-{
-    ScriptRegistry<DatabaseScript>::AddScript(this);
-}
-
-template class AC_GAME_API ScriptRegistry<DatabaseScript>;

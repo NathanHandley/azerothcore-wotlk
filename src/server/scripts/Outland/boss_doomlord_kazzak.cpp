@@ -15,11 +15,10 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellAuraEffects.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 
 enum Texts
 {
@@ -200,4 +199,3 @@ void AddSC_boss_doomlordkazzak()
     new boss_doomlord_kazzak();
     new spell_mark_of_kazzak();
 }
-

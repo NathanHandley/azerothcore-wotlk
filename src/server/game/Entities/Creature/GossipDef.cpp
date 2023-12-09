@@ -22,7 +22,6 @@
 #include "Opcodes.h"
 #include "Player.h"
 #include "QuestDef.h"
-#include "ScriptMgr.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 

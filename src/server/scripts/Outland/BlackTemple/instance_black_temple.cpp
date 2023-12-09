@@ -15,10 +15,8 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
-#include "InstanceMapScript.h"
 #include "InstanceScript.h"
-#include "SpellScriptLoader.h"
+#include "ScriptMgr.h"
 #include "black_temple.h"
 
 DoorData const doorData[] =
@@ -659,4 +657,3 @@ void AddSC_instance_black_temple()
     new spell_black_temple_curse_of_vitality();
     new spell_black_temple_dementia();
 }
-

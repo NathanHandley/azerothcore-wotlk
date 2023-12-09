@@ -21,7 +21,6 @@
 #include "DatabaseEnv.h"
 #include "GameTime.h"
 #include "Group.h"
-#include "InstanceScript.h"
 #include "Log.h"
 #include "ObjectMgr.h"
 #include "PetPackets.h"
@@ -1942,16 +1941,16 @@ void Pet::InitLevelupSpellsForLevel()
     {
         for (uint32 spellId : defSpells->spellid)
         {
-            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-            if (!spellInfo)
+            SpellInfo const* spellEntry = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellEntry)
                 continue;
 
             // will called first if level down
-            if (spellInfo->SpellLevel > level && sScriptMgr->CanUnlearnSpellDefault(this, spellInfo))
-                unlearnSpell(spellInfo->Id, true);
+            if (spellEntry->SpellLevel > level && sScriptMgr->CanUnlearnSpellDefault(this, spellEntry))
+                unlearnSpell(spellEntry->Id, true);
             // will called if level up
             else
-                learnSpell(spellInfo->Id);
+                learnSpell(spellEntry->Id);
         }
     }
 }

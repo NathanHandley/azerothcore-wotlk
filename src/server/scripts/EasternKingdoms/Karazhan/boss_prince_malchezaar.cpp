@@ -15,11 +15,10 @@
  * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "CreatureScript.h"
+#include "ScriptMgr.h"
 #include "ScriptedCreature.h"
 #include "SpellInfo.h"
 #include "SpellScript.h"
-#include "SpellScriptLoader.h"
 #include "karazhan.h"
 
 enum PrinceSay
@@ -397,4 +396,3 @@ void AddSC_boss_malchezaar()
     RegisterKarazhanCreatureAI(npc_netherspite_infernal);
     RegisterSpellScript(spell_malchezaar_enfeeble);
 }
-
