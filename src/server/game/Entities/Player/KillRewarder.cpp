@@ -22,6 +22,7 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 #include "SpellAuraEffects.h"
+#include "World.h"
 
 // KillRewarder incapsulates logic of rewarding player upon kill with:
 // * XP;
@@ -113,7 +114,10 @@ void KillRewarder::_InitGroupData()
                 }
         // 2.6. _isFullXP - flag identifying that for all group members victim is not gray,
         //      so 100% XP will be rewarded (50% otherwise).
-        _isFullXP = _maxNotGrayMember && (_maxLevel == _maxNotGrayMember->GetLevel());
+        if (sWorld->getIntConfig(CONFIG_MIN_CREATURE_SCALED_XP_RATIO) == 100)
+            _isFullXP = true;
+        else
+            _isFullXP = _maxNotGrayMember && (_maxLevel == _maxNotGrayMember->GetLevel());
     }
     else
         _count = 1;
@@ -148,16 +152,23 @@ void KillRewarder::_RewardXP(Player* player, float rate)
     uint32 xp(_xp);
     if (_group)
     {
+        uint32 rewardRate = 100;
         // 4.2.1. If player is in group, adjust XP:
         //        * set to 0 if player's level is more than maximum level of not gray member;
         //        * cut XP in half if _isFullXP is false.
         if (_maxNotGrayMember && player->IsAlive() &&
             _maxNotGrayMember->GetLevel() >= player->GetLevel())
-            xp = _isFullXP ?
-                 uint32(xp * rate) :             // Reward FULL XP if all group members are not gray.
-                 uint32(xp * rate / 2) + 1;      // Reward only HALF of XP if some of group members are gray.
+            rewardRate = _isFullXP ?
+                 100 :             // Reward FULL XP if all group members are not gray.
+                 50;               // Reward only HALF of XP if some of group members are gray.
         else
-            xp = 0;
+            rewardRate = 0;
+
+        // Rate can only be as low as the minimum configured
+        if (rewardRate < sWorld->getIntConfig(CONFIG_MIN_CREATURE_SCALED_XP_RATIO))
+            rewardRate = sWorld->getIntConfig(CONFIG_MIN_CREATURE_SCALED_XP_RATIO);
+
+        xp = (xp * rate * rewardRate) / 100;
     }
     if (xp)
     {
