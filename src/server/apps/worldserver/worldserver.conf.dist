@@ -4151,7 +4151,7 @@ AllowTwoSide.Interaction.Arena = 1
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 
-AllowTwoSide.Interaction.Auction = 0
+AllowTwoSide.Interaction.Auction = 1
 
 #
 #    AllowTwoSide.Interaction.Mail
