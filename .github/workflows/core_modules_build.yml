@@ -1,4 +1,4 @@
-name: core-modules-build
+name: nopch-module-build
 on:
   push:
     branches:
