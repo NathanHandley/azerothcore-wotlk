@@ -592,11 +592,12 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // apply original stats mods before spell loading or item equipment that call before equip _RemoveStatsMods()
     UpdateMaxHealth();                                      // Update max Health (for add bonus from stamina)
     SetFullHealth();
-    if (getPowerType() == POWER_MANA)
-    {
+    // Eternal Wrath: Enable mana for all classes
+    //if (getPowerType() == POWER_MANA)
+    //{
         UpdateMaxPower(POWER_MANA);                         // Update max Mana (for add bonus from intellect)
         SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-    }
+    //}
 
     if (getPowerType() == POWER_RUNIC_POWER)
     {
@@ -1846,22 +1847,34 @@ void Player::Regenerate(Powers power)
 
     float addvalue = 0.0f;
 
+    // Eternal Wrath: Enable mana for all classes
+    bool recentCast = IsUnderLastManaUseEffect();
+    float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
+
+    if (sWorld->getBoolConfig(CONFIG_LOW_LEVEL_REGEN_BOOST) && GetLevel() < 15)
+        ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
+
+    if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
+        addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
+    else
+        addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
+
     switch (power)
     {
-        case POWER_MANA:
-            {
-                bool recentCast = IsUnderLastManaUseEffect();
-                float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
+        //case POWER_MANA:
+        //    {
+        //        bool recentCast = IsUnderLastManaUseEffect();
+        //        float ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA);
 
-                if (sWorld->getBoolConfig(CONFIG_LOW_LEVEL_REGEN_BOOST) && GetLevel() < 15)
-                    ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
+        //        if (sWorld->getBoolConfig(CONFIG_LOW_LEVEL_REGEN_BOOST) && GetLevel() < 15)
+        //            ManaIncreaseRate = sWorld->getRate(RATE_POWER_MANA) * (2.066f - (GetLevel() * 0.066f));
 
-                if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
-                    addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
-                else
-                    addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
-            }
-            break;
+        //        if (recentCast) // Trinity Updates Mana in intervals of 2s, which is correct
+        //            addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_INTERRUPTED_FLAT_MODIFIER) *  ManaIncreaseRate * 0.001f * m_regenTimer;
+        //        else
+        //            addvalue += GetFloatValue(UNIT_FIELD_POWER_REGEN_FLAT_MODIFIER) * ManaIncreaseRate * 0.001f * m_regenTimer;
+        //    }
+        //    break;
         case POWER_RAGE:                                    // Regenerate rage
             {
                 if (!IsInCombat() && !HasAuraType(SPELL_AURA_INTERRUPT_REGEN))
@@ -2020,11 +2033,14 @@ void Player::RegenerateHealth()
 void Player::ResetAllPowers()
 {
     SetHealth(GetMaxHealth());
+    // Eternal Wrath: Enable mana for all classes
+    SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
     switch (getPowerType())
     {
-        case POWER_MANA:
-            SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-            break;
+        // Eternal Wrath: Enable mana for all classes
+        //case POWER_MANA:
+            //SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
+            //break;
         case POWER_RAGE:
             SetPower(POWER_RAGE, 0);
             break;
@@ -15158,7 +15174,8 @@ void Player::ActivateSpec(uint8 spec)
 
     // xinef: reset power
     Powers pw = getPowerType();
-    if (pw != POWER_MANA)
+    // Eternal Wrath: Enable mana for all classes
+    //if (pw != POWER_MANA)
         SetPower(POWER_MANA, 0); // Mana must be 0 even if it isn't the active power type.
     SetPower(pw, 0);
 
