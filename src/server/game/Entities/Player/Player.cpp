@@ -2025,6 +2025,8 @@ void Player::ResetAllPowers()
     SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
     // Eternal Wrath: Enable rage for all classes
     SetPower(POWER_RAGE, 0);
+    // Eternal Wrath: Enable energy for all classes
+    SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
 
     switch (getPowerType())
     {
@@ -2036,9 +2038,9 @@ void Player::ResetAllPowers()
         //case POWER_RAGE:
             //SetPower(POWER_RAGE, 0);
             //break;
-        case POWER_ENERGY:
-            SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
-            break;
+        //case POWER_ENERGY:
+            //SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
+            //break;
         case POWER_RUNIC_POWER:
             SetPower(POWER_RUNIC_POWER, 0);
             break;
