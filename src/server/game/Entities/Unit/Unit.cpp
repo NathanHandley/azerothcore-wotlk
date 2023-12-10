@@ -8834,8 +8834,9 @@ bool Unit::HandleAuraProc(Unit* victim, uint32 damage, Aura* triggeredByAura, Sp
                     // Convert recently used Blood Rune to Death Rune
                     if (Player* player = ToPlayer())
                     {
-                        if (player->getClass() != CLASS_DEATH_KNIGHT)
-                            return false;
+                        // Eternal Wrath: Enable runic power and runes for all classes
+                        //if (player->getClass() != CLASS_DEATH_KNIGHT)
+                        //    return false;
 
                         // xinef: not true
                         //RuneType rune = ToPlayer()->GetLastUsedRune();
@@ -9562,7 +9563,9 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
         // Item - Death Knight T10 Melee 4P Bonus
         if (auraSpellInfo->Id == 70656)
         {
-            if (GetTypeId() != TYPEID_PLAYER || getClass() != CLASS_DEATH_KNIGHT)
+            // Eternal Wrath: Enable runic power and runes for all classes
+            //if (GetTypeId() != TYPEID_PLAYER || getClass() != CLASS_DEATH_KNIGHT)
+            if (GetTypeId() != TYPEID_PLAYER)
                 return false;
 
             for (uint8 i = 0; i < MAX_RUNES; ++i)
@@ -9573,7 +9576,9 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
         else if (auraSpellInfo->SpellIconID == 85)
         {
             Player* plr = ToPlayer();
-            if (!plr || plr->getClass() != CLASS_DEATH_KNIGHT || !procSpell)
+            // Eternal Wrath: Enable runic power and runes for all classes
+            //if (!plr || plr->getClass() != CLASS_DEATH_KNIGHT || !procSpell)
+            if (!plr || !procSpell)
                 return false;
 
             if (!plr->IsBaseRuneSlotsOnCooldown(RUNE_BLOOD))
@@ -13820,7 +13825,8 @@ void Unit::ClearInCombat()
     else if (Player* player = ToPlayer())
     {
         player->UpdatePotionCooldown();
-        if (player->getClass() == CLASS_DEATH_KNIGHT)
+        // Eternal Wrath: Enable runic power and runes for all classes
+        //if (player->getClass() == CLASS_DEATH_KNIGHT)
             for (uint8 i = 0; i < MAX_RUNES; ++i)
                 player->SetGracePeriod(i, 0);
     }
