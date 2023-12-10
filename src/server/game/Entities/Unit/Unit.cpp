@@ -930,7 +930,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
     }
 
     // Rage from Damage made (only from direct weapon damage)
-    if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->getPowerType() == POWER_RAGE)
+    if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && (attacker->getPowerType() == POWER_RAGE || attacker->GetTypeId() == TYPEID_PLAYER))
     {
         uint32 weaponSpeedHitFactor;
 
@@ -958,10 +958,11 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         // Rage from absorbed damage
         if (cleanDamage && cleanDamage->absorbed_damage)
         {
-            if (victim->getPowerType() == POWER_RAGE)
+            // Eternal Wrath: Enable rage for all classes
+            if (victim->getPowerType() == POWER_RAGE || victim->GetTypeId() == TYPEID_PLAYER)
                 victim->RewardRage(cleanDamage->absorbed_damage, 0, false);
 
-            if (attacker && attacker->getPowerType() == POWER_RAGE )
+            if (attacker && (attacker->getPowerType() == POWER_RAGE || attacker->GetTypeId() == TYPEID_PLAYER))
                 attacker->RewardRage(cleanDamage->absorbed_damage, 0, true);
         }
 
@@ -1084,7 +1085,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         }
 
         // Rage from damage received
-        if (attacker != victim && victim->getPowerType() == POWER_RAGE)
+        // Eternal Wrath: Enable rage for all classes
+        if (attacker != victim && (victim->getPowerType() == POWER_RAGE || victim->GetTypeId() == TYPEID_PLAYER))
         {
             uint32 rageDamage = damage + (cleanDamage ? cleanDamage->absorbed_damage : 0);
             victim->RewardRage(rageDamage, 0, false);
