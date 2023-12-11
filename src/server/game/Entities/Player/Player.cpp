@@ -592,19 +592,21 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
     // apply original stats mods before spell loading or item equipment that call before equip _RemoveStatsMods()
     UpdateMaxHealth();                                      // Update max Health (for add bonus from stamina)
     SetFullHealth();
-    if (getPowerType() == POWER_MANA)
-    {
+    // Eternal Wrath: Enable mana for all classes
+    //if (getPowerType() == POWER_MANA)
+    //{
         UpdateMaxPower(POWER_MANA);                         // Update max Mana (for add bonus from intellect)
         SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-    }
+    //}
 
-    if (getPowerType() == POWER_RUNIC_POWER)
-    {
+    // Eternal Wrath: Enable runic power and runes for all classes
+//    if (getPowerType() == POWER_RUNIC_POWER)
+//    {
         SetPower(POWER_RUNE, 8);
         SetMaxPower(POWER_RUNE, 8);
         SetPower(POWER_RUNIC_POWER, 0);
         SetMaxPower(POWER_RUNIC_POWER, 1000);
-    }
+//    }
 
     // original spells
     LearnDefaultSkills();
@@ -1746,24 +1748,25 @@ void Player::RegenerateAll()
     Regenerate(POWER_MANA);
 
     // Runes act as cooldowns, and they don't need to send any data
-    if (getClass() == CLASS_DEATH_KNIGHT)
-        for (uint8 i = 0; i < MAX_RUNES; ++i)
+    // Eternal Wrath: Enable runic power and runes for all classes
+    //if (getClass() == CLASS_DEATH_KNIGHT)
+    for (uint8 i = 0; i < MAX_RUNES; ++i)
+    {
+        // xinef: implement grace
+        if (int32 cd = GetRuneCooldown(i))
         {
-            // xinef: implement grace
-            if (int32 cd = GetRuneCooldown(i))
-            {
-                SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
-                // start grace counter, player must be in combat and rune has to go off cooldown
-                if (IsInCombat() && cd <= m_regenTimer)
-                    SetGracePeriod(i, m_regenTimer - cd + 1); // added 1 because m_regenTimer-cd can be equal 0
-            }
-            // xinef: if grace is started, increase it but no more than cap
-            else if (uint32 grace = GetGracePeriod(i))
-            {
-                if (grace < RUNE_GRACE_PERIOD)
-                    SetGracePeriod(i, std::min<uint32>(grace + m_regenTimer, RUNE_GRACE_PERIOD));
-            }
+            SetRuneCooldown(i, (cd > m_regenTimer) ? cd - m_regenTimer : 0);
+            // start grace counter, player must be in combat and rune has to go off cooldown
+            if (IsInCombat() && cd <= m_regenTimer)
+                SetGracePeriod(i, m_regenTimer - cd + 1); // added 1 because m_regenTimer-cd can be equal 0
         }
+        // xinef: if grace is started, increase it but no more than cap
+        else if (uint32 grace = GetGracePeriod(i))
+        {
+            if (grace < RUNE_GRACE_PERIOD)
+                SetGracePeriod(i, std::min<uint32>(grace + m_regenTimer, RUNE_GRACE_PERIOD));
+        }
+    }
 
     if (m_regenTimerCount >= 2000)
     {
@@ -1776,8 +1779,10 @@ void Player::RegenerateAll()
         }
 
         Regenerate(POWER_RAGE);
-        if (getClass() == CLASS_DEATH_KNIGHT)
-            Regenerate(POWER_RUNIC_POWER);
+        // Eternal Wrath: Enable runic power and runes for all classes
+        Regenerate(POWER_RUNIC_POWER);
+        //if (getClass() == CLASS_DEATH_KNIGHT)
+        //    Regenerate(POWER_RUNIC_POWER);
 
         m_regenTimerCount -= 2000;
     }
@@ -2020,23 +2025,34 @@ void Player::RegenerateHealth()
 void Player::ResetAllPowers()
 {
     SetHealth(GetMaxHealth());
-    switch (getPowerType())
-    {
-        case POWER_MANA:
-            SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-            break;
-        case POWER_RAGE:
-            SetPower(POWER_RAGE, 0);
-            break;
-        case POWER_ENERGY:
-            SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
-            break;
-        case POWER_RUNIC_POWER:
-            SetPower(POWER_RUNIC_POWER, 0);
-            break;
-        default:
-            break;
-    }
+    // Eternal Wrath: Enable mana for all classes
+    SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
+    // Eternal Wrath: Enable rage for all classes
+    SetPower(POWER_RAGE, 0);
+    // Eternal Wrath: Enable energy for all classes
+    SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
+    // Eternal Wrath: Enable runic power and runes for all classes
+    SetPower(POWER_RUNIC_POWER, 0);
+
+    //switch (getPowerType())
+    //{
+        // Eternal Wrath: Enable mana for all classes
+        //case POWER_MANA:
+            //SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
+            //break;
+        // Eternal Wrath: Enable rage for all classes
+        //case POWER_RAGE:
+            //SetPower(POWER_RAGE, 0);
+            //break;
+        //case POWER_ENERGY:
+            //SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
+            //break;
+        //case POWER_RUNIC_POWER:
+            //SetPower(POWER_RUNIC_POWER, 0);
+            //break;
+        //default:
+            //break;
+    //}
 }
 
 bool Player::CanInteractWithQuestGiver(Object* questGiver)
@@ -13374,8 +13390,9 @@ static RuneType runeSlotTypes[MAX_RUNES] =
 
 void Player::InitRunes()
 {
-    if (getClass() != CLASS_DEATH_KNIGHT)
-        return;
+    // Eternal Wrath: Enable runic power and runes for all classes
+    //if (getClass() != CLASS_DEATH_KNIGHT)
+    //    return;
 
     m_runes = new Runes;
 
@@ -14172,25 +14189,32 @@ void Player::ResummonPetTemporaryUnSummonedIfAny()
 
 bool Player::CanResummonPet(uint32 spellid)
 {
-    switch (getClass())
-    {
-        case CLASS_DEATH_KNIGHT:
-            if (CanSeeDKPet())
-                return true;
-            else if (spellid == 52150)  //Raise Dead
-                return false;
-            break;
-        case CLASS_MAGE:
-            if (HasSpell(31687) && HasAura(70937))  //Has [Summon Water Elemental] spell and [Glyph of Eternal Water].
-                return true;
-            break;
-        case CLASS_HUNTER:
-        case CLASS_WARLOCK:
-            return true;
-            break;
-        default:
-            break;
-    }
+    // Eternal Wrath: Pets no longer restricted by class
+    if (HasSpell(31687) && HasAura(70937))  //Has [Summon Water Elemental] spell and [Glyph of Eternal Water].
+        return true;
+    else if (CanSeeDKPet())
+        return true;
+    else if (spellid == 52150)  //Raise Dead
+        return false;
+    //switch (getClass())
+    //{
+    //    case CLASS_DEATH_KNIGHT:
+    //        if (CanSeeDKPet())
+    //            return true;
+    //        else if (spellid == 52150)  //Raise Dead
+    //            return false;
+    //        break;
+    //    case CLASS_MAGE:
+    //        if (HasSpell(31687) && HasAura(70937))  //Has [Summon Water Elemental] spell and [Glyph of Eternal Water].
+    //            return true;
+    //        break;
+    //    case CLASS_HUNTER:
+    //    case CLASS_WARLOCK:
+    //        return true;
+    //        break;
+    //    default:
+    //        break;
+    //}
 
     return HasSpell(spellid);
 }
@@ -15158,7 +15182,8 @@ void Player::ActivateSpec(uint8 spec)
 
     // xinef: reset power
     Powers pw = getPowerType();
-    if (pw != POWER_MANA)
+    // Eternal Wrath: Enable mana for all classes
+    //if (pw != POWER_MANA)
         SetPower(POWER_MANA, 0); // Mana must be 0 even if it isn't the active power type.
     SetPower(pw, 0);
 

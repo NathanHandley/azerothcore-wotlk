@@ -930,7 +930,7 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
     }
 
     // Rage from Damage made (only from direct weapon damage)
-    if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && attacker->getPowerType() == POWER_RAGE)
+    if (attacker && cleanDamage && damagetype == DIRECT_DAMAGE && attacker != victim && (attacker->getPowerType() == POWER_RAGE || attacker->GetTypeId() == TYPEID_PLAYER))
     {
         uint32 weaponSpeedHitFactor;
 
@@ -958,10 +958,11 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         // Rage from absorbed damage
         if (cleanDamage && cleanDamage->absorbed_damage)
         {
-            if (victim->getPowerType() == POWER_RAGE)
+            // Eternal Wrath: Enable rage for all classes
+            if (victim->getPowerType() == POWER_RAGE || victim->GetTypeId() == TYPEID_PLAYER)
                 victim->RewardRage(cleanDamage->absorbed_damage, 0, false);
 
-            if (attacker && attacker->getPowerType() == POWER_RAGE )
+            if (attacker && (attacker->getPowerType() == POWER_RAGE || attacker->GetTypeId() == TYPEID_PLAYER))
                 attacker->RewardRage(cleanDamage->absorbed_damage, 0, true);
         }
 
@@ -1084,7 +1085,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         }
 
         // Rage from damage received
-        if (attacker != victim && victim->getPowerType() == POWER_RAGE)
+        // Eternal Wrath: Enable rage for all classes
+        if (attacker != victim && (victim->getPowerType() == POWER_RAGE || victim->GetTypeId() == TYPEID_PLAYER))
         {
             uint32 rageDamage = damage + (cleanDamage ? cleanDamage->absorbed_damage : 0);
             victim->RewardRage(rageDamage, 0, false);
@@ -8832,8 +8834,9 @@ bool Unit::HandleAuraProc(Unit* victim, uint32 damage, Aura* triggeredByAura, Sp
                     // Convert recently used Blood Rune to Death Rune
                     if (Player* player = ToPlayer())
                     {
-                        if (player->getClass() != CLASS_DEATH_KNIGHT)
-                            return false;
+                        // Eternal Wrath: Enable runic power and runes for all classes
+                        //if (player->getClass() != CLASS_DEATH_KNIGHT)
+                        //    return false;
 
                         // xinef: not true
                         //RuneType rune = ToPlayer()->GetLastUsedRune();
@@ -9560,7 +9563,9 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
         // Item - Death Knight T10 Melee 4P Bonus
         if (auraSpellInfo->Id == 70656)
         {
-            if (GetTypeId() != TYPEID_PLAYER || getClass() != CLASS_DEATH_KNIGHT)
+            // Eternal Wrath: Enable runic power and runes for all classes
+            //if (GetTypeId() != TYPEID_PLAYER || getClass() != CLASS_DEATH_KNIGHT)
+            if (GetTypeId() != TYPEID_PLAYER)
                 return false;
 
             for (uint8 i = 0; i < MAX_RUNES; ++i)
@@ -9571,7 +9576,9 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
         else if (auraSpellInfo->SpellIconID == 85)
         {
             Player* plr = ToPlayer();
-            if (!plr || plr->getClass() != CLASS_DEATH_KNIGHT || !procSpell)
+            // Eternal Wrath: Enable runic power and runes for all classes
+            //if (!plr || plr->getClass() != CLASS_DEATH_KNIGHT || !procSpell)
+            if (!plr || !procSpell)
                 return false;
 
             if (!plr->IsBaseRuneSlotsOnCooldown(RUNE_BLOOD))
@@ -13818,7 +13825,8 @@ void Unit::ClearInCombat()
     else if (Player* player = ToPlayer())
     {
         player->UpdatePotionCooldown();
-        if (player->getClass() == CLASS_DEATH_KNIGHT)
+        // Eternal Wrath: Enable runic power and runes for all classes
+        //if (player->getClass() == CLASS_DEATH_KNIGHT)
             for (uint8 i = 0; i < MAX_RUNES; ++i)
                 player->SetGracePeriod(i, 0);
     }

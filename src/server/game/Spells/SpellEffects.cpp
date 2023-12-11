@@ -5779,8 +5779,9 @@ void Spell::EffectActivateRune(SpellEffIndex effIndex)
 
     Player* player = m_caster->ToPlayer();
 
-    if (player->getClass() != CLASS_DEATH_KNIGHT)
-        return;
+    // Eternal Wrath: Enable runic power and runes for all classes
+    //if (player->getClass() != CLASS_DEATH_KNIGHT)
+    //    return;
 
     // needed later
     m_runesState = m_caster->ToPlayer()->GetRunesState();
