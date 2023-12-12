@@ -1258,11 +1258,12 @@ class spell_dk_death_gate : public SpellScript
 
     SpellCastResult CheckClass()
     {
-        if (GetCaster()->getClass() != CLASS_DEATH_KNIGHT)
+        // Eternal Wrath: All players can use death knight abilities
+        /*if (GetCaster()->getClass() != CLASS_DEATH_KNIGHT)
         {
             SetCustomCastResultMessage(SPELL_CUSTOM_ERROR_MUST_BE_DEATH_KNIGHT);
             return SPELL_FAILED_CUSTOM_ERROR;
-        }
+        }*/
 
         return SPELL_CAST_OK;
     }
