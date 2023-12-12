@@ -1034,16 +1034,45 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
         {
             if (petType == MAX_PET_TYPE)
             {
+                // Eternal Wrath: All players can use death knight abilities
                 // The petType was not overwritten by the hook, continue with default initialization
-                if (owner->getClass() == CLASS_WARLOCK ||
-                        owner->getClass() == CLASS_SHAMAN ||          // Fire Elemental
-                        owner->getClass() == CLASS_DEATH_KNIGHT ||    // Risen Ghoul
-                        owner->getClass() == CLASS_MAGE)              // Water Elemental with glyph
-                    petType = SUMMON_PET;
-                else if (owner->getClass() == CLASS_HUNTER)
+                //if (owner->getClass() == CLASS_WARLOCK ||
+                //        owner->getClass() == CLASS_SHAMAN ||          // Fire Elemental
+                //        owner->getClass() == CLASS_DEATH_KNIGHT ||    // Risen Ghoul
+                //        owner->getClass() == CLASS_MAGE)              // Water Elemental with glyph
+                //    petType = SUMMON_PET;
+                //else if (owner->getClass() == CLASS_HUNTER)
+                //{
+                //    petType = HUNTER_PET;
+                //}
+                uint32 entry = GetEntry();                
+                if (entry == NPC_INFERNAL
+                    || entry == NPC_IMP
+                    || entry == NPC_FELHUNTER
+                    || entry == NPC_VOIDWALKER
+                    || entry == NPC_SUCCUBUS
+                    || entry == NPC_DOOMGUARD
+                    || entry == NPC_FELGUARD
+                    || entry == NPC_EYE_OF_KILROGG
+                    || entry == NPC_WATER_ELEMENTAL_TEMP
+                    || entry == NPC_MIRROR_IMAGE
+                    || entry == NPC_WATER_ELEMENTAL_PERM
+                    || entry == NPC_TREANT
+                    || entry == NPC_SHADOWFIEND
+                    || entry == NPC_FIRE_ELEMENTAL
+                    || entry == NPC_EARTH_ELEMENTAL
+                    || entry == NPC_FERAL_SPIRIT
+                    || entry == NPC_RISEN_GHOUL
+                    || entry == NPC_BLOODWORM
+                    || entry == NPC_ARMY_OF_THE_DEAD
+                    || entry == NPC_EBON_GARGOYLE
+                    || entry == NPC_GENERIC_IMP
+                    || entry == NPC_GENERIC_VOIDWALKER)
                 {
-                    petType = HUNTER_PET;
+                    petType = SUMMON_PET;
                 }
+                else
+                    petType = HUNTER_PET;
             }
 
             if (petType == HUNTER_PET)

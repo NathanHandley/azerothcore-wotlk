@@ -6038,8 +6038,9 @@ void AuraEffect::HandleAuraConvertRune(AuraApplication const* aurApp, uint8 mode
 
     Player* player = target->ToPlayer();
 
-    if (player->getClass() != CLASS_DEATH_KNIGHT)
-        return;
+    // Eternal Wrath: All players can use death knight abilities
+    //if (player->getClass() != CLASS_DEATH_KNIGHT)
+    //    return;
 
     uint32 runes = m_amount;
     // convert number of runes specified in aura amount of rune type in miscvalue to runetype in miscvalueb
@@ -6310,8 +6311,9 @@ void AuraEffect::HandlePeriodicDummyAuraTick(Unit* target, Unit* caster) const
             {
                 if (target->GetTypeId() != TYPEID_PLAYER)
                     return;
-                if (target->ToPlayer()->getClass() != CLASS_DEATH_KNIGHT)
-                    return;
+                // Eternal Wrath: All players can use death knight abilities
+                //if (target->ToPlayer()->getClass() != CLASS_DEATH_KNIGHT)
+                //    return;
 
                 // timer expired - remove death runes
                 target->ToPlayer()->RemoveRunesByAuraEffect(this);
