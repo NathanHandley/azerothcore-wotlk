@@ -103,10 +103,21 @@ void KillRewarder::_InitGroupData()
                         }
                         // 2.4. _maxNotGrayMember - maximum level of alive group member within reward distance,
                         //      for whom victim is not gray;
-                        uint32 grayLevel = Acore::XP::GetGrayLevel(lvl);
-                        if (_victim->GetLevel() > grayLevel && (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl))
+                        // EternalWrath: Allow a gray member if there is a min creature scaled xp
+                        if (sWorld->getIntConfig(CONFIG_MIN_CREATURE_SCALED_XP_RATIO) > 0)
                         {
-                            _maxNotGrayMember = member;
+                            if (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl)
+                            {
+                                _maxNotGrayMember = member;
+                            }
+                        }
+                        else
+                        {
+                            uint32 grayLevel = Acore::XP::GetGrayLevel(lvl);
+                            if (_victim->GetLevel() > grayLevel && (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl))
+                            {
+                                _maxNotGrayMember = member;
+                            }
                         }
                     }
                     // 2.5. _sumLevel - sum of levels of group members within reward distance;
