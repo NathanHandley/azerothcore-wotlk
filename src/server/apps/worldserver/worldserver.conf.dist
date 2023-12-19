@@ -1078,7 +1078,7 @@ MaxWhoListReturns = 49
 #                     1  - (Enabled, prevent players AFK from being logged out in Sanctuary zones)
 #                     2  - (Enabled, prevent players AFK from being logged out in all zones)
 
-PreventAFKLogout = 0
+PreventAFKLogout = 2
 
 #
 ###################################################################################################
