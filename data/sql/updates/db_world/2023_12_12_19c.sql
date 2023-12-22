@@ -1,0 +1,22 @@
+-- Increase Required XP from 90+
+DELETE FROM player_xp_for_level WHERE LEVEL > 79;
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (80, 3341600);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (81, 3408432);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (82, 3476601);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (83, 3546133);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (84, 3617055);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (85, 3689396);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (86, 3763184);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (87, 3838448);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (88, 3915217);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (89, 3993521);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (90, 7987043);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (91, 8146784);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (92, 8309719);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (93, 8475914);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (94, 8645432);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (95, 8818340);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (96, 8994707);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (97, 9174601);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (98, 9358093);
+INSERT INTO player_xp_for_level (Level, Experience) VALUES (99, 9545255);
