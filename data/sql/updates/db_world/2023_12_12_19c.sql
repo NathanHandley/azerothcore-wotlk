@@ -42,8 +42,9 @@ INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderE
 INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderEntry`) VALUES (97, 2047, 502, 35790);
 INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderEntry`) VALUES (98, 2047, 502, 35790);
 INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderEntry`) VALUES (99, 2047, 502, 35790);
-INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderEntry`) VALUES (100, 2047, 502, 35790);
-DELETE FROM mail_loot_template WHERE Entry IN (500, 501);
+INSERT INTO `mail_level_reward` (`level`, `raceMask`, `mailTemplateId`, `senderEntry`) VALUES (100, 2047, 503, 35790);
+DELETE FROM mail_loot_template WHERE Entry IN (500, 501, 502, 503);
 INSERT INTO `mail_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (500, 81200, 0, 100, 0, 1, 0, 1, 1, 'Token of Mastery');
 INSERT INTO `mail_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (501, 81200, 0, 100, 0, 1, 0, 1, 1, 'Token of Mastery');
 INSERT INTO `mail_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (502, 81200, 0, 100, 0, 1, 0, 2, 2, 'Token of Mastery');
+INSERT INTO `mail_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (503, 81200, 0, 100, 0, 1, 0, 5, 5, 'Token of Mastery');
