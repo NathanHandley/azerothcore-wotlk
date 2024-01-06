@@ -105,6 +105,17 @@ void Pet::AddToWorld()
 
     if (GetOwnerGUID().IsPlayer())
     {
+        if (Player* owner = GetOwner())
+        {
+            // Eternal Wrath: Not restricted by class
+            // TODO: Better awareness for type of pet
+            //if (getPetType() == SUMMON_PET && owner->getClass() == CLASS_WARLOCK)
+            if (getPetType() == SUMMON_PET)
+            {
+                owner->SetLastPetSpell(GetUInt32Value(UNIT_CREATED_BY_SPELL));
+            }
+        }
+
         sScriptMgr->OnPetAddToWorld(this);
     }
 }

@@ -241,7 +241,7 @@ int32 Quest::GetRewOrReqMoney(uint8 playerLevel) const
         }
     }
 
-    return static_cast<int32>(rewardedMoney * sWorld->getRate(RATE_DROP_MONEY));
+    return static_cast<int32>(rewardedMoney * sWorld->getRate(RATE_REWARD_BONUS_MONEY));
 }
 
 uint32 Quest::GetRewMoneyMaxLevel() const
@@ -249,7 +249,7 @@ uint32 Quest::GetRewMoneyMaxLevel() const
     if (HasFlag(QUEST_FLAGS_NO_MONEY_FROM_XP))
         return 0;
 
-    return static_cast<int32>(RewardBonusMoney * sWorld->getRate(RATE_REWARD_BONUS_MONEY) * sWorld->getRate(RATE_DROP_MONEY));
+    return static_cast<int32>(RewardBonusMoney * sWorld->getRate(RATE_REWARD_BONUS_MONEY));
 }
 
 bool Quest::IsAutoAccept() const
