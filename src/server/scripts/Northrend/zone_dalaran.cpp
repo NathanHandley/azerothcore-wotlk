@@ -573,8 +573,9 @@ public:
                         if (Player* player = SelectTargetInDalaran())
                         {
                             me->NearTeleportTo(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), 0.0f);
-                            DoCast(player, SPELL_MANABONKED);
-                            SendMailToPlayer(player);
+                            // EternalWrath - Disable Manabonk
+                            // DoCast(player, SPELL_MANABONKED);
+                            // SendMailToPlayer(player);
                         }
                         events.ScheduleEvent(EVENT_BLINK, 3ms);
                         break;
