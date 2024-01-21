@@ -1,2 +1,10 @@
--- Add some Jeeves drops
--- Hold / Remove
+-- Update drop rate of rainbow leaves
+DELETE FROM `gameobject_loot_template` WHERE `Item` = 81010;
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24093, 81010, 0, 6, 0, 1, 0, 1, 1, 'Goldclover - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24224, 81010, 0, 6, 0, 1, 0, 1, 1, 'Tiger Lily - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24225, 81010, 0, 6, 0, 1, 0, 1, 1, 'Talandras Rose - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24226, 81010, 0, 7.5, 0, 1, 0, 1, 1, 'Lichbloom - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24227, 81010, 0, 7.5, 0, 1, 0, 1, 1, 'Icethorn - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24228, 81010, 0, 40, 0, 1, 0, 1, 1, 'Frost Lotus - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (25089, 81010, 0, 6, 0, 1, 0, 1, 1, 'Firethorn - Rainbow Leaves');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (25093, 81010, 0, 6, 0, 1, 0, 1, 1, 'Adders Tongue - Rainbow Leaves');
