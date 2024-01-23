@@ -1836,7 +1836,7 @@ StrictNames.Profanity = 0
 #                         placed in clientdir/Fonts.)
 #                     3 - (Enabled, Basic Latin characters + server timezone specific)
 
-StrictPlayerNames = 1
+StrictPlayerNames = 0
 
 #
 #    StrictPetNames
@@ -1850,7 +1850,7 @@ StrictPlayerNames = 1
 #                         placed in clientdir/Fonts.)
 #                     3 - (Enabled, Basic Latin characters + server timezone specific)
 
-StrictPetNames = 1
+StrictPetNames = 0
 
 #
 #    CharacterCreating.Disabled
@@ -3092,7 +3092,7 @@ Rate.RepairCost = 1
 #
 #        Default:     1 - (Enabled)
 
-LeaveGroupOnLogout.Enabled = 1
+LeaveGroupOnLogout.Enabled = 0
 
 #
 #    Group.Raid.LevelRestriction
@@ -3139,7 +3139,7 @@ Instance.IgnoreRaid = 1
 #        Range:       0-23
 #        Default:     4 - (04:00 AM)
 
-Instance.ResetTimeHour = 4
+Instance.ResetTimeHour = 6
 
 #
 #     Instance.ResetTimeRelativeTimestamp
@@ -3149,7 +3149,7 @@ Instance.ResetTimeHour = 4
 #        Default:     1135814400 - (Thu, 29 Dec 2005 00:00:00 GMT - meaning that 7-day raid reset falls on Thursdays,
 #                                   while 3-day reset falls on "Thu 29 Dec 2005", "Sun 01 Jan 2006", "Wed 04 Jan 2006", and so on)
 
-Instance.ResetTimeRelativeTimestamp = 1135814400
+Instance.ResetTimeRelativeTimestamp = 1705557600
 
 #
 #    Rate.InstanceResetTime
