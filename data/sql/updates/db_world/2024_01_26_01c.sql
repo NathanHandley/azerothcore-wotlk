@@ -1,0 +1,5 @@
+-- Slightly Lower mining rate for Rainbow Ore
+DELETE FROM `gameobject_loot_template` WHERE `Item` = 81011;
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24155, 81011, 0, 3, 0, 1, 0, 1, 1, 'Saronite Deposit - Rainbow Ore');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24156, 81011, 0, 5, 0, 1, 0, 1, 1, 'Rich Saronite Deposit - Rainbow Ore');
+INSERT INTO `gameobject_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (24157, 81011, 0, 15, 0, 1, 0, 1, 2, 'Titanium Vein - Rainbow Ore');
