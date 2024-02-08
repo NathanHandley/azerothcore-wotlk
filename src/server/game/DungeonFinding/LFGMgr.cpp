@@ -2144,10 +2144,11 @@ namespace lfg
         {
             error = LFG_TELEPORTERROR_IN_VEHICLE;
         }
-        else if (player->GetCharmGUID() || player->IsInCombat())
-        {
-            error = LFG_TELEPORTERROR_COMBAT;
-        }
+        // Eternal Wrath - Allow players to teleport in combat
+        //else if (player->GetCharmGUID() || player->IsInCombat())
+        //{
+        //    error = LFG_TELEPORTERROR_COMBAT;
+        //}
         else if (out && error == LFG_TELEPORTERROR_OK)
         {
             if (player->GetMapId() == uint32(dungeon->map))
