@@ -10127,7 +10127,11 @@ void Player::SetRestBonus(float rest_bonus_new)
     if (rest_bonus_new < 0)
         rest_bonus_new = 0;
 
-    float rest_bonus_max = (float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP) * 1.5f / 2;
+    // Eternal Wrath: Restrict rest_bonus to level 80 experience amount
+    float expBase = (float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
+    if (expBase > 1670800.0f)
+        expBase = 1670800.0f;
+    float rest_bonus_max = expBase * 1.5f / 2;
 
     if (rest_bonus_new > rest_bonus_max)
         _restBonus = rest_bonus_max;
