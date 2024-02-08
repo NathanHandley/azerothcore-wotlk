@@ -569,15 +569,15 @@ public:
                 switch (eventId)
                 {
                     case EVENT_SELECT_TARGET:
-                        me->SetVisible(true);
-                        DoCast(me, SPELL_TELEPORT_VISUAL);
-                        if (Player* player = SelectTargetInDalaran())
-                        {
-                            me->NearTeleportTo(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), 0.0f);
-                            DoCast(player, SPELL_MANABONKED);
-                            SendMailToPlayer(player);
-                        }
-                        events.ScheduleEvent(EVENT_BLINK, 3ms);
+                        //me->SetVisible(true);
+                        //DoCast(me, SPELL_TELEPORT_VISUAL);
+                        //if (Player* player = SelectTargetInDalaran())
+                        //{
+                        //    me->NearTeleportTo(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), 0.0f);
+                        //    DoCast(player, SPELL_MANABONKED);
+                        //    SendMailToPlayer(player);
+                        //}
+                        //events.ScheduleEvent(EVENT_BLINK, 3ms);
                         break;
                     case EVENT_BLINK:
                         {
