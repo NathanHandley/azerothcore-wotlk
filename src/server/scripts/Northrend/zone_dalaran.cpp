@@ -569,6 +569,7 @@ public:
                 switch (eventId)
                 {
                     case EVENT_SELECT_TARGET:
+                        // Eternal Wrath: Disable manabonk
                         //me->SetVisible(true);
                         //DoCast(me, SPELL_TELEPORT_VISUAL);
                         //if (Player* player = SelectTargetInDalaran())

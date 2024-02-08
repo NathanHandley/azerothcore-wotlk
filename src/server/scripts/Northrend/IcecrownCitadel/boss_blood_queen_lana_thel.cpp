@@ -194,6 +194,7 @@ public:
             me->CastSpell(me, SPELL_SHROUD_OF_SORROW, true);
             me->CastSpell(me, SPELL_FRENZIED_BLOODTHIRST_VISUAL, true);
             events.Reset();
+            // Eternal Wrath: Double berserk timer
             events.ScheduleEvent(EVENT_BERSERK, 660s);
             events.ScheduleEvent(EVENT_VAMPIRIC_BITE, 15s);
             events.ScheduleEvent(EVENT_BLOOD_MIRROR, 2500ms);

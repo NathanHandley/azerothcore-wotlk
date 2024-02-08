@@ -2172,6 +2172,7 @@ class spell_item_scroll_of_recall : public SpellScript
                 maxSafeLevel = 70;
                 break;
             case SPELL_SCROLL_OF_RECALL_III:  // Scroll of Recal III
+                // Eternal Wrath: Increase safe level from 80 to 83
                 maxSafeLevel = 83;
                 break;
             default:
