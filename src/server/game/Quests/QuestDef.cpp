@@ -214,22 +214,12 @@ uint32 Quest::XPValue(uint8 playerLevel) const
         diffFactor = 10;
     }
 
-    uint32 xp = diffFactor * xpentry->Exp[RewardXPDifficulty] / 10;
-    if (xp <= 100)
+    // Eternal Wrath: Min EXP
+    uint32 xp = RoundXPValue(diffFactor * xpentry->Exp[RewardXPDifficulty] / 10);
+    if (sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO))
     {
-        xp = 5 * ((xp + 2) / 5);
-    }
-    else if (xp <= 500)
-    {
-        xp = 10 * ((xp + 5) / 10);
-    }
-    else if (xp <= 1000)
-    {
-        xp = 25 * ((xp + 12) / 25);
-    }
-    else
-    {
-        xp = 50 * ((xp + 25) / 50);
+        uint32 minScaledXP = RoundXPValue(xpentry->Exp[RewardXPDifficulty]) * sWorld->getIntConfig(CONFIG_MIN_QUEST_SCALED_XP_RATIO) / 100;
+        xp = std::max(minScaledXP, xp);
     }
 
     return xp;
@@ -427,4 +417,17 @@ void Quest::InitializeQueryData()
 
     for (uint32 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
         queryData << ObjectiveText[i];
+}
+
+// Eternal Wrath: Min EXP
+uint32 Quest::RoundXPValue(uint32 xp)
+{
+    if (xp <= 100)
+        return 5 * ((xp + 2) / 5);
+    else if (xp <= 500)
+        return 10 * ((xp + 5) / 10);
+    else if (xp <= 1000)
+        return 25 * ((xp + 12) / 25);
+    else
+        return 50 * ((xp + 25) / 50);
 }
