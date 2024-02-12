@@ -626,6 +626,41 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "DurabilityLossChance.Block ({}) must be >=0. Using 0.0 instead.", _rate_values[RATE_DURABILITY_LOSS_BLOCK]);
         _rate_values[RATE_DURABILITY_LOSS_BLOCK] = 0.0f;
     }
+    _int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST] = sConfigMgr->GetOption<int32>("MinScaledXPRatio.Quest", 0);
+    if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST] < 0)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Quest ({}) must be greater than 0. Using 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST] > 100)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Quest ({}) is too high, and must be in range 0..100. Using 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_QUEST] = 0;
+    }
+
+    _int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL] = sConfigMgr->GetOption<int32>("MinScaledXPRatio.Kill", 0);
+    if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL] < 0)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Kill ({}) must be greater than 0.  Using 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL] > 100)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Kill ({}) is too high, and must be in range 0..100. Using to 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_KILL] = 0;
+    }
+
+    _int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED] = sConfigMgr->GetOption<int32>("MinScaledXPRatio.Discover", 0);
+    if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED] < 100)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Discover ({}) must be greater than 0. Using 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED] > 100)
+    {
+        LOG_ERROR("server.loading", "MinScaledXPRatio.Discover ({}) is too high, and must be in range 0..100. Using 0.", _int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED]);
+        _int_configs[CONFIG_MIN_SCALED_XP_RATIO_DISCOVERED] = 0;
+    }
 
     ///- Read other configuration items from the config file
 

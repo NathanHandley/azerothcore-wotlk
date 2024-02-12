@@ -2345,6 +2345,36 @@ Rate.XP.BattlegroundKillIC   = 1
 Rate.Pet.LevelXP = 0.05
 
 #
+#    Rate.XP.MinKillXP
+#        Description: Minimum proportion of experience to grant for a kill (0-100)
+#        Example:     50  (No less than 50% experience granted from killing a grey creature)
+#                     100 (Creatures always grant full experience)
+#        Default:     0 - (Creatures too low level won't give experience)
+#
+
+MinScaledXPRatio.Kill = 0
+
+#
+#    MinXP.Kill
+#        Description: Minimum proportion of experience to grant for completing a quest (0-100)
+#        Example:     50  (No less than 50% experience granted from completing a grey quest)
+#                     100 (Quests always grant full experience)
+#        Default:     0 - (Quests too low level won't give experience)
+#
+
+MinScaledXPRatio.Quest = 0
+
+#
+#    MinXP.Discover
+#        Description: Minimum proportion of experience to grant for discovering a new area (0-100)
+#        Example:     50  (No less than 50% experience granted from discovering a low level area)
+#                     100 (Discovery always grant full experience)
+#        Default:     0 - (Discovery too low level won't give experience)
+#
+
+MinScaledXPRatio.Discover = 0
+
+#
 ###################################################################################################
 
 ###################################################################################################
