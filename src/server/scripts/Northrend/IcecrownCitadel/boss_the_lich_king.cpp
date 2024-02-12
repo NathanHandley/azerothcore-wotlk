@@ -1141,6 +1141,7 @@ public:
                     break;
                 case EVENT_SUMMON_VALKYR:
                     {
+                    /*  Eternal Wrath: Disable Valkyr
                         me->GetMap()->SetZoneMusic(AREA_THE_FROZEN_THRONE, MUSIC_SPECIAL);
                         Talk(SAY_LK_SUMMON_VALKYR);
                         me->CastSpell((Unit*)nullptr, SUMMON_VALKYR, false);
@@ -1154,6 +1155,7 @@ public:
                             {
                                 events.RescheduleEvent(EVENT_DEFILE, minTime, EVENT_GROUP_ABILITIES);
                             }
+                    */
                     }
                     break;
                 case EVENT_VILE_SPIRITS:
