@@ -2352,7 +2352,7 @@ Rate.Pet.LevelXP = 0.05
 #        Default:     0 - (Creatures too low level won't give experience)
 #
 
-MinXPPercent.Kill = 0
+MinXPPercent.Kill = 50
 
 #
 #    MinXPPercent.Quest
@@ -2362,7 +2362,7 @@ MinXPPercent.Kill = 0
 #        Default:     0 - (Quests too low level won't give experience)
 #
 
-MinXPPercent.Quest = 0
+MinXPPercent.Quest = 100
 
 #
 #    MinXPPercent.Discover
@@ -2372,7 +2372,7 @@ MinXPPercent.Quest = 0
 #        Default:     0 - (Discovery too low level won't give experience)
 #
 
-MinXPPercent.Discover = 0
+MinXPPercent.Discover = 100
 
 #
 ###################################################################################################
