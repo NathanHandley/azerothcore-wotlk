@@ -1141,9 +1141,25 @@ public:
                     break;
                 case EVENT_SUMMON_VALKYR:
                     {
+                        // EternalWrath: Only summon Valkyr if there are 5 or more raid members on 25m, or 3 or more raid members on 10m
+                        bool doSummonValkyr = false;
+                        if (me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL || me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+                        {
+                            if (me->GetMap()->GetPlayersCountExceptGMs() >= 5)
+                                doSummonValkyr = true;
+                        }
+                        else if (me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL || me->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
+                        {
+                            if (me->GetMap()->GetPlayersCountExceptGMs() >= 3)
+                                doSummonValkyr = true;
+                        }
+
                         me->GetMap()->SetZoneMusic(AREA_THE_FROZEN_THRONE, MUSIC_SPECIAL);
-                        Talk(SAY_LK_SUMMON_VALKYR);
-                        me->CastSpell((Unit*)nullptr, SUMMON_VALKYR, false);
+                        if (doSummonValkyr)
+                        {                            
+                            Talk(SAY_LK_SUMMON_VALKYR);
+                            me->CastSpell((Unit*)nullptr, SUMMON_VALKYR, false);
+                        }
                         events.ScheduleEvent(EVENT_SUMMON_VALKYR, 45s, EVENT_GROUP_ABILITIES);
 
                         // schedule a defile (or reschedule it) if next defile event
