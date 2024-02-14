@@ -420,7 +420,16 @@ public:
                     events.ScheduleEvent(EVENT_AIR_MOVEMENT, 0ms);
                     break;
                 case POINT_AIR_PHASE:
-                    me->CastCustomSpell(SPELL_ICE_TOMB_TARGET, SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(2, 5, 2, 6), nullptr);
+                    // EternalWrath: Ensure at least one player is not ice tombed
+                    if (me->GetMap()->GetPlayersCountExceptGMs() > 1)
+                    {
+                        int32 maxPlayersIceTombed = me->GetMap()->GetPlayersCountExceptGMs() - 1;
+                        int32 normal10IceTombedPlayers = std::min(maxPlayersIceTombed, 2);
+                        int32 normal25IceTombedPlayers = std::min(maxPlayersIceTombed, 5);
+                        int32 heroic10IceTombedPlayers = std::min(maxPlayersIceTombed, 2);
+                        int32 heroic25IceTombedPlayers = std::min(maxPlayersIceTombed, 6);
+                        me->CastCustomSpell(SPELL_ICE_TOMB_TARGET, SPELLVALUE_MAX_TARGETS, RAID_MODE<int32>(normal10IceTombedPlayers, normal25IceTombedPlayers, heroic10IceTombedPlayers, heroic25IceTombedPlayers), nullptr);
+                    }
                     me->SetFacingTo(float(M_PI));
                     events.ScheduleEvent(EVENT_AIR_MOVEMENT_FAR, 0ms); // won't be processed during cast time anyway, so 0
                     events.ScheduleEvent(EVENT_FROST_BOMB, 7s);
