@@ -102,10 +102,21 @@ void KillRewarder::_InitGroupData()
                         }
                         // 2.4. _maxNotGrayMember - maximum level of alive group member within reward distance,
                         //      for whom victim is not gray;
-                        uint32 grayLevel = Acore::XP::GetGrayLevel(lvl);
-                        if (_victim->GetLevel() > grayLevel && (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl))
+                        // Allow exception for a gray member if there is a min kill scaled xp
+                        if (sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL) > 0)
                         {
-                            _maxNotGrayMember = member;
+                            if (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl)
+                            {
+                                _maxNotGrayMember = member;
+                            }
+                        }
+                        else
+                        {
+                            uint32 grayLevel = Acore::XP::GetGrayLevel(lvl);
+                            if (_victim->GetLevel() > grayLevel && (!_maxNotGrayMember || _maxNotGrayMember->GetLevel() < lvl))
+                            {
+                                _maxNotGrayMember = member;
+                            }
                         }
                     }
                     // 2.5. _sumLevel - sum of levels of group members within reward distance;
@@ -113,7 +124,10 @@ void KillRewarder::_InitGroupData()
                 }
         // 2.6. _isFullXP - flag identifying that for all group members victim is not gray,
         //      so 100% XP will be rewarded (50% otherwise).
-        _isFullXP = _maxNotGrayMember && (_maxLevel == _maxNotGrayMember->GetLevel());
+        if (sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL) == 100)
+            _isFullXP = true;
+        else
+            _isFullXP = _maxNotGrayMember && (_maxLevel == _maxNotGrayMember->GetLevel());
     }
     else
         _count = 1;
@@ -148,16 +162,24 @@ void KillRewarder::_RewardXP(Player* player, float rate)
     uint32 xp(_xp);
     if (_group)
     {
+        uint32 rewardProportion = 100;
+
         // 4.2.1. If player is in group, adjust XP:
         //        * set to 0 if player's level is more than maximum level of not gray member;
         //        * cut XP in half if _isFullXP is false.
         if (_maxNotGrayMember && player->IsAlive() &&
             _maxNotGrayMember->GetLevel() >= player->GetLevel())
-            xp = _isFullXP ?
-                 uint32(xp * rate) :             // Reward FULL XP if all group members are not gray.
-                 uint32(xp * rate / 2) + 1;      // Reward only HALF of XP if some of group members are gray.
+            rewardProportion = _isFullXP ?
+            100 :             // Reward FULL XP if all group members are not gray.
+            50;               // Reward only HALF of XP if some of group members are gray.
         else
-            xp = 0;
+            rewardProportion = 0;
+
+        // Rate can only be as low as the minimum configured
+        if (rewardProportion < sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL))
+            rewardProportion = sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL);
+
+        xp = (xp * rate * rewardProportion) / 100;
     }
     if (xp)
     {
