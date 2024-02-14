@@ -626,6 +626,40 @@ void World::LoadConfigSettings(bool reload)
         LOG_ERROR("server.loading", "DurabilityLossChance.Block ({}) must be >=0. Using 0.0 instead.", _rate_values[RATE_DURABILITY_LOSS_BLOCK]);
         _rate_values[RATE_DURABILITY_LOSS_BLOCK] = 0.0f;
     }
+    _int_configs[CONFIG_MIN_XP_PERCENT_QUEST] = sConfigMgr->GetOption<int32>("MinXPPercent.Quest", 0);
+    if (_int_configs[CONFIG_MIN_XP_PERCENT_QUEST] < 0)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Quest ({}) must be greater than 0. Using 0.", _int_configs[CONFIG_MIN_XP_PERCENT_QUEST]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_QUEST] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_XP_PERCENT_QUEST] > 100)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Quest ({}) is too high, and must be in range 0..100. Using 0.", _int_configs[CONFIG_MIN_XP_PERCENT_QUEST]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_QUEST] = 0;
+    }
+    _int_configs[CONFIG_MIN_XP_PERCENT_KILL] = sConfigMgr->GetOption<int32>("MinXPPercent.Kill", 0);
+    if (_int_configs[CONFIG_MIN_XP_PERCENT_KILL] < 0)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Kill ({}) must be greater than 0.  Using 0.", _int_configs[CONFIG_MIN_XP_PERCENT_KILL]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_KILL] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_XP_PERCENT_KILL] > 100)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Kill ({}) is too high, and must be in range 0..100. Using to 0.", _int_configs[CONFIG_MIN_XP_PERCENT_KILL]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_KILL] = 0;
+    }
+
+    _int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED] = sConfigMgr->GetOption<int32>("MinXPPercent.Discover", 0);
+    if (_int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED] < 100)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Discover ({}) must be greater than 0. Using 0.", _int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED] = 0;
+    }
+    else if (_int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED] > 100)
+    {
+        LOG_ERROR("server.loading", "MinXPPercent.Discover ({}) is too high, and must be in range 0..100. Using 0.", _int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED]);
+        _int_configs[CONFIG_MIN_XP_PERCENT_DISCOVERED] = 0;
+    }
 
     ///- Read other configuration items from the config file
 

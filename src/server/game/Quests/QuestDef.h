@@ -328,6 +328,8 @@ public:
     void SetEventIdForQuest(uint16 eventId) { _eventIdForQuest = eventId; }
     [[nodiscard]] uint16 GetEventIdForQuest() const { return _eventIdForQuest; }
 
+    static uint32 RoundXPValue(uint32 xp);
+
     // cached data
 private:
     uint32 _reqItemsCount;

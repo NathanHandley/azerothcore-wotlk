@@ -64,6 +64,13 @@ uint32 Acore::XP::BaseGain(uint8 pl_level, uint8 mob_level, ContentLevels conten
             baseGain = 0;
     }
 
+    if (sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL))
+    {
+        // Use mob level instead of player level to avoid overscaling on gain in a min is enforced
+        uint32 baseGainMin = (mob_level * 5 + nBaseExp) * sWorld->getIntConfig(CONFIG_MIN_XP_PERCENT_KILL) / 100;
+        baseGain = std::max(baseGainMin, baseGain);
+    }
+
     //sScriptMgr->OnBaseGainCalculation(baseGain, pl_level, mob_level, content); // pussywizard: optimization
     return baseGain;
 }
