@@ -238,8 +238,13 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     bool forceLoadFromDB = false;
     sScriptMgr->OnBeforeLoadPetFromDB(owner, petEntry, petnumber, current, forceLoadFromDB);
 
-    if (!forceLoadFromDB && (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET) && !owner->CanSeeDKPet())) // DK Pet exception
-        return false;
+    // DK Pet exception
+    if (!forceLoadFromDB && (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET) && !owner->CanSeeDKPet()))
+    {
+        CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(petInfo->CreatureId);
+        if (creatureInfo && creatureInfo->type == CREATURE_TYPE_UNDEAD)
+            return false;
+    }
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(petInfo->CreatedBySpellId);
 
