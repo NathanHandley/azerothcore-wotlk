@@ -238,8 +238,13 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     bool forceLoadFromDB = false;
     sScriptMgr->OnBeforeLoadPetFromDB(owner, petEntry, petnumber, current, forceLoadFromDB);
 
-    if (!forceLoadFromDB && (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET) && !owner->CanSeeDKPet())) // DK Pet exception
-        return false;
+    // DK Pet exception
+    if (!forceLoadFromDB && (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET) && !owner->CanSeeDKPet()))
+    {
+        CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(petInfo->CreatureId);
+        if (creatureInfo && creatureInfo->type == CREATURE_TYPE_UNDEAD)
+            return false;
+    }
 
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(petInfo->CreatedBySpellId);
 
@@ -2299,12 +2304,12 @@ bool Pet::IsPermanentPetFor(Player* owner) const
     switch (getPetType())
     {
         case SUMMON_PET:
-            if (owner->IsClass(CLASS_WARLOCK, CLASS_CONTEXT_PET))
-                return GetCreatureTemplate()->type == CREATURE_TYPE_DEMON;
-            else if (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET))
-                return GetCreatureTemplate()->type == CREATURE_TYPE_UNDEAD;
-            else if (owner->IsClass(CLASS_MAGE, CLASS_CONTEXT_PET))
-                return GetEntry() == 37994;
+            if (owner->IsClass(CLASS_WARLOCK, CLASS_CONTEXT_PET) && GetCreatureTemplate()->type == CREATURE_TYPE_DEMON)
+                return true;
+            else if (owner->IsClass(CLASS_DEATH_KNIGHT, CLASS_CONTEXT_PET) && GetCreatureTemplate()->type == CREATURE_TYPE_UNDEAD)
+                return true;
+            else if (owner->IsClass(CLASS_MAGE, CLASS_CONTEXT_PET) && GetEntry() == 37994)
+                return true;
             else
                 return false;
         case HUNTER_PET:
