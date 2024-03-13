@@ -90,22 +90,23 @@ public:
 
         void JustDied(Unit* /*killer*/) override
         {
-            if (secondPhase)
-            {
+            // EternalWrath: Make phase 1 optional
+            //if (secondPhase)
+            //{
                 _JustDied();
-            }
-            else
-            {
-                // Respawn shorty in case of failure during phase 1.
-                me->SetCorpseRemoveTime(25);
-                me->SetRespawnTime(30);
-                me->SaveRespawnTime();
+            //}
+            //else
+            //{
+            //    // Respawn shorty in case of failure during phase 1.
+            //    me->SetCorpseRemoveTime(25);
+            //    me->SetRespawnTime(30);
+            //    me->SaveRespawnTime();
 
                 // Might not be required, safe measure.
-                me->SetLootRecipient(nullptr);
+            //    me->SetLootRecipient(nullptr);
 
-                instance->SetData(DATA_EGG_EVENT, FAIL);
-            }
+            //    instance->SetData(DATA_EGG_EVENT, FAIL);
+            //}
         }
 
         bool CanAIAttack(Unit const* target) const override
@@ -225,12 +226,13 @@ public:
 
         void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
         {
-            if (!secondPhase && damage >= me->GetHealth())
-            {
-                Talk(SAY_DEATH);
-                DoCastAOE(SPELL_EXPLODE_ORB);
-                DoCastAOE(SPELL_EXPLOSION);
-            }
+            // EternalWrath: Make phase 1 optional
+            //if (!secondPhase && damage >= me->GetHealth())
+            //{
+            //    Talk(SAY_DEATH);
+            //    DoCastAOE(SPELL_EXPLODE_ORB);
+            //    DoCastAOE(SPELL_EXPLOSION);
+            //}
         }
 
         void UpdateAI(uint32 diff) override
