@@ -224,7 +224,7 @@ public:
             }
         }
 
-        void DamageTaken(Unit*, uint32& damage, DamageEffectType, SpellSchoolMask) override
+        void DamageTaken(Unit*, uint32&, DamageEffectType, SpellSchoolMask) override
         {
             // EternalWrath: Make phase 1 optional
             //if (!secondPhase && damage >= me->GetHealth())
