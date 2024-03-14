@@ -385,10 +385,11 @@ public:
                 me->m_Events.AddEvent(new FrostwyrmLandEvent(*me, SindragosaLandPos), me->m_Events.CalculateTime(uint64(moveTime) + 250));
                 me->GetMotionMaster()->MovePoint(POINT_FROSTWYRM_FLY_IN, SindragosaFlyInPos);
 
-                if (!instance->GetData(DATA_SINDRAGOSA_INTRO))
-                {
-                    DoCastAOE(SPELL_SINDRAGOSA_S_FURY);
-                }
+                // EternalWrath: Disable Sindragosa's Fury on Initial Landing
+//                if (!instance->GetData(DATA_SINDRAGOSA_INTRO))
+//                {
+//                    DoCastAOE(SPELL_SINDRAGOSA_S_FURY);
+//                }
             }
         }
 
@@ -447,8 +448,8 @@ public:
                         me->SetDisableGravity(false);
                         me->SetSpeed(MOVE_RUN, me->GetCreatureTemplate()->speed_run);
                         me->SetReactState(REACT_AGGRESSIVE);
-                        if (Unit* target = me->SelectVictim())
-                            AttackStart(target);
+                        //if (Unit* target = me->SelectVictim())
+                        //    AttackStart(target);
                         break;
                     }
                 default:
