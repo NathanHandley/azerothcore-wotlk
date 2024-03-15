@@ -515,6 +515,7 @@ public:
                 case EVENT_PHASE_5_START:
                     if (me->HealthBelowPct(30))
                     {
+                        // EternalWrath: Disable Shadow Prison
                         //me->CastSpell(me, SPELL_SHADOW_PRISON, true);
                         me->SendMeleeAttackStop(me->GetVictim());
                         me->SetUnitFlag(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
