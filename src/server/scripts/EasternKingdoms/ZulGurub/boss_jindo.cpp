@@ -62,7 +62,8 @@ struct boss_jindo : public BossAI
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
-        events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s);
+        // EternalWrath: Disable Brain Wash Totem
+        //events.ScheduleEvent(EVENT_BRAIN_WASH_TOTEM, 20s);
         events.ScheduleEvent(EVENT_POWERFULL_HEALING_WARD, 16s);
         events.ScheduleEvent(EVENT_HEX, 8s);
         events.ScheduleEvent(EVENT_DELUSIONS_OF_JINDO, 10s);
