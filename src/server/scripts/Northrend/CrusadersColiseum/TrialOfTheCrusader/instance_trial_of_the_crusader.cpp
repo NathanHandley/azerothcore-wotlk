@@ -1030,11 +1030,12 @@ public:
                     }
                 case EVENT_SUMMON_CHAMPIONS:
                     {
-                        std::vector<uint32> vHealerEntries;
-                        vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_DRUID_RESTORATION : NPC_ALLIANCE_DRUID_RESTORATION);
-                        vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_PALADIN_HOLY : NPC_ALLIANCE_PALADIN_HOLY);
-                        vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_PRIEST_DISCIPLINE : NPC_ALLIANCE_PRIEST_DISCIPLINE);
-                        vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_SHAMAN_RESTORATION : NPC_ALLIANCE_SHAMAN_RESTORATION);
+                        // EternalWrath: Disable Healers
+                        //std::vector<uint32> vHealerEntries;
+                        //vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_DRUID_RESTORATION : NPC_ALLIANCE_DRUID_RESTORATION);
+                        //vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_PALADIN_HOLY : NPC_ALLIANCE_PALADIN_HOLY);
+                        //vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_PRIEST_DISCIPLINE : NPC_ALLIANCE_PRIEST_DISCIPLINE);
+                        //vHealerEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_SHAMAN_RESTORATION : NPC_ALLIANCE_SHAMAN_RESTORATION);
 
                         std::vector<uint32> vOtherEntries;
                         vOtherEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_DEATH_KNIGHT : NPC_ALLIANCE_DEATH_KNIGHT);
@@ -1044,48 +1045,49 @@ public:
                         vOtherEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_WARLOCK : NPC_ALLIANCE_WARLOCK);
                         vOtherEntries.push_back(TeamIdInInstance == TEAM_ALLIANCE ? NPC_HORDE_WARRIOR : NPC_ALLIANCE_WARRIOR);
 
-                        uint8 healersSubtracted = 2;
-                        if( instance->GetSpawnMode() == RAID_DIFFICULTY_25MAN_NORMAL || instance->GetSpawnMode() == RAID_DIFFICULTY_25MAN_HEROIC )
-                            healersSubtracted = 1;
-                        for( uint8 i = 0; i < healersSubtracted; ++i )
-                        {
-                            uint8 pos = urand(0, vHealerEntries.size() - 1);
-                            switch( vHealerEntries[pos] )
-                            {
-                                case NPC_ALLIANCE_DRUID_RESTORATION:
-                                    vOtherEntries.push_back(NPC_ALLIANCE_DRUID_BALANCE);
-                                    break;
-                                case NPC_HORDE_DRUID_RESTORATION:
-                                    vOtherEntries.push_back(NPC_HORDE_DRUID_BALANCE);
-                                    break;
-                                case NPC_ALLIANCE_PALADIN_HOLY:
-                                    vOtherEntries.push_back(NPC_ALLIANCE_PALADIN_RETRIBUTION);
-                                    break;
-                                case NPC_HORDE_PALADIN_HOLY:
-                                    vOtherEntries.push_back(NPC_HORDE_PALADIN_RETRIBUTION);
-                                    break;
-                                case NPC_ALLIANCE_PRIEST_DISCIPLINE:
-                                    vOtherEntries.push_back(NPC_ALLIANCE_PRIEST_SHADOW);
-                                    break;
-                                case NPC_HORDE_PRIEST_DISCIPLINE:
-                                    vOtherEntries.push_back(NPC_HORDE_PRIEST_SHADOW);
-                                    break;
-                                case NPC_ALLIANCE_SHAMAN_RESTORATION:
-                                    vOtherEntries.push_back(NPC_ALLIANCE_SHAMAN_ENHANCEMENT);
-                                    break;
-                                case NPC_HORDE_SHAMAN_RESTORATION:
-                                    vOtherEntries.push_back(NPC_HORDE_SHAMAN_ENHANCEMENT);
-                                    break;
-                            }
-                            vHealerEntries.erase(vHealerEntries.begin() + pos);
-                        }
+                        //uint8 healersSubtracted = 2;
+                        //if( instance->GetSpawnMode() == RAID_DIFFICULTY_25MAN_NORMAL || instance->GetSpawnMode() == RAID_DIFFICULTY_25MAN_HEROIC )
+                        //    healersSubtracted = 1;
+                        //for( uint8 i = 0; i < healersSubtracted; ++i )
+                        //{
+                        //    uint8 pos = urand(0, vHealerEntries.size() - 1);
+                        //    switch( vHealerEntries[pos] )
+                        //    {
+                        //        case NPC_ALLIANCE_DRUID_RESTORATION:
+                        //            vOtherEntries.push_back(NPC_ALLIANCE_DRUID_BALANCE);
+                        //            break;
+                        //        case NPC_HORDE_DRUID_RESTORATION:
+                        //            vOtherEntries.push_back(NPC_HORDE_DRUID_BALANCE);
+                        //            break;
+                        //        case NPC_ALLIANCE_PALADIN_HOLY:
+                        //            vOtherEntries.push_back(NPC_ALLIANCE_PALADIN_RETRIBUTION);
+                        //            break;
+                        //        case NPC_HORDE_PALADIN_HOLY:
+                        //            vOtherEntries.push_back(NPC_HORDE_PALADIN_RETRIBUTION);
+                        //            break;
+                        //        case NPC_ALLIANCE_PRIEST_DISCIPLINE:
+                        //            vOtherEntries.push_back(NPC_ALLIANCE_PRIEST_SHADOW);
+                        //            break;
+                        //        case NPC_HORDE_PRIEST_DISCIPLINE:
+                        //            vOtherEntries.push_back(NPC_HORDE_PRIEST_SHADOW);
+                        //            break;
+                        //        case NPC_ALLIANCE_SHAMAN_RESTORATION:
+                        //            vOtherEntries.push_back(NPC_ALLIANCE_SHAMAN_ENHANCEMENT);
+                        //            break;
+                        //        case NPC_HORDE_SHAMAN_RESTORATION:
+                        //            vOtherEntries.push_back(NPC_HORDE_SHAMAN_ENHANCEMENT);
+                        //            break;
+                        //    }
+                        //    vHealerEntries.erase(vHealerEntries.begin() + pos);
+                        //}
 
-                        if( instance->GetSpawnMode() == RAID_DIFFICULTY_10MAN_NORMAL || instance->GetSpawnMode() == RAID_DIFFICULTY_10MAN_HEROIC )
+                        // EternalWrath: Always reduce 4 entries regardless of difficulty
+//                        if( instance->GetSpawnMode() == RAID_DIFFICULTY_10MAN_NORMAL || instance->GetSpawnMode() == RAID_DIFFICULTY_10MAN_HEROIC )
                             for( uint8 i = 0; i < 4; ++i )
                                 vOtherEntries.erase(vOtherEntries.begin() + urand(0, vOtherEntries.size() - 1));
 
-                        for( std::vector<uint32>::iterator itr = vHealerEntries.begin(); itr != vHealerEntries.end(); ++itr )
-                            vOtherEntries.push_back(*itr);
+                        //for( std::vector<uint32>::iterator itr = vHealerEntries.begin(); itr != vHealerEntries.end(); ++itr )
+                        //    vOtherEntries.push_back(*itr);
 
                         uint8 pos2 = 10;
                         for( std::vector<uint32>::iterator itr = vOtherEntries.begin(); itr != vOtherEntries.end(); ++itr )
