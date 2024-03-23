@@ -5419,7 +5419,7 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
                        ? bubble1 * sWorld->getRate(RATE_REST_OFFLINE_IN_TAVERN_OR_CITY)
                        : bubble0 * sWorld->getRate(RATE_REST_OFFLINE_IN_WILDERNESS);
 
-        // Eternal Wrath: Restrict rest_bonus to level 80 experience amount
+        // EternalWrath: Restrict rest_bonus to level 80 experience amount
         float expBase = (float)GetUInt32Value(PLAYER_NEXT_LEVEL_XP);
         if (expBase > 1670800.0f)
             expBase = 1670800.0f;

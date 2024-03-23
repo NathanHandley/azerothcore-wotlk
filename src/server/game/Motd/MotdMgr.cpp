@@ -82,7 +82,7 @@ void MotdMgr::LoadMotd()
         LOG_INFO("server.loading", " ");
     }
 
-    // Eternal Wrath - Have a shared MOTD
+    // EternalWrath - Have a shared MOTD
     MotdMgr::SetMotd("Welcome to Eternal Wrath (based on AzerothCore)");
 
     LOG_INFO("server.loading", ">> Loaded Motd Definitions in {} ms", GetMSTimeDiffToNow(oldMSTime));
