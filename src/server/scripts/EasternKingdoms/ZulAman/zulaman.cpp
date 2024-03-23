@@ -673,7 +673,9 @@ public:
                             if (GameObject* gong = me->GetMap()->GetGameObject(instance->GetGuidData(GO_STRANGE_GONG)))
                                 gong->RemoveGameObjectFlag(GO_FLAG_NOT_SELECTABLE);
                             _gongEvent = GONG_EVENT_4;
-                            _gongTimer = 105000;
+                            // EternalWrath: Disable the need to bang the gong
+                            //_gongTimer = 105000;
+                            _gongTimer = 1000;
                             break;
                         case GONG_EVENT_4:
                             me->RemoveAura(SPELL_BANGING_THE_GONG);
