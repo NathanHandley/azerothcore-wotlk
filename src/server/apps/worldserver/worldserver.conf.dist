@@ -4352,7 +4352,7 @@ Minigob.Manabonk.Enable = 1
 #        Default:     0  - (Do not show)
 #
 
-Calculate.Creature.Zone.Area.Data = 0
+Calculate.Creature.Zone.Area.Data = 1
 
 #
 #     Calculate.Gameoject.Zone.Area.Data
@@ -4360,7 +4360,7 @@ Calculate.Creature.Zone.Area.Data = 0
 #        Default:     0  - (Do not show)
 #
 
-Calculate.Gameoject.Zone.Area.Data = 0
+Calculate.Gameoject.Zone.Area.Data = 1
 
 #
 #    TeleportTimeoutNear
