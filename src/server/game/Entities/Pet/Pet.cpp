@@ -261,6 +261,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
 
     if (current && owner->IsPetNeedBeTemporaryUnsummoned())
     {
+        owner->SetLastPetSpell(petInfo->CreatedBySpellId);
         owner->SetTemporaryUnsummonedPetNumber(petInfo->PetNumber);
         return false;
     }
@@ -2422,9 +2423,9 @@ void Pet::SynchronizeLevelWithOwner()
     }
 }
 
-void Pet::SetDisplayId(uint32 modelId)
+void Pet::SetDisplayId(uint32 modelId, float displayScale /*= 1.f*/)
 {
-    Guardian::SetDisplayId(modelId);
+    Guardian::SetDisplayId(modelId, displayScale);
 
     if (!isControlled())
         return;
