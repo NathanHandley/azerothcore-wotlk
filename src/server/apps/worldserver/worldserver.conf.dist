@@ -4370,7 +4370,7 @@ WipeGunshipBlizzlike.Enable = 1
 #        Description: Enable/ Disable Minigob Manabonk
 #        Default:     1
 
-Minigob.Manabonk.Enable = 1
+Minigob.Manabonk.Enable = 0
 
 #
 #     Calculate.Creature.Zone.Area.Data
