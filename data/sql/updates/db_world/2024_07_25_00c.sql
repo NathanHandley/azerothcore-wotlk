@@ -1,0 +1,4 @@
+DELETE FROM `creature_loot_template` WHERE `Item` = 37719;
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (3242, 37719, 0, 0.1, 0, 1, 0, 1, 1, 'Zhevra Runner - Swift Zhevra');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (3426, 37719, 0, 0.1, 0, 1, 0, 1, 1, 'Zhevra Charger - Swift Zhevra');
+INSERT INTO `creature_loot_template` (`Entry`, `Item`, `Reference`, `Chance`, `QuestRequired`, `LootMode`, `GroupId`, `MinCount`, `MaxCount`, `Comment`) VALUES (3466, 37719, 0, 0.1, 0, 1, 0, 1, 1, 'Zhevra Courser - Swift Zhevra');
