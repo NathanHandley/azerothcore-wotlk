@@ -3316,6 +3316,15 @@ LFG.KickPreventionTimer = 0
 DungeonAccessRequirements.LFGLevelDBCOverride = 0
 
 #
+#    DungeonFinder.CastDeserter
+#
+#        Description: Cast Deserter to player who leave a dungeon prematurely
+#        Default:     1 - (Enabled, Blizzlike)
+#                     0 - (Disabled)
+
+DungeonFinder.CastDeserter = 1
+
+#
 ###################################################################################################
 
 ###################################################################################################
