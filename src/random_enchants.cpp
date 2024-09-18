@@ -65,26 +65,6 @@ void rollPossibleEnchant(Player* player, Item* item)
         chathandle.PSendSysMessage("Newly Acquired |cffFF0000 %s |rhas received|cffFF0000 1 |rrandom enchantment!", name);
 }
 
-uint32 getRandEnchantment(Item* item)
-{
-    const ItemTemplate* itemTemplate = item->GetTemplate();
-    if (!itemTemplate)
-        return -1;
-
-    uint32 itemClass = item->GetTemplate()->Class;
-    uint32 itemQuality = item->GetTemplate()->Quality;
-    std::string classQueryString = "";
-    int rarityRoll = -1;
-    uint8 tier = CalcTierForItem(item);
-
-    QueryResult result = WorldDatabase.Query("SELECT enchantID FROM item_enchantment_random_tiers WHERE tier='{}' AND ((exclusiveSubClass=NULL AND class='{}') OR exclusiveSubClass='{}' OR class='ANY') ORDER BY RAND() LIMIT 1", tier, item->GetTemplate()->SubClass, classQueryString, classQueryString);
-
-    if (!result)
-        return 0;
-
-    return result->Fetch()[0].Get<uint32>();
-}
-
 int CalcTierForItem(Item* item)
 {
     const ItemTemplate* itemTemplate = item->GetTemplate();
@@ -139,6 +119,26 @@ int CalcTierForItem(Item* item)
     else
         tier = 5;
     return tier;
+}
+
+uint32 getRandEnchantment(Item* item)
+{
+    const ItemTemplate* itemTemplate = item->GetTemplate();
+    if (!itemTemplate)
+        return -1;
+
+    uint32 itemClass = item->GetTemplate()->Class;
+    uint32 itemQuality = item->GetTemplate()->Quality;
+    std::string classQueryString = "";
+    int rarityRoll = -1;
+    uint8 tier = CalcTierForItem(item);
+
+    QueryResult result = WorldDatabase.Query("SELECT enchantID FROM item_enchantment_random_tiers WHERE tier='{}' AND ((exclusiveSubClass=NULL AND class='{}') OR exclusiveSubClass='{}' OR class='ANY') ORDER BY RAND() LIMIT 1", tier, item->GetTemplate()->SubClass, classQueryString, classQueryString);
+
+    if (!result)
+        return 0;
+
+    return result->Fetch()[0].Get<uint32>();
 }
 
 void RandomEnchantsPlayer::OnLogin(Player* player)
