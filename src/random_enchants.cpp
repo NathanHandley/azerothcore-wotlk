@@ -1,3 +1,5 @@
+// Modifications since 9/17/2024 done by Nathan Handley
+
 #include "random_enchants.h"
 
 void rollPossibleEnchant(Player* player, Item* item)
@@ -26,12 +28,12 @@ void rollPossibleEnchant(Player* player, Item* item)
     float enchantChance2 = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance2", 65.0f);
     float enchantChance3 = sConfigMgr->GetOption<float>("RandomEnchants.EnchantChance3", 60.0f);
 
-    if (rand_chance() < enchantChance1)
-        slotRand[0] = getRandEnchantment(item);
-    if (slotRand[0] != -1 && rand_chance() < enchantChance2)
-        slotRand[1] = getRandEnchantment(item);
-    if (slotRand[1] != -1 && rand_chance() < enchantChance3)
+    if (itemQuality >= ITEM_QUALITY_RARE || rand_chance() < enchantChance1)
         slotRand[2] = getRandEnchantment(item);
+    if (itemQuality >= ITEM_QUALITY_EPIC || (slotRand[2] != -1 && rand_chance() < enchantChance2))
+        slotRand[1] = getRandEnchantment(item);
+    if (itemQuality >= ITEM_QUALITY_LEGENDARY || (slotRand[1] != -1 && rand_chance() < enchantChance3))
+        slotRand[0] = getRandEnchantment(item);
 
     for (int i = 0; i < 3; i++)
     {
@@ -65,67 +67,78 @@ void rollPossibleEnchant(Player* player, Item* item)
 
 uint32 getRandEnchantment(Item* item)
 {
+    const ItemTemplate* itemTemplate = item->GetTemplate();
+    if (!itemTemplate)
+        return -1;
+
     uint32 itemClass = item->GetTemplate()->Class;
     uint32 itemQuality = item->GetTemplate()->Quality;
     std::string classQueryString = "";
     int rarityRoll = -1;
-    uint8 tier = 0;
+    uint8 tier = CalcTierForItem(item);
 
-    switch (itemClass)
-    {
-        case 2:
-            classQueryString = "WEAPON";
-            break;
-        case 4:
-            classQueryString = "ARMOR";
-            break;
-    }
-
-    if (classQueryString == "")
-        return -1;
-
-    switch (itemQuality)
-    {
-        case GREY:
-            rarityRoll = rand_norm() * 25;
-            break;
-        case WHITE:
-            rarityRoll = rand_norm() * 50;
-            break;
-        case GREEN:
-            rarityRoll = 45 + (rand_norm() * 20);
-            break;
-        case BLUE:
-            rarityRoll = 65 + (rand_norm() * 15);
-            break;
-        case PURPLE:
-            rarityRoll = 80 + (rand_norm() * 14);
-            break;
-        case ORANGE:
-            rarityRoll = 93;
-            break;
-    }
-
-    if (rarityRoll < 0)
-        return -1;
-
-    if (rarityRoll <= 44)
-        tier = 1;
-    else if (rarityRoll <= 64)
-        tier = 2;
-    else if (rarityRoll <= 79)
-        tier = 3;
-    else if (rarityRoll <= 92)
-        tier = 4;
-    else
-        tier = 5;
-
-    QueryResult result = WorldDatabase.Query("SELECT `enchantID` FROM `item_enchantment_random_tiers` WHERE `tier`={} AND `exclusiveSubClass`=NULL AND exclusiveSubClass='{}' OR `class`='{}' OR `class`='ANY' ORDER BY RAND() LIMIT 1", tier, item->GetTemplate()->SubClass, classQueryString, classQueryString);
+    QueryResult result = WorldDatabase.Query("SELECT enchantID FROM item_enchantment_random_tiers WHERE tier='{}' AND ((exclusiveSubClass=NULL AND class='{}') OR exclusiveSubClass='{}' OR class='ANY') ORDER BY RAND() LIMIT 1", tier, item->GetTemplate()->SubClass, classQueryString, classQueryString);
 
     if (!result)
         return 0;
 
     return result->Fetch()[0].Get<uint32>();
+}
+
+int CalcTierForItem(Item* item)
+{
+    const ItemTemplate* itemTemplate = item->GetTemplate();
+
+    // Calculate the floor for the roll
+    int tierRollFloor = 0;
+
+    // Item quality raises the floor
+    switch (itemTemplate->Quality)
+    {
+    case ITEM_QUALITY_NORMAL:       tierRollFloor = 0;      break;
+    case ITEM_QUALITY_UNCOMMON:     tierRollFloor = 15;     break;
+    case ITEM_QUALITY_RARE:         tierRollFloor = 25;     break;
+    case ITEM_QUALITY_EPIC:         tierRollFloor = 50;     break;
+    case ITEM_QUALITY_LEGENDARY:    tierRollFloor = 75;     break;
+    default:                        tierRollFloor = 0;      break;
+    }
+
+    // Item level also impacts the floor
+    int tierItemLevelFloorAdd = 0;
+    if (itemTemplate->ItemLevel < 30)
+        tierItemLevelFloorAdd = 0;  // First Half of Classic Gear
+    else if (itemTemplate->ItemLevel < 60)
+        tierItemLevelFloorAdd = 10; // Second Half of Classic Gear
+    else if (itemTemplate->ItemLevel < 100)
+        tierItemLevelFloorAdd = 35; // Lower TBC Gear
+    else if (itemTemplate->ItemLevel < 140)
+        tierItemLevelFloorAdd = 50; // Higher TBC Gear
+    else if (itemTemplate->ItemLevel < 200)
+        tierItemLevelFloorAdd = 60; // Low 70s gear
+    else if (itemTemplate->ItemLevel < 245)
+        tierItemLevelFloorAdd = 75; // WOTLK Instance and Low Raids
+    else
+        tierItemLevelFloorAdd = 90; // WOTLK High Raids
+    tierRollFloor += tierItemLevelFloorAdd;
+
+    // Roll for a rarity
+    tierRollFloor += urand(0, 50);
+    int tierRollCap = tierRollFloor + 55 + urand(0, 100);
+    int tierRarityRoll = urand(tierRollFloor, tierRollCap);
+
+    // Determine the tier based on the result
+    int tier = 1;
+    if (tierRarityRoll < 50)
+        tier = 1;
+    else if (tierRarityRoll < 100)
+        tier = 2;
+    else if (tierRarityRoll < 150)
+        tier = 3;
+    else if (tierRarityRoll < 200)
+        tier = 4;
+    else
+        tier = 5;
+    return tier;
 }
 
 void RandomEnchantsPlayer::OnLogin(Player* player)
