@@ -1205,8 +1205,24 @@ public:
                                 if (Player* plr = itr->GetSource())
                                     if (!plr->IsGameMaster())
                                     {
-                                        TeamIdInInstance = plr->GetTeamId();
-                                        break;
+                                        if (Group* group = plr->GetGroup())
+                                        {
+                                            if (Player* gLeader = ObjectAccessor::FindPlayer(group->GetLeaderGUID()))
+                                            {
+                                                TeamIdInInstance = Player::TeamIdForRace(gLeader->getRace());
+                                                break;
+                                            }
+                                            else
+                                            {
+                                                TeamIdInInstance = plr->GetTeamId();
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            TeamIdInInstance = plr->GetTeamId();
+                                            break;
+                                        }
                                     }
                         }
                         if (Creature* c = instance->GetCreature(TeamIdInInstance == TEAM_ALLIANCE ? NPC_VarianGUID : NPC_GarroshGUID))
@@ -1399,6 +1415,22 @@ public:
 
         void OnPlayerEnter(Player* plr) override
         {
+            if (TeamIdInInstance == TEAM_NEUTRAL)
+            {
+                if (Group* group = plr->GetGroup())
+                {
+                    if (Player* gLeader = ObjectAccessor::FindPlayer(group->GetLeaderGUID()))
+                        TeamIdInInstance = Player::TeamIdForRace(gLeader->getRace());
+                    else
+                        TeamIdInInstance = plr->GetTeamId();
+                }
+                else
+                    TeamIdInInstance = plr->GetTeamId();
+            }
+
+            if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
+                plr->SetFaction((TeamIdInInstance == TEAM_HORDE) ? 1610 : 1);
+
             if (instance->IsHeroic())
             {
                 plr->SendUpdateWorldState(UPDATE_STATE_UI_SHOW, 1);
@@ -1416,6 +1448,12 @@ public:
             SpawnAnubArak();
 
             events.RescheduleEvent(EVENT_CHECK_PLAYERS, 5s);
+        }
+
+        void OnPlayerLeave(Player* player) override
+        {
+            if (sWorld->getBoolConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP))
+                player->SetFactionForRace(player->getRace());
         }
 
         bool DoNeedCleanup(Player* ignoredPlayer = nullptr)
