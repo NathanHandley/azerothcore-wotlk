@@ -5860,7 +5860,7 @@ void Player::CheckAreaExploreAndOutdoor()
                     XP = std::max(minScaledXP, XP);
                 }
 
-                sScriptMgr->OnGivePlayerXP(this, XP, nullptr, PlayerXPSource::XPSOURCE_EXPLORE);
+                sScriptMgr->OnPlayerGiveXP(this, XP, nullptr, PlayerXPSource::XPSOURCE_EXPLORE);
 
                 GiveXP(XP, nullptr);
                 SendExplorationExperience(areaId, XP);
