@@ -21,24 +21,6 @@
 #include "Player.h"
 #include <atomic>
 
-// TODO: Move these to WorldStateDefines.h
-enum WorldStateWorldStates
-{
-    // Sun's Reach Reclamation
-    WORLD_STATE_QUEL_DANAS_MUSIC                    = 3426,
-    WORLD_STATE_QUEL_DANAS_HARBOR                   = 3238,
-    WORLD_STATE_QUEL_DANAS_ALCHEMY_LAB              = 3223,
-    WORLD_STATE_QUEL_DANAS_ARMORY                   = 3233,
-    WORLD_STATE_QUEL_DANAS_SANCTUM                  = 3244,
-    WORLD_STATE_QUEL_DANAS_PORTAL                   = 3269,
-    WORLD_STATE_QUEL_DANAS_ANVIL                    = 3228,
-    WORLD_STATE_QUEL_DANAS_MONUMENT                 = 3275,
-    // Sunwell Gate
-    WORLD_STATE_AGAMATH_THE_FIRST_GATE_HEALTH       = 3253, // guessed, potentially wrong
-    WORLD_STATE_ROHENDOR_THE_SECOND_GATE_HEALTH     = 3255,
-    WORLD_STATE_ARCHONISUS_THE_FINAL_GATE_HEALTH    = 3257,
-};
-
 enum WorldStateCondition
 {
     WORLD_STATE_CONDITION_TROLLBANES_COMMAND  = 39911,
@@ -195,6 +177,9 @@ class WorldState
         virtual ~WorldState();
         static WorldState* instance();
         void Load();
+        void LoadWorldStates();
+        void setWorldState(uint32 index, uint64 value);
+        [[nodiscard]] uint64 getWorldState(uint32 index) const;
         void Save(WorldStateSaveIds saveId);
         void SaveHelper(std::string& stringToSave, WorldStateSaveIds saveId);
         void HandlePlayerEnterZone(Player* player, WorldStateZoneId zoneId);
@@ -213,6 +198,8 @@ class WorldState
         void HandleSunwellGateTransition(uint32 newGate);
         void SetSunwellGateCounter(SunwellGateCounters index, uint32 value);
     private:
+        typedef std::map<uint32, uint64> WorldStatesMap;
+        WorldStatesMap _worldstates;
         void SendWorldstateUpdate(std::mutex& mutex, GuidVector const& guids, uint32 value, uint32 worldStateId);
         void StopSunsReachPhase(bool forward);
         void StartSunsReachPhase(bool initial = false);
