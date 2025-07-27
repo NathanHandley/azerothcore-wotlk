@@ -504,6 +504,12 @@ void WorldConfig::BuildConfigCache()
 
     SetConfigValue<uint32>(CONFIG_DAILY_RBG_MIN_LEVEL_AP_REWARD, "DailyRBGArenaPoints.MinLevel", 71);
 
+    // Eternal Wrath
+    SetConfigValue<uint32>(CONFIG_MIN_XP_PERCENT_QUEST, "MinXPPercent.Quest", 0);
+    SetConfigValue<uint32>(CONFIG_MIN_XP_PERCENT_KILL, "MinXPPercent.Kill", 0);
+    SetConfigValue<uint32>(CONFIG_MIN_XP_PERCENT_DISCOVERED, "MinXPPercent.Discover", 0);
+    ///
+
     // Respawn
     SetConfigValue<float>(CONFIG_RESPAWN_DYNAMICRATE_CREATURE, "Respawn.DynamicRateCreature", 1.0f);
     SetConfigValue<uint32>(CONFIG_RESPAWN_DYNAMICMINIMUM_CREATURE, "Respawn.DynamicMinimumCreature", 10);
