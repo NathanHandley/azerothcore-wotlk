@@ -342,7 +342,7 @@ class spell_dk_death_and_decay_aura : public AuraScript
         if (GetCaster() && GetTarget())
         {
             int32 basePoints0 = aurEff->GetAmount();
-            GetCaster()->CastCustomSpell(GetTarget(), SPELL_DK_DEATH_AND_DECAY_TRIGGER, &basePoints0, nullptr, nullptr, true, 0, aurEff);
+            GetCaster()->CastCustomSpell(GetTarget(), SPELL_DK_DEATH_AND_DECAY_TRIGGER, &basePoints0, nullptr, nullptr, false, 0, aurEff);
         }
     }
 
@@ -530,11 +530,21 @@ class spell_dk_bone_shield : public AuraScript
 {
     PrepareAuraScript(spell_dk_bone_shield);
 
+    uint32 lastChargeUsedTime = 0;
+
     void HandleProc(ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
+        uint32 currentTime = getMSTime();
+        // Checks for 2 seconds between uses of bone shield charges
+        if ((currentTime - lastChargeUsedTime) < 2000)
+            return;
+
         if (!eventInfo.GetSpellInfo() || !eventInfo.GetSpellInfo()->IsTargetingArea())
+        {
             DropCharge();
+            lastChargeUsedTime = currentTime;
+        }
     }
 
     void Register() override
@@ -766,19 +776,19 @@ class spell_dk_pet_scaling : public AuraScript
 
     void CalculateSPAmount(AuraEffect const*  /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
     {
-        // xinef: dk gargoyle inherits 33% of SP
         if (GetUnitOwner()->GetEntry() != NPC_EBON_GARGOYLE)
             return;
 
         if (Unit* owner = GetUnitOwner()->GetOwner())
         {
-            int32 modifier = 33;
+            // Percentage of the owner's attack power to be inherited as spell power
+            // This value was chosen based on experimental damage of Gargoyle Strike
+            int32 modifier = 75;
 
-            // xinef: impurity
-            if (owner->GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 1986, 0))
-                modifier = 40;
+            if (AuraEffect* impurityEff = owner->GetDummyAuraEffect(SPELLFAMILY_DEATHKNIGHT, 1986, EFFECT_0))
+                AddPct(modifier, impurityEff->GetAmount());
 
-            amount = CalculatePct(std::max<int32>(0, owner->GetTotalAttackPowerValue(BASE_ATTACK)), modifier);
+            amount = CalculatePct(std::max<int32>(0, static_cast<int32>(owner->GetTotalAttackPowerValue(BASE_ATTACK))), modifier);
 
             // xinef: Update appropriate player field
             if (owner->IsPlayer())
@@ -790,8 +800,11 @@ class spell_dk_pet_scaling : public AuraScript
     {
         // xinef: scale haste with owners melee haste
         if (Unit* owner = GetUnitOwner()->GetOwner())
-            if (owner->m_modAttackSpeedPct[BASE_ATTACK] < 1.0f) // inherit haste only
-                amount = std::min<int32>(100, int32(((1.0f / owner->m_modAttackSpeedPct[BASE_ATTACK]) - 1.0f) * 100.0f));
+        {
+            float modSpeed = owner->m_modAttackSpeedPct[BASE_ATTACK];
+            modSpeed = std::ranges::clamp(modSpeed, 1e-6f, 1.0f);
+            amount = static_cast<int32>(((1.0f / modSpeed) - 1.0f) * 100.0f);
+        }
     }
 
     void HandleEffectApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
@@ -850,13 +863,13 @@ class spell_dk_pet_scaling : public AuraScript
 
     void Register() override
     {
-        if (m_scriptSpellId == 54566)
+        if (m_scriptSpellId == SPELL_DK_PET_SCALING_01)
         {
             DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_pet_scaling::CalculateStatAmount, EFFECT_ALL, SPELL_AURA_MOD_STAT);
             DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_pet_scaling::CalculateSPAmount, EFFECT_ALL, SPELL_AURA_MOD_DAMAGE_DONE);
         }
 
-        if (m_scriptSpellId == 51996)
+        if (m_scriptSpellId == SPELL_DK_PET_SCALING_02)
             DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dk_pet_scaling::CalculateHasteAmount, EFFECT_ALL, SPELL_AURA_MELEE_SLOW);
 
         OnEffectApply += AuraEffectApplyFn(spell_dk_pet_scaling::HandleEffectApply, EFFECT_ALL, SPELL_AURA_ANY, AURA_EFFECT_HANDLE_REAL);
