@@ -26,6 +26,7 @@
 #include "ItemTemplate.h"
 #include "MotionMaster.h"
 #include "Object.h"
+#include "PetDefines.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
 #include "SpellDefines.h"
@@ -622,6 +623,28 @@ typedef std::unordered_map<uint32, uint32> PacketCooldowns;
 #define MAX_PLAYER_STEALTH_DETECT_RANGE 30.0f               // max distance for detection targets by player
 
 struct SpellProcEventEntry;                                 // used only privately
+
+enum class SpeedOpcodeIndex : uint32
+{
+    PC,
+    NPC,
+    ACK_RESPONSE,
+    MAX
+};
+
+typedef const Opcodes SpeedOpcodePair[static_cast<size_t>(SpeedOpcodeIndex::MAX)];
+SpeedOpcodePair SetSpeed2Opc_table[MAX_MOVE_TYPE] =
+{
+    {SMSG_FORCE_WALK_SPEED_CHANGE,        SMSG_SPLINE_SET_WALK_SPEED,           MSG_MOVE_SET_WALK_SPEED},
+    {SMSG_FORCE_RUN_SPEED_CHANGE,         SMSG_SPLINE_SET_RUN_SPEED,            MSG_MOVE_SET_RUN_SPEED},
+    {SMSG_FORCE_RUN_BACK_SPEED_CHANGE,    SMSG_SPLINE_SET_RUN_BACK_SPEED,       MSG_MOVE_SET_RUN_BACK_SPEED},
+    {SMSG_FORCE_SWIM_SPEED_CHANGE,        SMSG_SPLINE_SET_SWIM_SPEED,           MSG_MOVE_SET_SWIM_SPEED},
+    {SMSG_FORCE_SWIM_BACK_SPEED_CHANGE,   SMSG_SPLINE_SET_SWIM_BACK_SPEED,      MSG_MOVE_SET_SWIM_BACK_SPEED},
+    {SMSG_FORCE_TURN_RATE_CHANGE,         SMSG_SPLINE_SET_TURN_RATE,            MSG_MOVE_SET_TURN_RATE},
+    {SMSG_FORCE_FLIGHT_SPEED_CHANGE,      SMSG_SPLINE_SET_FLIGHT_SPEED,         MSG_MOVE_SET_FLIGHT_SPEED},
+    {SMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE, SMSG_SPLINE_SET_FLIGHT_BACK_SPEED,    MSG_MOVE_SET_FLIGHT_BACK_SPEED},
+    {SMSG_FORCE_PITCH_RATE_CHANGE,        SMSG_SPLINE_SET_PITCH_RATE,           MSG_MOVE_SET_PITCH_RATE},
+};
 
 class Unit : public WorldObject
 {
@@ -1677,12 +1700,10 @@ public:
     void propagateSpeedChange() { GetMotionMaster()->propagateSpeedChange(); }
 
     void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 TransitTime, SplineFlags sf = SPLINEFLAG_WALK_MODE); // pussywizard: need to just send packet, with no movement/spline
-    void MonsterMoveWithSpeed(float x, float y, float z, float speed);
-    //void SetFacing(float ori, WorldObject* obj = nullptr);
-    //void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint8 type, uint32 MovementFlags, uint32 Time, Player* player = nullptr);
+    void MonsterMoveWithSpeed(float x, float y, float z, float speed); // Not to be used outside of cinematics
 
     virtual bool SetWalk(bool enable);
-    virtual bool SetDisableGravity(bool disable, bool packetOnly = false, bool updateAnimationTier = true);
+    void SetDisableGravity(bool disable);
     virtual bool SetSwim(bool enable);
     void SetCanFly(bool enable);
     void SetWaterWalking(bool enable);
@@ -1921,8 +1942,8 @@ public:
 
     void SetInFront(WorldObject const* target);
     void SetFacingTo(float ori);
-    void SetFacingToObject(WorldObject* object);
-    void SetTimedFacingToObject(WorldObject* object, uint32 time); // Reset to home orientation after given time
+    // <timed>Reset to home orientation after given time
+    void SetFacingToObject(WorldObject* object, Milliseconds timed = 0ms);
 
     bool isInAccessiblePlaceFor(Creature const* c) const;
     bool isInFrontInMap(Unit const* target, float distance, float arc = M_PI) const;
@@ -1964,9 +1985,10 @@ public:
     void SendPlaySpellVisual(uint32 id);
     void SendPlaySpellImpact(ObjectGuid guid, uint32 id);
 
-    void SendPetActionFeedback (uint8 msg);
-    void SendPetTalk (uint32 pettalk);
-    void SendPetAIReaction(ObjectGuid guid);
+    void SendPetActionFeedback(uint8 msg) const;
+    void SendPetActionSound(PetAction action) const;
+    void SendPetDismissSound() const;
+    void SendPetAIReaction(ObjectGuid guid) const;
 
     void SendPeriodicAuraLog(SpellPeriodicAuraLogInfo* pInfo);
 

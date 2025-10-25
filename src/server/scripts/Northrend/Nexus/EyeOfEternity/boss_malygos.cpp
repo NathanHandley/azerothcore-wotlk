@@ -521,16 +521,14 @@ public:
                                             }
                                             //pPlayer->ClearUnitState(UNIT_STATE_ONVEHICLE);
 
-                                            Movement::MoveSplineInit init(pPlayer);
+                                            Movement::MoveSplineInit init(pPlayer); // TODO: has to be removed and handled with vehicle exit and vehicle enter code
                                             init.MoveTo(CenterPos.GetPositionX(), CenterPos.GetPositionY(), CenterPos.GetPositionZ());
                                             init.SetFacing(pPlayer->GetOrientation());
                                             init.SetTransportExit();
                                             init.Launch();
 
                                             pPlayer->SetUnitMovementFlags(MOVEMENTFLAG_NONE);
-                                            pPlayer->SetDisableGravity(true, true);
-
-                                            sScriptMgr->AnticheatSetCanFlybyServer(pPlayer, true);
+                                            pPlayer->SetDisableGravity(true);
 
                                             WorldPacket data(SMSG_SPLINE_MOVE_UNROOT, 8);
                                             data << pPlayer->GetPackGUID();
@@ -727,7 +725,7 @@ public:
                                     {
                                         c->SetFaction(pPlayer->GetFaction());
                                         //pPlayer->CastCustomSpell(60683, SPELLVALUE_BASE_POINT0, 1, c, true);
-                                        c->m_Events.AddEvent(new EoEDrakeEnterVehicleEvent(*c, pPlayer->GetGUID()), c->m_Events.CalculateTime(500));
+                                        c->m_Events.AddEventAtOffset(new EoEDrakeEnterVehicleEvent(*c, pPlayer->GetGUID()), 500ms);
                                         AttackStart(c);
                                     }
                                 }
@@ -898,9 +896,9 @@ public:
             {
                 Player* plr = pass->ToPlayer();
                 float speed = plr->GetDistance(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ()) / (1.0f * 0.001f);
-                plr->MonsterMoveWithSpeed(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), speed);
+                plr->SetDisableGravity(false); // packet only would lead to issues elsewhere
+                plr->GetMotionMaster()->MoveCharge(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), speed);
                 plr->RemoveAura(SPELL_FREEZE_ANIM);
-                plr->SetDisableGravity(false, true);
                 plr->SetGuidValue(PLAYER_FARSIGHT, ObjectGuid::Empty);
 
                 sScriptMgr->AnticheatSetCanFlybyServer(plr, false);
@@ -941,10 +939,7 @@ public:
                             if (!bUpdatedFlying && timer)
                             {
                                 bUpdatedFlying = true;
-                                plr->SetDisableGravity(true, true);
-
-                                sScriptMgr->AnticheatSetCanFlybyServer(plr, true);
-                                sScriptMgr->AnticheatSetUnderACKmount(plr);
+                                plr->SetDisableGravity(true);
                             }
 
                             plr->SendMonsterMove(me->GetPositionX() + dist * cos(arcangle), me->GetPositionY() + dist * std::sin(arcangle), me->GetPositionZ(), VORTEX_DEFAULT_DIFF * 2, SPLINEFLAG_FLYING);
@@ -998,7 +993,7 @@ public:
                     MoveTimer = 0;
                     me->GetMotionMaster()->MoveIdle();
                     me->DisableSpline();
-                    me->MonsterMoveWithSpeed(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() + 0.05f, 7.0f);
+                    me->GetMotionMaster()->MovePoint(0, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() + 0.05f, FORCED_MOVEMENT_NONE, 7.0f);
                     break;
             }
         }
@@ -1013,8 +1008,7 @@ public:
                     MoveTimer = 0;
                     me->GetMotionMaster()->MoveIdle();
                     me->DisableSpline();
-                    me->MonsterMoveWithSpeed(me->GetPositionX(), me->GetPositionY(), CenterPos.GetPositionZ(), 100.0f);
-                    me->SetPosition(me->GetPositionX(), me->GetPositionY(), CenterPos.GetPositionZ(), me->GetOrientation());
+                    me->GetMotionMaster()->MovePoint(0, me->GetPositionX(), me->GetPositionY(), CenterPos.GetPositionZ(), FORCED_MOVEMENT_NONE, 100.0f);
                     me->ReplaceAllUnitFlags(UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE);
                     me->RemoveAura(SPELL_POWER_SPARK_VISUAL);
                     me->CastSpell(me, SPELL_POWER_SPARK_GROUND_BUFF, true);
@@ -1221,8 +1215,9 @@ public:
             if (Vehicle* v = me->GetVehicle())
                 v->RemoveAllPassengers();
 
-            if (Player* player = killer->GetCharmerOrOwnerPlayerOrPlayerItself())
-                player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_GET_KILLING_BLOWS, 1, 0, me);
+            if (killer)
+                if (Player* player = killer->GetCharmerOrOwnerPlayerOrPlayerItself())
+                    player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_GET_KILLING_BLOWS, 1, 0, me);
         }
 
         void MoveInLineOfSight(Unit*  /*who*/) override {}

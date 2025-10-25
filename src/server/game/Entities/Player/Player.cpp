@@ -1573,17 +1573,6 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             if (oldmap)
                 oldmap->RemovePlayerFromMap(this, false);
 
-            // xinef: do this before setting fall information!
-            if (IsMounted() && (!GetMap()->GetEntry()->IsDungeon() && !GetMap()->GetEntry()->IsBattlegroundOrArena()) && !m_transport)
-            {
-                AuraEffectList const& auras = GetAuraEffectsByType(SPELL_AURA_MOUNTED);
-                if (!auras.empty())
-                {
-                    SetMountBlockId((*auras.begin())->GetId());
-                    RemoveAurasByType(SPELL_AURA_MOUNTED);
-                }
-            }
-
             teleportStore_dest = WorldLocation(mapid, x, y, z, orientation);
             SetFallInformation(GameTime::GetGameTime().count(), z);
             // if the player is saved before worldportack (at logout for example)
@@ -11710,7 +11699,7 @@ void Player::SendInitialPacketsAfterAddToMap()
     // manual send package (have code in HandleEffect(this, AURA_EFFECT_HANDLE_SEND_FOR_CLIENT, true); that must not be re-applied.
     if (IsImmobilizedState())
     {
-        auto const counter = GetSession()->GetOrderCounter();
+        uint32 const counter = GetSession()->GetOrderCounter();
         setCompoundState << uint8(2 + GetPackGUID().size() + 4);
         setCompoundState << uint16(SMSG_FORCE_MOVE_ROOT);
         setCompoundState << GetPackGUID();
@@ -11720,7 +11709,7 @@ void Player::SendInitialPacketsAfterAddToMap()
 
     if (HasAuraType(SPELL_AURA_FEATHER_FALL))
     {
-        auto const counter = GetSession()->GetOrderCounter();
+        uint32 const counter = GetSession()->GetOrderCounter();
         setCompoundState << uint8(2 + GetPackGUID().size() + 4);
         setCompoundState << uint16(SMSG_MOVE_FEATHER_FALL);
         setCompoundState << GetPackGUID();
@@ -11730,7 +11719,7 @@ void Player::SendInitialPacketsAfterAddToMap()
 
     if (HasAuraType(SPELL_AURA_WATER_WALK))
     {
-        auto const counter = GetSession()->GetOrderCounter();
+        uint32 const counter = GetSession()->GetOrderCounter();
         setCompoundState << uint8(2 + GetPackGUID().size() + 4);
         setCompoundState << uint16(SMSG_MOVE_WATER_WALK);
         setCompoundState << GetPackGUID();
@@ -11740,7 +11729,7 @@ void Player::SendInitialPacketsAfterAddToMap()
 
     if (HasAuraType(SPELL_AURA_HOVER))
     {
-        auto const counter = GetSession()->GetOrderCounter();
+        uint32 const counter = GetSession()->GetOrderCounter();
         setCompoundState << uint8(2 + GetPackGUID().size() + 4);
         setCompoundState << uint16(SMSG_MOVE_SET_HOVER);
         setCompoundState << GetPackGUID();
@@ -14380,6 +14369,12 @@ bool Player::CanSeeSpellClickOn(Creature const* c) const
  */
 bool Player::AnyVendorOptionAvailable(uint32 menuId, Creature const* creature) const
 {
+    {
+        GossipMenuItemsMapBounds menuItemBounds = sObjectMgr->GetGossipMenuItemsMapBounds(menuId);
+        if (menuItemBounds.first == menuItemBounds.second)
+            return true;
+    }
+
     std::set<uint32> visitedMenus;
     std::queue<uint32> menusToCheck;
     menusToCheck.push(menuId);
@@ -16032,24 +16027,6 @@ bool Player::IsInWhisperWhiteList(ObjectGuid guid)
     }
 
     return false;
-}
-
-bool Player::SetDisableGravity(bool disable, bool packetOnly /*= false*/, bool /*updateAnimationTier = true*/)
-{
-    if (!packetOnly && !Unit::SetDisableGravity(disable))
-        return false;
-
-    WorldPacket data(disable ? SMSG_MOVE_GRAVITY_DISABLE : SMSG_MOVE_GRAVITY_ENABLE, 12);
-    data << GetPackGUID();
-    data << GetSession()->GetOrderCounter(); // movement counter
-    SendDirectMessage(&data);
-    GetSession()->IncrementOrderCounter();
-
-    data.Initialize(MSG_MOVE_GRAVITY_CHNG, 64);
-    data << GetPackGUID();
-    BuildMovementPacket(&data);
-    SendMessageToSet(&data, false);
-    return true;
 }
 
 Guild* Player::GetGuild() const
