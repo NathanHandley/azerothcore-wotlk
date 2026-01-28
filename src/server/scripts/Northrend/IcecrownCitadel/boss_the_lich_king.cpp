@@ -141,6 +141,7 @@ enum Spells
     SPELL_SOUL_REAPER                   = 69409, // instant
     SPELL_SOUL_REAPER_BUFF              = 69410,
     SPELL_SUMMON_VALKYR                 = 69037, // instant
+    SPELL_SUMMON_VALKYR_PERIODIC        = 74361,
     SPELL_WINGS_OF_THE_DAMNED           = 74352,
     SPELL_VALKYR_TARGET_SEARCH          = 69030,
     SPELL_HARVEST_SOUL_VALKYR           = 68985, // vehicle aura used by Val'kyr Shadowguard and Strangulate Vehicle
@@ -1151,7 +1152,7 @@ public:
                         if (doSummonValkyr)
                         {                            
                             Talk(SAY_LK_SUMMON_VALKYR);
-							me->CastSpell((Unit*)nullptr, SPELL_SUMMON_VALKYR, false);
+							DoCastSelf(Is25ManRaid() ? SPELL_SUMMON_VALKYR_PERIODIC : SPELL_SUMMON_VALKYR);
                         }
                         events.ScheduleEvent(EVENT_SUMMON_VALKYR, 45s, EVENT_GROUP_ABILITIES);
 

@@ -3289,6 +3289,26 @@ void SmartScript::ProcessAction(SmartScriptHolder& e, Unit* unit, uint32 var0, u
                 }
             break;
         }
+        case SMART_ACTION_SET_ANIM_TIER:
+        {
+            for (WorldObject* target : targets)
+                if (IsUnit(target))
+                    target->ToUnit()->SetAnimTier(AnimTier(e.action.animTier.animTier));
+            break;
+        }
+        case SMART_ACTION_SET_GOSSIP_MENU:
+        {
+            for (WorldObject* target : targets)
+            {
+                if (Creature* creature = target->ToCreature())
+                {
+                    creature->SetGossipMenuId(e.action.setGossipMenu.gossipMenuId);
+                    LOG_DEBUG("sql.sql", "SmartScript::ProcessAction: SMART_ACTION_SET_GOSSIP_MENU: Creature {} set gossip menu to {}",
+                        creature->GetGUID().ToString(), e.action.setGossipMenu.gossipMenuId);
+                }
+            }
+            break;
+        }
         default:
             LOG_ERROR("sql.sql", "SmartScript::ProcessAction: Entry {} SourceType {}, Event {}, Unhandled Action type {}", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
             break;
@@ -4529,6 +4549,7 @@ void SmartScript::ProcessEvent(SmartScriptHolder& e, Unit* unit, uint32 var0, ui
             {
                 if (e.event.doAction.eventId != var0)
                     return;
+                RecalcTimer(e, e.event.doAction.cooldownMin, e.event.doAction.cooldownMax);
                 ProcessAction(e, unit, var0);
                 break;
             }
