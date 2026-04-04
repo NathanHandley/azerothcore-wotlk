@@ -405,10 +405,10 @@ LootItem::LootItem(LootStoreItem const& li)
     randomSuffix = GenerateEnchSuffixFactor(itemid);
     randomPropertyId = Item::GenerateItemRandomPropertyId(itemid);
     count = 0;
-    is_looted = 0;
-    is_blocked = 0;
-    is_underthreshold = 0;
-    is_counted = 0;
+    is_looted = false;
+    is_blocked = false;
+    is_underthreshold = false;
+    is_counted = false;
     rollWinnerGUID = ObjectGuid::Empty;
     groupid = li.groupid;
 }
@@ -662,7 +662,11 @@ QuestItemList* Loot::FillQuestLoot(Player* player)
         {
             item.AddAllowedLooter(player);
 
-            if (!item.is_counted)
+            if (item.freeforall)
+            {
+                ++unlootedCount;
+            }
+            else if (!item.is_counted)
             {
                 ++unlootedCount;
                 item.is_counted = true;
