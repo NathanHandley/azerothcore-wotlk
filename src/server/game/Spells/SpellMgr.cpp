@@ -33,6 +33,8 @@
 #include "Tokenize.h"
 #include "World.h"
 
+#include <algorithm>
+
 bool IsPrimaryProfessionSkill(uint32 skill)
 {
     SkillLineEntry const* pSkill = sSkillLineStore.LookupEntry(skill);
@@ -687,6 +689,24 @@ SpellLearnSkillNode const* SpellMgr::GetSpellLearnSkill(uint32 spell_id) const
         return nullptr;
 }
 
+std::vector<uint32> SpellMgr::GetSkillRankSpells(uint32 skillId) const
+{
+    // Returns every spell that grants this skill via SPELL_EFFECT_SKILL,
+    // i.e. the profession rank/proficiency spells (Apprentice -> Grand Master),
+    // ordered by step. Not strictly limited to the six ranks: any skill-granting
+    // spell for the line is included.
+    std::vector<uint32> result;
+    for (auto const& [spellId, node] : mSpellLearnSkills)
+        if (node.skill == skillId)
+            result.push_back(spellId);
+
+    std::ranges::sort(result, [this](uint32 a, uint32 b)
+    {
+        return mSpellLearnSkills.at(a).step < mSpellLearnSkills.at(b).step;
+    });
+    return result;
+}
+
 SpellTargetPosition const* SpellMgr::GetSpellTargetPosition(uint32 spell_id, SpellEffIndex effIndex) const
 {
     SpellTargetPositionMap::const_iterator itr = mSpellTargetPositions.find(std::make_pair(spell_id, effIndex));
@@ -991,7 +1011,7 @@ bool SpellMgr::IsArenaAllowedEnchancment(uint32 ench_id) const
     return mEnchantCustomAttr[ench_id];
 }
 
-const std::vector<int32>* SpellMgr::GetSpellLinked(int32 spell_id) const
+std::vector<int32> const* SpellMgr::GetSpellLinked(int32 spell_id) const
 {
     SpellLinkedMap::const_iterator itr = mSpellLinkedMap.find(spell_id);
     return itr != mSpellLinkedMap.end() ? &(itr->second) : nullptr;
@@ -3257,6 +3277,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                         case 44801: // Spectral Invisibility (Kalecgos, SWP)
                         case 46021: // Spectral Realm (SWP)
                         case 52951: // Chapel Invisibility (DK starting zone)
+                        case 43062: // Alpha Worg: Garwal's Invisibility
                             break;
                         default:
                             spellInfo->AuraInterruptFlags |= AURA_INTERRUPT_FLAG_CAST;
