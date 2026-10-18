@@ -2104,7 +2104,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
     // If this is a creature and it attacks from behind it has a probability to daze it's victim
     if ((damageInfo->damages[0].damage + damageInfo->damages[1].damage) && ((damageInfo->hitOutCome == MELEE_HIT_CRIT || damageInfo->hitOutCome == MELEE_HIT_CRUSHING || damageInfo->hitOutCome == MELEE_HIT_NORMAL || damageInfo->hitOutCome == MELEE_HIT_GLANCING) &&
                                !IsPlayer() && !ToCreature()->IsControlledByPlayer() && !victim->HasInArc(M_PI, this)
-                               && (victim->IsPlayer() || !victim->ToCreature()->isWorldBoss()) && !victim->IsVehicle()))
+                               && (victim->IsPlayer() || (!victim->ToCreature()->isWorldBoss() && !victim->IsVehicle()))))
     {
         // -probability is between 0% and 40%
         // 20% base chance
@@ -2785,6 +2785,16 @@ void Unit::AttackerStateUpdate(Unit* victim, WeaponAttackType attType /*= BASE_A
 
     if (attType != BASE_ATTACK && attType != OFF_ATTACK)
         return;                                             // ignore ranged case
+
+    // Let the pet know we've started attacking someting. Handles melee attacks only
+    // Spells such as auto-shot and others handled in WorldSession::HandleCastSpellOpcode
+    if (IsPlayer())
+    {
+        for (Unit* controlled : m_Controlled)
+            if (Creature* cControlled = controlled->ToCreature())
+                if (CreatureAI* controlledAI = cControlled->AI())
+                    controlledAI->OwnerAttacked(victim);
+    }
 
     if (!extra && _lastExtraAttackSpell)
     {
@@ -6729,7 +6739,7 @@ void Unit::SendAttackStateUpdate(CalcDamageInfo* damageInfo)
         data << uint32(0);
 
     //! Probably used for debugging purposes, as it is not known to appear on retail servers
-    if (damageInfo->HitInfo & HITINFO_UNK1)
+    if (damageInfo->HitInfo & HITINFO_DEBUG)
     {
         data << uint32(0);
         data << float(0);
@@ -7220,16 +7230,6 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
     if (meleeAttack)
         SendMeleeAttackStart(victim);
 
-    // Let the pet know we've started attacking someting. Handles melee attacks only
-    // Spells such as auto-shot and others handled in WorldSession::HandleCastSpellOpcode
-    if (IsPlayer())
-    {
-        for (Unit* controlled : m_Controlled)
-            if (Creature* cControlled = controlled->ToCreature())
-                if (CreatureAI* controlledAI = cControlled->AI())
-                    controlledAI->OwnerAttacked(victim);
-    }
-
     return true;
 }
 
@@ -7270,7 +7270,7 @@ bool Unit::AttackStop()
     return true;
 }
 
-void Unit::CombatStop(bool includingCast, bool mutualPvP)
+void Unit::CombatStop(bool includingCast, bool mutualPvP, bool keepPvPForOthers)
 {
     if (includingCast && IsNonMeleeSpellCast(false))
         InterruptNonMeleeSpells(false);
@@ -7283,7 +7283,7 @@ void Unit::CombatStop(bool includingCast, bool mutualPvP)
         pCreature->ClearLastLeashExtensionTimePtr();
 
     if (mutualPvP)
-        ClearInCombat();
+        ClearInCombat(keepPvPForOthers);
     else
     {
         GetCombatManager().EndAllPvECombat();
@@ -10204,29 +10204,33 @@ uint32 Unit::MeleeDamageBonusTaken(Unit* attacker, uint32 pdamage, WeaponAttackT
     return uint32(std::max(tmpDamage, 0.0f));
 }
 
-class spellIdImmunityPredicate
-{
-public:
-    spellIdImmunityPredicate(uint32 type) : _type(type) {}
-    bool operator()(SpellImmune const& spellImmune) { return spellImmune.spellId == 0 && spellImmune.type == _type; }
-
-private:
-    uint32 _type;
-};
-
 void Unit::ApplySpellImmune(uint32 spellId, uint32 op, uint32 type, bool apply, SpellImmuneBlockType /*blockType*/)
 {
     if (apply)
+    {
+        // Immunities with spellId 0 are applied by scripts and are meant to exist only once per type.
+        if (!spellId)
+        {
+            auto bounds = m_spellImmune[op].equal_range(type);
+            for (auto itr = bounds.first; itr != bounds.second; ++itr)
+                if (!itr->second)
+                    return;
+        }
+
         m_spellImmune[op].emplace(type, spellId);
+    }
     else
     {
+        // Remove a single entry: the same spell can be applied by several casters at once (e.g. the four
+        // Magic Barrier channels on Lady Vashj), and each removal must drop only the application it belongs to.
         auto bounds = m_spellImmune[op].equal_range(type);
-        for (auto itr = bounds.first; itr != bounds.second;)
+        for (auto itr = bounds.first; itr != bounds.second; ++itr)
         {
             if (itr->second == spellId)
-                itr = m_spellImmune[op].erase(itr);
-            else
-                ++itr;
+            {
+                m_spellImmune[op].erase(itr);
+                break;
+            }
         }
     }
 }
@@ -10416,12 +10420,18 @@ void Unit::SetImmuneToNPC(bool apply, bool keepCombat)
         RemoveUnitFlag(UNIT_FLAG_IMMUNE_TO_NPC);
 }
 
-void Unit::ClearInCombat()
+void Unit::ClearInCombat(bool keepPvPForOthers)
 {
     m_CombatTimer = 0;
     // Let CombatManager handle flag removal through UpdateOwnerCombatState
     // so that AtExitCombat/AtDisengage callbacks properly fire.
-    GetCombatManager().EndAllCombat();
+    if (keepPvPForOthers)
+    {
+        GetCombatManager().EndAllPvECombat();
+        GetCombatManager().SuppressPvPCombat();
+    }
+    else
+        GetCombatManager().EndAllCombat();
     // If flag is still set (e.g. set by old code path without CombatReference),
     // remove it directly.
     if (IsInCombat())
@@ -10487,6 +10497,18 @@ bool Unit::isTargetableForAttack(bool checkFakeDeath, Unit const* byWho) const
 bool Unit::IsValidAttackTarget(Unit const* target, SpellInfo const* bySpell) const
 {
     return _IsValidAttackTarget(target, bySpell);
+}
+
+bool Unit::IsAreaEffectPvPBlocked(Unit const* target, SpellInfo const* bySpell) const
+{
+    if (!bySpell || !bySpell->IsAffectingArea() || bySpell->HasAttribute(SPELL_ATTR5_IGNORE_AREA_EFFECT_PVP_CHECK))
+        return false;
+
+    // only player controlled units take part in PvP, PvP flagged creatures remain valid targets
+    if (!HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) || !target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))
+        return false;
+
+    return !IsPvP();
 }
 
 // function based on function Unit::CanAttack from 13850 client
@@ -10608,7 +10630,7 @@ bool Unit::_IsValidAttackTarget(Unit const* target, SpellInfo const* bySpell, Wo
     // additional checks - only PvP case
     if (playerAffectingAttacker && playerAffectingTarget)
     {
-        if (!IsPvP() && bySpell && bySpell->IsAffectingArea() && !bySpell->HasAttribute(SPELL_ATTR5_IGNORE_AREA_EFFECT_PVP_CHECK))
+        if (IsAreaEffectPvPBlocked(target, bySpell))
             return false;
 
         if (target->IsPvP())
@@ -11119,13 +11141,18 @@ void Unit::SendSpeedToController(UnitMoveType mtype, Player* target) const
 
 void Unit::setDeathState(DeathState s, bool despawn)
 {
+    bool const wasAlive = IsAlive();
+
     // death state needs to be updated before RemoveAllAurasOnDeath() calls HandleChannelDeathItem(..) so that
     // it can be used to check creation of death items (such as soul shards).
     m_deathState = s;
 
     if (s != DeathState::Alive && s != DeathState::JustRespawned)
     {
-        CombatStop();
+        // restart our pvp timers so units fighting us get a full pvp timeout from our death (#27967)
+        if (wasAlive)
+            GetCombatManager().RestartPvPCombatTimers();
+        CombatStop(false, /*mutualPvP*/ true, /*keepPvPForOthers*/ true);
         ClearComboPointHolders();                           // any combo points pointed to unit lost at it death
 
         if (IsNonMeleeSpellCast(false))
@@ -13740,8 +13767,9 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
                 //Remove all expected to remove at death auras (most important negative case like DoT or periodic triggers)
                 victim->RemoveAllAurasOnDeath();
 
-                // Stop attacks
-                victim->CombatStop();
+                // Stop attacks - units in pvp combat with us keep a full pvp timeout, as on a real death
+                victim->GetCombatManager().RestartPvPCombatTimers();
+                victim->CombatStop(false, /*mutualPvP*/ true, /*keepPvPForOthers*/ true);
 
                 // restore for use at real death
                 victim->SetUInt32Value(PLAYER_SELF_RES_SPELL, ressSpellId);
