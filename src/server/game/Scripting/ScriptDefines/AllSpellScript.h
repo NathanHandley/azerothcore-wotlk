@@ -38,6 +38,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_CAST,
     ALLSPELLHOOK_ON_PREPARE,
     ALLSPELLHOOK_ON_IS_AURA_EXCLUSIVE_BY_SPECIFIC_WITH,
+    ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -63,9 +64,12 @@ public:
 
     [[nodiscard]] virtual bool CanSelectSpecTalent(Spell* /*spell*/) { return true; }
 
-    virtual void OnScaleAuraUnitAdd(Spell* /*spell*/, Unit* /*target*/, uint32 /*effectMask*/, bool /*checkIfValid*/, bool /*implicit*/, uint8 /*auraScaleMask*/, TargetInfo& /*targetInfo*/) { }
+    virtual void OnScaleAuraUnitAdd(Spell* /*spell*/, Unit* /*target*/, uint32 /*effectMask*/, bool /*checkIfValid*/, bool /*implicit*/, uint32 /*auraScaleMask*/, TargetInfo& /*targetInfo*/) { }
 
-    virtual void OnRemoveAuraScaleTargets(Spell* /*spell*/, TargetInfo& /*targetInfo*/, uint8 /*auraScaleMask*/, bool& /*needErase*/) { }
+    virtual void OnRemoveAuraScaleTargets(Spell* /*spell*/, TargetInfo& /*targetInfo*/, uint32 /*auraScaleMask*/, bool& /*needErase*/) { }
+
+    // MergedWorlds: the hit result (targetInfo.missCondition) was just rolled for a target, and can be changed
+    virtual void OnAfterSpellHitResult(Spell* /*spell*/, Unit* /*target*/, TargetInfo& /*targetInfo*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 

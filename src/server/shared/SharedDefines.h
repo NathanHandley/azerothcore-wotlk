@@ -31,6 +31,16 @@ enum SpellEffIndex : uint8
     EFFECT_0 = 0,
     EFFECT_1 = 1,
     EFFECT_2 = 2,
+    // MergedWorlds extended-effects: from SpellExtendedEffects.dbc
+    EFFECT_3 = 3,
+    EFFECT_4 = 4,
+    EFFECT_5 = 5,
+    EFFECT_6 = 6,
+    EFFECT_7 = 7,
+    EFFECT_8 = 8,
+    EFFECT_9 = 9,
+    EFFECT_10 = 10,
+    EFFECT_11 = 11,
 };
 
 // used in script definitions

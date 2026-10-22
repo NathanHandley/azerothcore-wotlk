@@ -153,6 +153,7 @@ DBCStorage <SoundEntriesEntry> sSoundEntriesStore(SoundEntriesfmt);
 DBCStorage <SpellItemEnchantmentEntry> sSpellItemEnchantmentStore(SpellItemEnchantmentfmt);
 DBCStorage <SpellItemEnchantmentConditionEntry> sSpellItemEnchantmentConditionStore(SpellItemEnchantmentConditionfmt);
 DBCStorage <SpellEntry> sSpellStore(SpellEntryfmt);
+DBCStorage <SpellExtendedEffectsEntry> sSpellExtendedEffectsStore(SpellExtendedEffectsfmt); // MergedWorlds extended-effects
 SpellCategoryStore sSpellsByCategoryStore;
 PetFamilySpellsStore sPetFamilySpellsStore;
 
@@ -359,6 +360,20 @@ void LoadDBCStores(std::string const& dataPath)
     LOAD_DBC(sSkillTiersStore,                      "SkillTiers.dbc",                       "skilltiers_dbc");
     LOAD_DBC(sSoundEntriesStore,                    "SoundEntries.dbc",                     "soundentries_dbc");
     LOAD_DBC(sSpellStore,                           "Spell.dbc",                            "spell_dbc");
+
+    // MergedWorlds extended-effects: optional, since stock data has none and only spells with more than three effects (or a per-effect level cap) get a row
+    {
+        ASSERT(DBCFileLoader::GetFormatRecordSize(sSpellExtendedEffectsStore.GetFormat()) == sizeof(SpellExtendedEffectsEntry) ||
+            LoadDBC_assert_print(DBCFileLoader::GetFormatRecordSize(sSpellExtendedEffectsStore.GetFormat()), sizeof(SpellExtendedEffectsEntry), "SpellExtendedEffects.dbc"));
+        std::string spellExtendedEffectsFilename = dbcPath + "SpellExtendedEffects.dbc";
+        if (FILE* f = fopen(spellExtendedEffectsFilename.c_str(), "rb"))
+        {
+            fclose(f);
+            ++DBCFileCount;
+            if (!sSpellExtendedEffectsStore.Load(spellExtendedEffectsFilename.c_str()))
+                bad_dbc_files.push_back(spellExtendedEffectsFilename + " exists, but could not be loaded (expected " + std::to_string(strlen(sSpellExtendedEffectsStore.GetFormat())) + " fields)");
+        }
+    }
     LOAD_DBC(sSpellCastTimesStore,                  "SpellCastTimes.dbc",                   "spellcasttimes_dbc");
     LOAD_DBC(sSpellCategoryStore,                   "SpellCategory.dbc",                    "spellcategory_dbc");
     LOAD_DBC(sSpellDifficultyStore,                 "SpellDifficulty.dbc",                  "spelldifficulty_dbc");
@@ -565,7 +580,7 @@ void LoadDBCStores(std::string const& dataPath)
     {
         std::set<uint32> spellPaths;
         for (SpellEntry const* sInfo : sSpellStore)
-            for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
+            for (uint8 j = 0; j < MAX_SPELL_EFFECTS_DBC; ++j)
                 if (sInfo->Effect[j] == SPELL_EFFECT_SEND_TAXI)
                     spellPaths.insert(sInfo->EffectMiscValue[j]);
 

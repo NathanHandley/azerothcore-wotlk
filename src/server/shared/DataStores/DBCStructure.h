@@ -1670,8 +1670,12 @@ struct SoundEntriesEntry
     // 29       new in 3.1
 };
 
-#define MAX_SPELL_EFFECTS 3
-#define MAX_EFFECT_MASK 7
+// MergedWorlds extended-effects: a spell can carry up to 12 effects.  Spell.dbc keeps its 3 (MAX_SPELL_EFFECTS_DBC), and effects
+// 3 and up come from SpellExtendedEffects.dbc (MAX_SPELL_EFFECTS_EXTENDED)
+#define MAX_SPELL_EFFECTS 12
+#define MAX_SPELL_EFFECTS_DBC 3
+#define MAX_SPELL_EFFECTS_EXTENDED (MAX_SPELL_EFFECTS - MAX_SPELL_EFFECTS_DBC)
+#define MAX_EFFECT_MASK 0xFFF
 #define MAX_SPELL_REAGENTS 8
 
 struct SpellEntry
@@ -1730,24 +1734,24 @@ struct SpellEntry
     int32     EquippedItemClass;                                    // 68       m_equippedItemClass (value)
     int32     EquippedItemSubClassMask;                             // 69       m_equippedItemSubclass (mask)
     int32     EquippedItemInventoryTypeMask;                        // 70       m_equippedItemInvTypes (mask)
-    std::array<uint32, MAX_SPELL_EFFECTS> Effect;                   // 71-73    m_effect
-    std::array<int32, MAX_SPELL_EFFECTS> EffectDieSides;            // 74-76    m_effectDieSides
-    std::array<float, MAX_SPELL_EFFECTS> EffectRealPointsPerLevel;  // 77-79    m_effectRealPointsPerLevel
-    std::array<int32, MAX_SPELL_EFFECTS> EffectBasePoints;          // 80-82    m_effectBasePoints (must not be used in spell/auras explicitly, must be used cached Spell::m_currentBasePoints)
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectMechanic;           // 83-85    m_effectMechanic
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectImplicitTargetA;    // 86-88    m_implicitTargetA
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectImplicitTargetB;    // 89-91    m_implicitTargetB
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectRadiusIndex;        // 92-94    m_effectRadiusIndex - spellradius.dbc
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectApplyAuraName;      // 95-97    m_effectAura
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectAmplitude;          // 98-100   m_effectAuraPeriod
-    std::array<float, MAX_SPELL_EFFECTS> EffectValueMultiplier;     // 101-103
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectChainTarget;        // 104-106  m_effectChainTargets
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectItemType;           // 107-109  m_effectItemType
-    std::array<int32, MAX_SPELL_EFFECTS> EffectMiscValue;           // 110-112  m_effectMiscValue
-    std::array<int32, MAX_SPELL_EFFECTS> EffectMiscValueB;          // 113-115  m_effectMiscValueB
-    std::array<uint32, MAX_SPELL_EFFECTS> EffectTriggerSpell;       // 116-118  m_effectTriggerSpell
-    std::array<float, MAX_SPELL_EFFECTS> EffectPointsPerComboPoint; // 119-121  m_effectPointsPerCombo
-    std::array<flag96, MAX_SPELL_EFFECTS> EffectSpellClassMask;     // 122-130
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> Effect;                   // 71-73    m_effect
+    std::array<int32, MAX_SPELL_EFFECTS_DBC> EffectDieSides;            // 74-76    m_effectDieSides
+    std::array<float, MAX_SPELL_EFFECTS_DBC> EffectRealPointsPerLevel;  // 77-79    m_effectRealPointsPerLevel
+    std::array<int32, MAX_SPELL_EFFECTS_DBC> EffectBasePoints;          // 80-82    m_effectBasePoints (must not be used in spell/auras explicitly, must be used cached Spell::m_currentBasePoints)
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectMechanic;           // 83-85    m_effectMechanic
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectImplicitTargetA;    // 86-88    m_implicitTargetA
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectImplicitTargetB;    // 89-91    m_implicitTargetB
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectRadiusIndex;        // 92-94    m_effectRadiusIndex - spellradius.dbc
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectApplyAuraName;      // 95-97    m_effectAura
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectAmplitude;          // 98-100   m_effectAuraPeriod
+    std::array<float, MAX_SPELL_EFFECTS_DBC> EffectValueMultiplier;     // 101-103
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectChainTarget;        // 104-106  m_effectChainTargets
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectItemType;           // 107-109  m_effectItemType
+    std::array<int32, MAX_SPELL_EFFECTS_DBC> EffectMiscValue;           // 110-112  m_effectMiscValue
+    std::array<int32, MAX_SPELL_EFFECTS_DBC> EffectMiscValueB;          // 113-115  m_effectMiscValueB
+    std::array<uint32, MAX_SPELL_EFFECTS_DBC> EffectTriggerSpell;       // 116-118  m_effectTriggerSpell
+    std::array<float, MAX_SPELL_EFFECTS_DBC> EffectPointsPerComboPoint; // 119-121  m_effectPointsPerCombo
+    std::array<flag96, MAX_SPELL_EFFECTS_DBC> EffectSpellClassMask;     // 122-130
     std::array<uint32, 2> SpellVisual;                              // 131-132  m_spellVisualID
     uint32    SpellIconID;                                          // 133      m_spellIconID
     uint32    ActiveIconID;                                         // 134      m_activeIconID
@@ -1770,7 +1774,7 @@ struct SpellEntry
     uint32    DmgClass;                                             // 213      m_defenseType
     uint32    PreventionType;                                       // 214      m_preventionType
     //uint32    StanceBarOrder;                                     // 215      m_stanceBarOrder not used
-    std::array<float, MAX_SPELL_EFFECTS> EffectDamageMultiplier;    // 216-218  m_effectChainAmplitude
+    std::array<float, MAX_SPELL_EFFECTS_DBC> EffectDamageMultiplier;    // 216-218  m_effectChainAmplitude
     //uint32    MinFactionId;                                       // 219      m_minFactionID not used
     //uint32    MinReputation;                                      // 220      m_minReputation not used
     //uint32    RequiredAuraVision;                                 // 221      m_requiredAuraVision not used
@@ -1780,9 +1784,36 @@ struct SpellEntry
     uint32    RuneCostID;                                           // 226      m_runeCostID
     //uint32    SpellMissileID;                                     // 227      m_spellMissileID not used
     //uint32  PowerDisplayId;                                       // 228      PowerDisplay.dbc, new in 3.1
-    std::array<float, MAX_SPELL_EFFECTS> EffectBonusMultiplier;     // 229-231  3.2.0
+    std::array<float, MAX_SPELL_EFFECTS_DBC> EffectBonusMultiplier;     // 229-231  3.2.0
     //uint32  SpellDescriptionVariableID;                           // 232      3.2.0
     //uint32  SpellDifficultyId;                                    // 233      3.3.0
+};
+
+// MergedWorlds extended-effects: effects 3 and up of a spell (row ID = spell ID), plus a per-effect level cap for every effect
+struct SpellExtendedEffectsEntry
+{
+    uint32    Id;                                                                   // 0        spell ID
+    std::array<uint32, MAX_SPELL_EFFECTS> EffectMaxLevel;                           // 1-12     level cap for an effect's per-level scaling, 0 = the spell's MaxLevel
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> Effect;                          // 13-21
+    std::array<int32, MAX_SPELL_EFFECTS_EXTENDED> EffectDieSides;                   // 22-30
+    std::array<float, MAX_SPELL_EFFECTS_EXTENDED> EffectRealPointsPerLevel;         // 31-39
+    std::array<int32, MAX_SPELL_EFFECTS_EXTENDED> EffectBasePoints;                 // 40-48
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectMechanic;                  // 49-57
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectImplicitTargetA;           // 58-66
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectImplicitTargetB;           // 67-75
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectRadiusIndex;               // 76-84
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectApplyAuraName;             // 85-93
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectAmplitude;                 // 94-102
+    std::array<float, MAX_SPELL_EFFECTS_EXTENDED> EffectValueMultiplier;            // 103-111
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectChainTarget;               // 112-120
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectItemType;                  // 121-129
+    std::array<int32, MAX_SPELL_EFFECTS_EXTENDED> EffectMiscValue;                  // 130-138
+    std::array<int32, MAX_SPELL_EFFECTS_EXTENDED> EffectMiscValueB;                 // 139-147
+    std::array<uint32, MAX_SPELL_EFFECTS_EXTENDED> EffectTriggerSpell;              // 148-156
+    std::array<float, MAX_SPELL_EFFECTS_EXTENDED> EffectPointsPerComboPoint;        // 157-165
+    std::array<flag96, MAX_SPELL_EFFECTS_EXTENDED> EffectSpellClassMask;            // 166-192
+    std::array<float, MAX_SPELL_EFFECTS_EXTENDED> EffectDamageMultiplier;           // 193-201
+    std::array<float, MAX_SPELL_EFFECTS_EXTENDED> EffectBonusMultiplier;            // 202-210
 };
 
 typedef std::set<std::pair<bool, uint32>> SpellCategorySet;

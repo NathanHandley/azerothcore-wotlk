@@ -545,6 +545,7 @@ public: /* GlobalScript */
     void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32 creditEntry, Unit* source, Difficulty difficulty_fixed, DungeonEncounterList const* encounters, uint32 dungeonCompleted, bool updated);
     void OnBeforeWorldObjectSetPhaseMask(WorldObject const* worldObject, uint32& oldPhaseMask, uint32& newPhaseMask, bool& useCombinedPhases, bool& update);
     bool OnIsAffectedBySpellModCheck(SpellInfo const* affectSpell, SpellInfo const* checkSpell, SpellModifier const* mod);
+    void OnIsSpellEffectAffectedBySpellMod(SpellInfo const* affectSpell, SpellInfo const* checkSpell, SpellModifier const* mod, uint8 effIndex, bool& affected); // MergedWorlds extended-effects
     bool OnSpellHealingBonusTakenNegativeModifiers(Unit const* target, Unit const* caster, SpellInfo const* spellInfo, float& val);
     void OnLoadSpellCustomAttr(SpellInfo* spell);
     bool OnAllowedForPlayerLootCheck(Player const* player, ObjectGuid source);
@@ -647,8 +648,9 @@ public: /* SpellSC */
     bool CanPrepare(Spell* spell, SpellCastTargets const* targets, AuraEffect const* triggeredByAura);
     bool CanScalingEverything(Spell* spell);
     bool CanSelectSpecTalent(Spell* spell);
-    void OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint8 auraScaleMask, TargetInfo& targetInfo);
-    void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint8 auraScaleMask, bool& needErase);
+    void OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint32 auraScaleMask, TargetInfo& targetInfo);
+    void OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& targetInfo); // MergedWorlds
+    void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
     void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);
     void OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, GameObject* gameObjTarget);

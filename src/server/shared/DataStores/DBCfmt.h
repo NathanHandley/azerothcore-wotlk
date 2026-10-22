@@ -111,6 +111,7 @@ char constexpr SpellEntryfmt[] = "niiiiiiiiiiiixixiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
 char constexpr SpellFocusObjectfmt[] = "nxxxxxxxxxxxxxxxxx";
 char constexpr SpellItemEnchantmentfmt[] = "niiiiiiixxxiiissssssssssssssssxiiiiiii";
 char constexpr SpellItemEnchantmentConditionfmt[] = "nbbbbbxxxxxbbbbbbbbbbiiiiiXXXXX";
+char constexpr SpellExtendedEffectsfmt[] = "niiiiiiiiiiiiiiiiiiiiiiiiiiiiiifffffffffiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifffffffffiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiifffffffffiiiiiiiiiiiiiiiiiiiiiiiiiiiffffffffffffffffff"; // MergedWorlds extended-effects
 char constexpr SpellRadiusfmt[] = "nfff";
 char constexpr SpellRangefmt[] = "nffffixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 char constexpr SpellRuneCostfmt[] = "niiii";

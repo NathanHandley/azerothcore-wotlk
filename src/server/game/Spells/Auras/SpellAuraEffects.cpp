@@ -851,28 +851,12 @@ void AuraEffect::ApplySpellMod(Unit* target, bool apply)
                         aura->GetSpellInfo()->CheckShapeshift(target->GetShapeshiftForm()) == SPELL_CAST_OK &&
                         aura->GetSpellInfo()->IsAffectedBySpellMod(m_spellmod))
                     {
-                        if (GetMiscValue() == SPELLMOD_ALL_EFFECTS)
+                        // MergedWorlds extended-effects: a per-effect mod recalculates the effects it reaches, which a script can point past the first three
+                        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                         {
-                            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                            {
-                                if (AuraEffect* aurEff = aura->GetEffect(i))
+                            if (AuraEffect* aurEff = aura->GetEffect(i))
+                                if (aura->GetSpellInfo()->IsEffectAffectedBySpellMod(m_spellmod, i))
                                     aurEff->RecalculateAmount();
-                            }
-                        }
-                        else if (GetMiscValue() == SPELLMOD_EFFECT1)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(0))
-                                aurEff->RecalculateAmount();
-                        }
-                        else if (GetMiscValue() == SPELLMOD_EFFECT2)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(1))
-                                aurEff->RecalculateAmount();
-                        }
-                        else //if (modOp == SPELLMOD_EFFECT3)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(2))
-                                aurEff->RecalculateAmount();
                         }
                     }
                 }
@@ -890,28 +874,12 @@ void AuraEffect::ApplySpellMod(Unit* target, bool apply)
                     // if aura is casted by others, it will not be affected
                     if ((aura->IsPassive() || aura->IsPermanent()) && aura->GetCasterGUID() == petguid && aura->GetSpellInfo()->IsAffectedBySpellMod(m_spellmod))
                     {
-                        if (GetMiscValue() == SPELLMOD_ALL_EFFECTS)
+                        // MergedWorlds extended-effects: a per-effect mod recalculates the effects it reaches, which a script can point past the first three
+                        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                         {
-                            for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-                            {
-                                if (AuraEffect* aurEff = aura->GetEffect(i))
+                            if (AuraEffect* aurEff = aura->GetEffect(i))
+                                if (aura->GetSpellInfo()->IsEffectAffectedBySpellMod(m_spellmod, i))
                                     aurEff->RecalculateAmount();
-                            }
-                        }
-                        else if (GetMiscValue() == SPELLMOD_EFFECT1)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(0))
-                                aurEff->RecalculateAmount();
-                        }
-                        else if (GetMiscValue() == SPELLMOD_EFFECT2)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(1))
-                                aurEff->RecalculateAmount();
-                        }
-                        else //if (modOp == SPELLMOD_EFFECT3)
-                        {
-                            if (AuraEffect* aurEff = aura->GetEffect(2))
-                                aurEff->RecalculateAmount();
                         }
                     }
                 }

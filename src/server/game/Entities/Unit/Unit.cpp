@@ -4342,7 +4342,7 @@ bool Unit::IsHighestExclusiveAura(Aura const* aura, bool removeOtherAuraApplicat
     return true;
 }
 
-bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint8 auraEffectMask, bool removeOtherAuraApplications /*= false*/)
+bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType auraType, int32 effectAmount, uint32 auraEffectMask, bool removeOtherAuraApplications /*= false*/)
 {
     AuraEffectList const& auras = GetAuraEffectsByType(auraType);
     for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end();)
@@ -4393,7 +4393,7 @@ bool Unit::IsHighestExclusiveAuraEffect(SpellInfo const* spellInfo, AuraType aur
     return true;
 }
 
-Aura* Unit::_TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint8 effMask, Unit* caster, int32* baseAmount /*= nullptr*/, Item* castItem /*= nullptr*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/, bool periodicReset /*= false*/)
+Aura* Unit::_TryStackingOrRefreshingExistingAura(SpellInfo const* newAura, uint32 effMask, Unit* caster, int32* baseAmount /*= nullptr*/, Item* castItem /*= nullptr*/, ObjectGuid casterGUID /*= ObjectGuid::Empty*/, bool periodicReset /*= false*/)
 {
     ASSERT(casterGUID || caster);
     if (!casterGUID)
@@ -4491,7 +4491,7 @@ void Unit::_AddAura(UnitAura* aura, Unit* caster)
 
 // creates aura application instance and registers it in lists
 // aura application effects are handled separately to prevent aura list corruption
-AuraApplication* Unit::_CreateAuraApplication(Aura* aura, uint8 effMask)
+AuraApplication* Unit::_CreateAuraApplication(Aura* aura, uint32 effMask)
 {
     // can't apply aura on unit which is going to be deleted - to not create a memory leak
     ASSERT(!m_cleanupDone);
@@ -4543,7 +4543,7 @@ void Unit::_ApplyAuraEffect(Aura* aura, uint8 effIndex)
 
 // handles effects of aura application
 // should be done after registering aura in lists
-void Unit::_ApplyAura(AuraApplication* aurApp, uint8 effMask)
+void Unit::_ApplyAura(AuraApplication* aurApp, uint32 effMask)
 {
     Aura* aura = aurApp->GetBase();
 
@@ -4754,7 +4754,7 @@ void Unit::RemoveOwnedAura(AuraMap::iterator& i, AuraRemoveMode removeMode)
     i = m_ownedAuras.begin();
 }
 
-void Unit::RemoveOwnedAura(uint32 spellId, ObjectGuid casterGUID, uint8 reqEffMask, AuraRemoveMode removeMode)
+void Unit::RemoveOwnedAura(uint32 spellId, ObjectGuid casterGUID, uint32 reqEffMask, AuraRemoveMode removeMode)
 {
     for (AuraMap::iterator itr = m_ownedAuras.lower_bound(spellId); itr != m_ownedAuras.upper_bound(spellId);)
         if (((itr->second->GetEffectMask() & reqEffMask) == reqEffMask) && (!casterGUID || itr->second->GetCasterGUID() == casterGUID))
@@ -4788,7 +4788,7 @@ void Unit::RemoveOwnedAura(Aura* aura, AuraRemoveMode removeMode)
     ABORT();
 }
 
-Aura* Unit::GetOwnedAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask, Aura* except) const
+Aura* Unit::GetOwnedAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask, Aura* except) const
 {
     AuraMapBounds range = m_ownedAuras.equal_range(spellId);
     for (AuraMap::const_iterator itr = range.first; itr != range.second; ++itr)
@@ -4820,7 +4820,7 @@ void Unit::RemoveAura(AuraApplicationMap::iterator& i, AuraRemoveMode mode)
     i = m_appliedAuras.begin();
 }
 
-void Unit::RemoveAura(uint32 spellId, ObjectGuid caster, uint8 reqEffMask, AuraRemoveMode removeMode)
+void Unit::RemoveAura(uint32 spellId, ObjectGuid caster, uint32 reqEffMask, AuraRemoveMode removeMode)
 {
     AuraApplicationMapBoundsNonConst range = m_appliedAuras.equal_range(spellId);
     for (AuraApplicationMap::iterator iter = range.first; iter != range.second;)
@@ -4943,7 +4943,7 @@ void Unit::RemoveAppliedAuras(uint32 spellId, std::function<bool(AuraApplication
     }
 }
 
-void Unit::RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID, uint8 reqEffMask, AuraRemoveMode removeMode)
+void Unit::RemoveAurasDueToSpell(uint32 spellId, ObjectGuid casterGUID, uint32 reqEffMask, AuraRemoveMode removeMode)
 {
     for (AuraApplicationMap::iterator iter = m_appliedAuras.lower_bound(spellId); iter != m_appliedAuras.upper_bound(spellId);)
     {
@@ -5050,8 +5050,8 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGUID, U
         {
             int32 damage[MAX_SPELL_EFFECTS];
             int32 baseDamage[MAX_SPELL_EFFECTS];
-            uint8 effMask = 0;
-            uint8 recalculateMask = 0;
+            uint32 effMask = 0;
+            uint32 recalculateMask = 0;
             Unit* caster = aura->GetCaster();
             for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
             {
@@ -5612,7 +5612,7 @@ AuraEffect* Unit::GetAuraEffectDummy(uint32 spellid) const
     return nullptr;
 }
 
-AuraApplication* Unit::GetAuraApplication(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask, AuraApplication* except) const
+AuraApplication* Unit::GetAuraApplication(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask, AuraApplication* except) const
 {
     AuraApplicationMapBounds range = m_appliedAuras.equal_range(spellId);
     for (; range.first != range.second; ++range.first)
@@ -5631,13 +5631,13 @@ AuraApplication* Unit::GetAuraApplication(uint32 spellId, ObjectGuid casterGUID,
     return nullptr;
 }
 
-Aura* Unit::GetAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+Aura* Unit::GetAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask) const
 {
     AuraApplication* aurApp = GetAuraApplication(spellId, casterGUID, itemCasterGUID, reqEffMask);
     return aurApp ? aurApp->GetBase() : nullptr;
 }
 
-AuraApplication* Unit::GetAuraApplicationOfRankedSpell(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask, AuraApplication* except) const
+AuraApplication* Unit::GetAuraApplicationOfRankedSpell(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask, AuraApplication* except) const
 {
     uint32 rankSpell = sSpellMgr->GetFirstSpellInChain(spellId);
     while (rankSpell)
@@ -5649,7 +5649,7 @@ AuraApplication* Unit::GetAuraApplicationOfRankedSpell(uint32 spellId, ObjectGui
     return nullptr;
 }
 
-Aura* Unit::GetAuraOfRankedSpell(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+Aura* Unit::GetAuraOfRankedSpell(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask) const
 {
     AuraApplication* aurApp = GetAuraApplicationOfRankedSpell(spellId, casterGUID, itemCasterGUID, reqEffMask);
     return aurApp ? aurApp->GetBase() : nullptr;
@@ -5771,7 +5771,7 @@ bool Unit::HasAuras(SearchMethod sm, std::vector<uint32>& spellIds) const
     }
 }
 
-bool Unit::HasAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint8 reqEffMask) const
+bool Unit::HasAura(uint32 spellId, ObjectGuid casterGUID, ObjectGuid itemCasterGUID, uint32 reqEffMask) const
 {
     if (GetAuraApplication(spellId, casterGUID, itemCasterGUID, reqEffMask))
         return true;
@@ -11356,18 +11356,12 @@ float Unit::ApplyEffectModifiers(SpellInfo const* spellProto, uint8 effect_index
     if (Player* modOwner = GetSpellModOwner())
     {
         modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_ALL_EFFECTS, value);
-        switch (effect_index)
-        {
-            case 0:
-                modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT1, value);
-                break;
-            case 1:
-                modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT2, value);
-                break;
-            case 2:
-                modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT3, value);
-                break;
-        }
+
+        // MergedWorlds extended-effects: each per-effect mod reaches the effect in its slot unless a script points it at another effect (effects past
+        // Spell.dbc's three have no slot of their own), so all three are offered to every effect
+        modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT1, value, nullptr, false, effect_index);
+        modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT2, value, nullptr, false, effect_index);
+        modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_EFFECT3, value, nullptr, false, effect_index);
     }
     return value;
 }
@@ -12492,7 +12486,7 @@ void Unit::GetProcAurasTriggeredOnEvent(AuraApplicationProcContainer& aurasTrigg
 
     auto processAuraApplication = [&](AuraApplication* aurApp)
     {
-        if (uint8 procEffectMask = aurApp->GetBase()->GetProcEffectMask(aurApp, eventInfo, now))
+        if (uint32 procEffectMask = aurApp->GetBase()->GetProcEffectMask(aurApp, eventInfo, now))
         {
             aurApp->GetBase()->PrepareProcToTrigger(aurApp, eventInfo, now);
             aurasTriggeringProc.emplace_back(procEffectMask, aurApp);
@@ -14787,7 +14781,7 @@ Aura* Unit::AddAura(uint32 spellId, Unit* target)
     return AddAura(spellInfo, MAX_EFFECT_MASK, target);
 }
 
-Aura* Unit::AddAura(SpellInfo const* spellInfo, uint8 effMask, Unit* target)
+Aura* Unit::AddAura(SpellInfo const* spellInfo, uint32 effMask, Unit* target)
 {
     if (!spellInfo)
         return nullptr;
@@ -15199,7 +15193,8 @@ bool Unit::HandleSpellClick(Unit* clicker, int8 seatId)
         {
             uint8 i = 0;
             bool valid = false;
-            while (i < MAX_SPELL_EFFECTS)
+            // MergedWorlds extended-effects: the seat is passed as a SPELLVALUE_BASE_POINT, which only exists for effects 0-2
+            while (i < MAX_SPELL_EFFECTS_DBC)
             {
                 if (spellInfo->Effects[i].ApplyAuraName == SPELL_AURA_CONTROL_VEHICLE)
                 {

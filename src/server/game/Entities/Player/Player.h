@@ -1810,7 +1810,7 @@ public:
     bool IsAffectedBySpellmod(SpellInfo const* spellInfo, SpellModifier* mod, Spell* spell = nullptr);
     bool HasSpellMod(SpellModifier* mod, Spell* spell);
     template <class T>
-    void ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* spell = nullptr, bool temporaryPet = false);
+    void ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* spell = nullptr, bool temporaryPet = false, uint8 effIndex = MAX_SPELL_EFFECTS); // MergedWorlds extended-effects: effIndex
     void RemoveSpellMods(Spell* spell);
     void RestoreSpellMods(Spell* spell, uint32 ownerAuraId = 0, Aura* aura = nullptr);
     void RestoreAllSpellMods(uint32 ownerAuraId = 0, Aura* aura = nullptr);

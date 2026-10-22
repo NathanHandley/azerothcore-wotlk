@@ -107,7 +107,7 @@ public:
 
     TestSpellEntryHelper& WithEffect(uint8 effIndex, uint32 effect, uint32 auraType = 0)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
         {
             _entry.Effect[effIndex] = effect;
             _entry.EffectApplyAuraName[effIndex] = auraType;
@@ -117,7 +117,7 @@ public:
 
     TestSpellEntryHelper& WithEffectImplicitTargets(uint8 effIndex, uint32 targetA, uint32 targetB = 0)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
         {
             _entry.EffectImplicitTargetA[effIndex] = targetA;
             _entry.EffectImplicitTargetB[effIndex] = targetB;
@@ -127,7 +127,7 @@ public:
 
     TestSpellEntryHelper& WithEffectTriggerSpell(uint8 effIndex, uint32 triggerSpell)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
         {
             _entry.EffectTriggerSpell[effIndex] = triggerSpell;
         }
@@ -136,21 +136,21 @@ public:
 
     TestSpellEntryHelper& WithEffectBasePoints(uint8 effIndex, int32 basePoints)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
             _entry.EffectBasePoints[effIndex] = basePoints;
         return *this;
     }
 
     TestSpellEntryHelper& WithEffectMiscValue(uint8 effIndex, int32 miscValue)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
             _entry.EffectMiscValue[effIndex] = miscValue;
         return *this;
     }
 
     TestSpellEntryHelper& WithEffectDieSides(uint8 effIndex, int32 dieSides)
     {
-        if (effIndex < MAX_SPELL_EFFECTS)
+        if (effIndex < MAX_SPELL_EFFECTS_DBC)
             _entry.EffectDieSides[effIndex] = dieSides;
         return *this;
     }

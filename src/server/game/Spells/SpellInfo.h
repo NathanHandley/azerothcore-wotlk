@@ -38,6 +38,7 @@ struct SpellModifier;
 struct SpellRangeEntry;
 struct SpellRadiusEntry;
 struct SpellEntry;
+struct SpellExtendedEffectsEntry;
 struct SpellCastTimesEntry;
 struct Condition;
 
@@ -292,12 +293,13 @@ public:
     uint32    TriggerSpell;
     flag96    SpellClassMask;
     std::list<Condition*>* ImplicitTargetConditions;
+    uint32    MaxLevel;     // MergedWorlds extended-effects: level cap for this effect's per-level scaling, 0 = the spell's MaxLevel
 
     SpellEffectInfo() : _spellInfo(nullptr), EffectIndex(0), Effect(0), ApplyAuraName(SPELL_AURA_NONE), Amplitude(0), DieSides(0),
         RealPointsPerLevel(0), BasePoints(0), PointsPerComboPoint(0), ValueMultiplier(0), DamageMultiplier(0),
         BonusMultiplier(0), MiscValue(0), MiscValueB(0), Mechanic(MECHANIC_NONE), RadiusEntry(nullptr), ChainTarget(0),
-        ItemType(0), TriggerSpell(0), ImplicitTargetConditions(nullptr) {}
-    SpellEffectInfo(SpellEntry const* spellEntry, SpellInfo const* spellInfo, uint8 effIndex);
+        ItemType(0), TriggerSpell(0), ImplicitTargetConditions(nullptr), MaxLevel(0) {}
+    SpellEffectInfo(SpellEntry const* spellEntry, SpellExtendedEffectsEntry const* extendedEffectsEntry, SpellInfo const* spellInfo, uint8 effIndex);
 
     bool IsEffect() const;
     bool IsEffect(SpellEffects effectName) const;
@@ -310,6 +312,7 @@ public:
     bool IsUnitOwnedAuraEffect() const;
 
     int32 CalcValue(WorldObject const* caster = nullptr, int32 const* basePoints = nullptr, Unit const* target = nullptr) const;
+    uint32 GetScalingMaxLevel() const;
     int32 CalcBaseValue(int32 value) const;
     float CalcValueMultiplier(WorldObject* caster, Spell* spell = nullptr) const;
     float CalcDamageMultiplier(WorldObject* caster, Spell* spell = nullptr) const;
@@ -326,6 +329,9 @@ public:
     [[nodiscard]] ImmunityInfo const* GetImmunityInfo() const;
 
 private:
+    template<class T>
+    void LoadFrom(T const& entry, uint8 entryIndex);
+
     struct StaticData
     {
         SpellEffectImplicitTargetTypes ImplicitTargetType; // defines what target can be added to effect target list if there's no valid target type provided for effect
@@ -354,6 +360,9 @@ public:
     uint32 AttributesEx6;
     uint32 AttributesEx7;
     uint32 AttributesCu;
+    // MergedWorlds extended-effects: AttributesCu only has NEGATIVE/POSITIVE bits for effects 0-2, so the effects past them keep theirs here (bit = effect index)
+    uint32 ExtendedNegativeEffectMask;
+    uint32 ExtendedPositiveEffectMask;
     uint32 Stances;
     uint32 StancesNot;
     uint32 Targets;
@@ -486,6 +495,8 @@ public:
     bool CanBeUsedInCombat() const;
     bool IsPositive() const;
     bool IsPositiveEffect(uint8 effIndex) const;
+    void SetEffectNegative(uint8 effIndex);
+    void ForceEffectPositive(uint8 effIndex);
     bool IsChanneled() const;
     [[nodiscard]] bool IsActionAllowedChannel() const;
     bool NeedsComboPoints() const;
@@ -498,6 +509,7 @@ public:
 
     bool IsAffectedBySpellMods() const;
     bool IsAffectedBySpellMod(SpellModifier const* mod) const;
+    bool IsEffectAffectedBySpellMod(SpellModifier const* mod, uint8 effIndex) const; // MergedWorlds extended-effects
 
     bool CanPierceImmuneAura(SpellInfo const* auraSpellInfo) const;
     bool CanDispelAura(SpellInfo const* auraSpellInfo) const;

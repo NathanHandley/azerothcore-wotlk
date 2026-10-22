@@ -453,6 +453,9 @@ void WorldSession::HandlePetActionHelper(Unit* pet, ObjectGuid guid1, uint32 spe
                     // search positive effects for spell
                     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                     {
+                        // MergedWorlds extended-effects: the empty slots past Spell.dbc's three must not count as positive effects
+                        if (i >= MAX_SPELL_EFFECTS_DBC && !spellInfo->Effects[i].IsEffect())
+                            continue;
                         if (spellInfo->_IsPositiveEffect(i, true))
                         {
                             haspositiveeffect = true;

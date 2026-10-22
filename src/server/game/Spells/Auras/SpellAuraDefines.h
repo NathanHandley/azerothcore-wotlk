@@ -30,7 +30,7 @@ enum AURA_FLAGS
     AFLAG_CASTER                 = 0x08,
     AFLAG_POSITIVE               = 0x10,
     AFLAG_DURATION               = 0x20,
-    AFLAG_ANY_EFFECT_AMOUNT_SENT = 0x40, // used with AFLAG_EFF_INDEX_0/1/2
+    AFLAG_EXTENDED_EFFECTS       = 0x40, // MergedWorlds extended-effects: a uint16 mask of the active effects 3 and up follows the stack byte (stock 0x40, "any effect amount sent", is never sent by 3.3.5)
     AFLAG_NEGATIVE               = 0x80
 };
 

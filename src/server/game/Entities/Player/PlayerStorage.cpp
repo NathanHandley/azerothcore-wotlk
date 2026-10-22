@@ -5838,13 +5838,13 @@ void Player::_LoadAuras(PreparedQueryResult result, uint32 timediff)
         do
         {
             Field* fields = result->Fetch();
-            int32 damage[3];
-            int32 baseDamage[3];
+            int32 damage[MAX_SPELL_EFFECTS];
+            int32 baseDamage[MAX_SPELL_EFFECTS];
             ObjectGuid caster_guid = ObjectGuid(fields[0].Get<uint64>());
             ObjectGuid itemGuid = ObjectGuid(fields[1].Get<uint64>());
             uint32 spellid = fields[2].Get<uint32>();
-            uint8 effmask = fields[3].Get<uint8>();
-            uint8 recalculatemask = fields[4].Get<uint8>();
+            uint32 effmask = fields[3].Get<uint16>();
+            uint32 recalculatemask = fields[4].Get<uint16>();
             uint8 stackcount = fields[5].Get<uint8>();
             damage[0] = fields[6].Get<int32>();
             damage[1] = fields[7].Get<int32>();
@@ -5855,6 +5855,12 @@ void Player::_LoadAuras(PreparedQueryResult result, uint32 timediff)
             int32 maxduration = fields[12].Get<int32>();
             int32 remaintime = fields[13].Get<int32>();
             uint8 remaincharges = fields[14].Get<uint8>();
+            // MergedWorlds extended-effects: effects 3 and up follow the stock columns
+            for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            {
+                damage[i] = fields[15 + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
+                baseDamage[i] = fields[15 + MAX_SPELL_EFFECTS_EXTENDED + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
+            }
 
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
             if (!spellInfo)
@@ -7397,8 +7403,8 @@ void Player::_SaveAuras(CharacterDatabaseTransaction trans, bool logout)
 
         int32 damage[MAX_SPELL_EFFECTS];
         int32 baseDamage[MAX_SPELL_EFFECTS];
-        uint8 effMask = 0;
-        uint8 recalculateMask = 0;
+        uint32 effMask = 0;
+        uint32 recalculateMask = 0;
         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         {
             if (AuraEffect const* effect = aura->GetEffect(i))
@@ -7422,8 +7428,8 @@ void Player::_SaveAuras(CharacterDatabaseTransaction trans, bool logout)
         stmt->SetData(index++, itr->second->GetCasterGUID().GetRawValue());
         stmt->SetData(index++, itr->second->GetCastItemGUID().GetRawValue());
         stmt->SetData(index++, itr->second->GetId());
-        stmt->SetData(index++, effMask);
-        stmt->SetData(index++, recalculateMask);
+        stmt->SetData(index++, uint16(effMask));
+        stmt->SetData(index++, uint16(recalculateMask));
         stmt->SetData(index++, itr->second->GetStackAmount());
         stmt->SetData(index++, damage[0]);
         stmt->SetData(index++, damage[1]);
@@ -7433,7 +7439,12 @@ void Player::_SaveAuras(CharacterDatabaseTransaction trans, bool logout)
         stmt->SetData(index++, baseDamage[2]);
         stmt->SetData(index++, itr->second->GetMaxDuration());
         stmt->SetData(index++, itr->second->GetDuration());
-        stmt->SetData(index, itr->second->GetCharges());
+        stmt->SetData(index++, itr->second->GetCharges());
+        // MergedWorlds extended-effects: effects 3 and up
+        for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            stmt->SetData(index++, damage[i]);
+        for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            stmt->SetData(index++, baseDamage[i]);
         trans->Append(stmt);
     }
 }

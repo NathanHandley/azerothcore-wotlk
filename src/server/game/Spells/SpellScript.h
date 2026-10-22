@@ -74,7 +74,7 @@ protected:
         EffectHook(uint8 _effIndex);
         virtual ~EffectHook() { }
 
-        uint8 GetAffectedEffectsMask(SpellInfo const* spellInfo);
+        uint32 GetAffectedEffectsMask(SpellInfo const* spellInfo);
         bool IsEffectAffected(SpellInfo const* spellInfo, uint8 effIndex);
         virtual bool CheckEffect(SpellInfo const* spellInfo, uint8 effIndex) = 0;
         std::string EffIndexToString();
@@ -308,8 +308,8 @@ public:
     bool IsInEffectHook() const;
 private:
     Spell* m_spell;
-    uint8 m_hitPreventEffectMask;
-    uint8 m_hitPreventDefaultEffectMask;
+    uint32 m_hitPreventEffectMask;
+    uint32 m_hitPreventDefaultEffectMask;
 public:
     //
     // SpellScript interface

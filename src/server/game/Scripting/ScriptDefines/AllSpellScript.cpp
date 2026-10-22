@@ -44,14 +44,20 @@ bool ScriptMgr::CanSelectSpecTalent(Spell* spell)
     CALL_ENABLED_BOOLEAN_HOOKS(AllSpellScript, ALLSPELLHOOK_CAN_SELECT_SPEC_TALENT, !script->CanSelectSpecTalent(spell));
 }
 
-void ScriptMgr::OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint8 auraScaleMask, TargetInfo& targetInfo)
+void ScriptMgr::OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint32 auraScaleMask, TargetInfo& targetInfo)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_SCALE_AURA_UNIT_ADD, script->OnScaleAuraUnitAdd(spell, target, effectMask, checkIfValid, implicit, auraScaleMask, targetInfo));
 }
 
-void ScriptMgr::OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint8 auraScaleMask, bool& needErase)
+void ScriptMgr::OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_REMOVE_AURA_SCALE_TARGETS, script->OnRemoveAuraScaleTargets(spell, targetInfo, auraScaleMask, needErase));
+}
+
+// MergedWorlds
+void ScriptMgr::OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& targetInfo)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, script->OnAfterSpellHitResult(spell, target, targetInfo));
 }
 
 void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level)

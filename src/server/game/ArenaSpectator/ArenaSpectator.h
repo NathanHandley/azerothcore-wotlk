@@ -111,7 +111,7 @@ namespace ArenaSpectator
     AC_GAME_API bool HandleSpectatorWatchCommand(ChatHandler* handler, std::string const& name);
     AC_GAME_API void CreatePacket(WorldPacket& data, std::string const& message);
     AC_GAME_API void HandleResetCommand(Player* player);
-    AC_GAME_API bool ShouldSendAura(Aura* aura, uint8 effMask, ObjectGuid targetGUID, bool remove);
+    AC_GAME_API bool ShouldSendAura(Aura* aura, uint32 effMask, ObjectGuid targetGUID, bool remove);
 }
 
 #endif

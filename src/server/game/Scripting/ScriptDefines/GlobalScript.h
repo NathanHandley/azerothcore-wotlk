@@ -49,6 +49,7 @@ enum GlobalHook
     GLOBALHOOK_ON_BEFORE_SET_BOSS_STATE,
     GLOBALHOOK_AFTER_INSTANCE_GAME_OBJECT_CREATE,
     GLOBALHOOK_CAN_CREATE_LFG_PROPOSAL,
+    GLOBALHOOK_ON_IS_SPELL_EFFECT_AFFECTED_BY_SPELL_MOD, // MergedWorlds extended-effects
     GLOBALHOOK_END
 };
 
@@ -87,6 +88,10 @@ public:
 
     // Called when checking if an aura spell is affected by a mod
     virtual bool OnIsAffectedBySpellModCheck(SpellInfo const* /*affectSpell*/, SpellInfo const* /*checkSpell*/, SpellModifier const* /*mod*/) { return true; };
+
+    // MergedWorlds extended-effects: called when checking which effect of a spell a per-effect mod (SPELLMOD_EFFECT1..3) changes, with affected
+    // already set to whether the effect is in the mod's slot
+    virtual void OnIsSpellEffectAffectedBySpellMod(SpellInfo const* /*affectSpell*/, SpellInfo const* /*checkSpell*/, SpellModifier const* /*mod*/, uint8 /*effIndex*/, bool& /*affected*/) { }
 
     // Called when checking for spell negative healing modifiers
     virtual bool OnSpellHealingBonusTakenNegativeModifiers(Unit const* /*target*/, Unit const* /*caster*/, SpellInfo const* /*spellInfo*/, float& /*val*/) { return false; };

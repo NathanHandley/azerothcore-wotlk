@@ -323,31 +323,52 @@ std::array<SpellImplicitTargetInfo::StaticData, TOTAL_SPELL_TARGETS> SpellImplic
     {TARGET_OBJECT_TYPE_DEST, TARGET_REFERENCE_TYPE_NONE,   TARGET_SELECT_CATEGORY_NYI,     TARGET_CHECK_DEFAULT,  TARGET_DIR_NONE},        // 110 TARGET_DEST_UNK_110
 } };
 
-SpellEffectInfo::SpellEffectInfo(SpellEntry const* spellEntry, SpellInfo const* spellInfo, uint8 effIndex)
+SpellEffectInfo::SpellEffectInfo(SpellEntry const* spellEntry, SpellExtendedEffectsEntry const* extendedEffectsEntry, SpellInfo const* spellInfo, uint8 effIndex) : SpellEffectInfo()
 {
     _spellInfo = spellInfo;
     EffectIndex = effIndex;
-    Effect = spellEntry->Effect[effIndex];
-    ApplyAuraName = AuraType(spellEntry->EffectApplyAuraName[effIndex]);
-    Amplitude = spellEntry->EffectAmplitude[effIndex];
-    DieSides = spellEntry->EffectDieSides[effIndex];
-    RealPointsPerLevel = spellEntry->EffectRealPointsPerLevel[effIndex];
-    BasePoints = spellEntry->EffectBasePoints[effIndex];
-    PointsPerComboPoint = spellEntry->EffectPointsPerComboPoint[effIndex];
-    ValueMultiplier = spellEntry->EffectValueMultiplier[effIndex];
-    DamageMultiplier = spellEntry->EffectDamageMultiplier[effIndex];
-    BonusMultiplier = spellEntry->EffectBonusMultiplier[effIndex];
-    MiscValue = spellEntry->EffectMiscValue[effIndex];
-    MiscValueB = spellEntry->EffectMiscValueB[effIndex];
-    Mechanic = Mechanics(spellEntry->EffectMechanic[effIndex]);
-    TargetA = SpellImplicitTargetInfo(spellEntry->EffectImplicitTargetA[effIndex]);
-    TargetB = SpellImplicitTargetInfo(spellEntry->EffectImplicitTargetB[effIndex]);
-    RadiusEntry = spellEntry->EffectRadiusIndex[effIndex] ? sSpellRadiusStore.LookupEntry(spellEntry->EffectRadiusIndex[effIndex]) : nullptr;
-    ChainTarget = spellEntry->EffectChainTarget[effIndex];
-    ItemType = spellEntry->EffectItemType[effIndex];
-    TriggerSpell = spellEntry->EffectTriggerSpell[effIndex];
-    SpellClassMask = spellEntry->EffectSpellClassMask[effIndex];
     ImplicitTargetConditions = nullptr;
+
+    // MergedWorlds extended-effects: a per-effect level cap, and effects past Spell.dbc's three come from SpellExtendedEffects.dbc
+    MaxLevel = extendedEffectsEntry ? extendedEffectsEntry->EffectMaxLevel[effIndex] : 0;
+    if (effIndex >= MAX_SPELL_EFFECTS_DBC)
+    {
+        if (extendedEffectsEntry)
+            LoadFrom(*extendedEffectsEntry, effIndex - MAX_SPELL_EFFECTS_DBC);
+        return;
+    }
+    LoadFrom(*spellEntry, effIndex);
+}
+
+// Both entries hold their effect fields under the same names, just in arrays of different sizes
+template<class T>
+void SpellEffectInfo::LoadFrom(T const& entry, uint8 entryIndex)
+{
+    Effect = entry.Effect[entryIndex];
+    ApplyAuraName = AuraType(entry.EffectApplyAuraName[entryIndex]);
+    Amplitude = entry.EffectAmplitude[entryIndex];
+    DieSides = entry.EffectDieSides[entryIndex];
+    RealPointsPerLevel = entry.EffectRealPointsPerLevel[entryIndex];
+    BasePoints = entry.EffectBasePoints[entryIndex];
+    PointsPerComboPoint = entry.EffectPointsPerComboPoint[entryIndex];
+    ValueMultiplier = entry.EffectValueMultiplier[entryIndex];
+    DamageMultiplier = entry.EffectDamageMultiplier[entryIndex];
+    BonusMultiplier = entry.EffectBonusMultiplier[entryIndex];
+    MiscValue = entry.EffectMiscValue[entryIndex];
+    MiscValueB = entry.EffectMiscValueB[entryIndex];
+    Mechanic = Mechanics(entry.EffectMechanic[entryIndex]);
+    TargetA = SpellImplicitTargetInfo(entry.EffectImplicitTargetA[entryIndex]);
+    TargetB = SpellImplicitTargetInfo(entry.EffectImplicitTargetB[entryIndex]);
+    RadiusEntry = entry.EffectRadiusIndex[entryIndex] ? sSpellRadiusStore.LookupEntry(entry.EffectRadiusIndex[entryIndex]) : nullptr;
+    ChainTarget = entry.EffectChainTarget[entryIndex];
+    ItemType = entry.EffectItemType[entryIndex];
+    TriggerSpell = entry.EffectTriggerSpell[entryIndex];
+    SpellClassMask = entry.EffectSpellClassMask[entryIndex];
+}
+
+uint32 SpellEffectInfo::GetScalingMaxLevel() const
+{
+    return MaxLevel ? MaxLevel : _spellInfo->MaxLevel;
 }
 
 bool SpellEffectInfo::IsEffect() const
@@ -419,8 +440,9 @@ int32 SpellEffectInfo::CalcValue(WorldObject const* caster, int32 const* bp, Uni
     if (casterUnit && basePointsPerLevel != 0.0f)
     {
         int32 level = int32(casterUnit->GetLevel());
-        if (level > int32(_spellInfo->MaxLevel) && _spellInfo->MaxLevel > 0)
-            level = int32(_spellInfo->MaxLevel);
+        int32 maxLevel = int32(GetScalingMaxLevel());
+        if (level > maxLevel && maxLevel > 0)
+            level = maxLevel;
         else if (level < int32(_spellInfo->BaseLevel))
             level = int32(_spellInfo->BaseLevel);
 
@@ -802,6 +824,8 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry)
     AttributesEx6 = spellEntry->AttributesEx6;
     AttributesEx7 = spellEntry->AttributesEx7;
     AttributesCu = 0;
+    ExtendedNegativeEffectMask = 0;
+    ExtendedPositiveEffectMask = 0;
     Stances = spellEntry->Stances;
     StancesNot = spellEntry->StancesNot;
     Targets = spellEntry->Targets;
@@ -862,8 +886,9 @@ SpellInfo::SpellInfo(SpellEntry const* spellEntry)
     PreventionType = spellEntry->PreventionType;
     AreaGroupId = spellEntry->AreaGroupId;
     SchoolMask = spellEntry->SchoolMask;
+    SpellExtendedEffectsEntry const* extendedEffectsEntry = sSpellExtendedEffectsStore.LookupEntry(Id); // MergedWorlds extended-effects
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
-        Effects[i] = SpellEffectInfo(spellEntry, this, i);
+        Effects[i] = SpellEffectInfo(spellEntry, extendedEffectsEntry, this, i);
 
     ChainEntry = nullptr;
     ExplicitTargetMask = 0;
@@ -1281,11 +1306,15 @@ bool SpellInfo::CanBeUsedInCombat() const
 
 bool SpellInfo::IsPositive() const
 {
-    return !(AttributesCu & SPELL_ATTR0_CU_NEGATIVE) || (AttributesCu & SPELL_ATTR0_CU_POSITIVE);
+    return !((AttributesCu & SPELL_ATTR0_CU_NEGATIVE) || ExtendedNegativeEffectMask) || (AttributesCu & SPELL_ATTR0_CU_POSITIVE) || ExtendedPositiveEffectMask;
 }
 
 bool SpellInfo::IsPositiveEffect(uint8 effIndex) const
 {
+    // MergedWorlds extended-effects
+    if (effIndex >= MAX_SPELL_EFFECTS_DBC && effIndex < MAX_SPELL_EFFECTS)
+        return !(ExtendedNegativeEffectMask & (1 << effIndex)) || (ExtendedPositiveEffectMask & (1 << effIndex));
+
     switch (effIndex)
     {
         default:
@@ -1295,6 +1324,29 @@ bool SpellInfo::IsPositiveEffect(uint8 effIndex) const
             return !(AttributesCu & SPELL_ATTR0_CU_NEGATIVE_EFF1) || (AttributesCu & SPELL_ATTR0_CU_POSITIVE_EFF1);
         case 2:
             return !(AttributesCu & SPELL_ATTR0_CU_NEGATIVE_EFF2) || (AttributesCu & SPELL_ATTR0_CU_POSITIVE_EFF2);
+    }
+}
+
+// MergedWorlds extended-effects: marks an effect negative in whichever store holds that effect's bits
+void SpellInfo::SetEffectNegative(uint8 effIndex)
+{
+    if (effIndex < MAX_SPELL_EFFECTS_DBC)
+        AttributesCu |= (SPELL_ATTR0_CU_NEGATIVE_EFF0 << effIndex);
+    else if (effIndex < MAX_SPELL_EFFECTS)
+        ExtendedNegativeEffectMask |= (1 << effIndex);
+}
+
+void SpellInfo::ForceEffectPositive(uint8 effIndex)
+{
+    if (effIndex < MAX_SPELL_EFFECTS_DBC)
+    {
+        AttributesCu &= ~(SPELL_ATTR0_CU_NEGATIVE_EFF0 << effIndex);
+        AttributesCu |= (SPELL_ATTR0_CU_POSITIVE_EFF0 << effIndex);
+    }
+    else if (effIndex < MAX_SPELL_EFFECTS)
+    {
+        ExtendedNegativeEffectMask &= ~(1 << effIndex);
+        ExtendedPositiveEffectMask |= (1 << effIndex);
     }
 }
 
@@ -1370,6 +1422,34 @@ bool SpellInfo::IsAffectedBySpellMod(SpellModifier const* mod) const
         return true;
 
     return IsAffected(affectSpell->SpellFamilyName, mod->mask);
+}
+
+// MergedWorlds extended-effects: which effect a per-effect modifier (SPELLMOD_EFFECT1..3) changes.  It is the effect in its slot, so effects past
+// Spell.dbc's three are reached only when a script points the modifier at them; every other modifier reaches all effects
+bool SpellInfo::IsEffectAffectedBySpellMod(SpellModifier const* mod, uint8 effIndex) const
+{
+    bool affected;
+    switch (mod->op)
+    {
+        case SPELLMOD_EFFECT1:
+            affected = effIndex == EFFECT_0;
+            break;
+        case SPELLMOD_EFFECT2:
+            affected = effIndex == EFFECT_1;
+            break;
+        case SPELLMOD_EFFECT3:
+            affected = effIndex == EFFECT_2;
+            break;
+        default:
+            return true;
+    }
+
+    SpellInfo const* affectSpell = sSpellMgr->GetSpellInfo(mod->spellId);
+    if (!affectSpell)
+        return affected;
+
+    sScriptMgr->OnIsSpellEffectAffectedBySpellMod(affectSpell, this, mod, effIndex, affected);
+    return affected;
 }
 
 bool SpellInfo::CanPierceImmuneAura(SpellInfo const* auraSpellInfo) const
@@ -3219,6 +3299,9 @@ bool SpellInfo::_IsPositiveEffect(uint8 effIndex, bool deep) const
                                             bool negative = true;
                                             for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
                                             {
+                                                // MergedWorlds extended-effects: the empty slots past Spell.dbc's three must not count as positive effects
+                                                if (i >= MAX_SPELL_EFFECTS_DBC && !Effects[i].IsEffect())
+                                                    continue;
                                                 if (i != effIndex)
                                                     if (_IsPositiveEffect(i, true))
                                                     {

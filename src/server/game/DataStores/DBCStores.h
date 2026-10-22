@@ -175,6 +175,7 @@ extern DBCStorage <SpellRangeEntry>              sSpellRangeStore;
 extern DBCStorage <SpellRuneCostEntry>           sSpellRuneCostStore;
 extern DBCStorage <SpellShapeshiftFormEntry>     sSpellShapeshiftFormStore;
 extern DBCStorage <SpellEntry>                   sSpellStore;
+extern DBCStorage <SpellExtendedEffectsEntry>    sSpellExtendedEffectsStore; // MergedWorlds extended-effects
 extern DBCStorage <SpellVisualEntry>             sSpellVisualStore;
 extern DBCStorage <StableSlotPricesEntry>        sStableSlotPricesStore;
 extern DBCStorage <SummonPropertiesEntry>        sSummonPropertiesStore;

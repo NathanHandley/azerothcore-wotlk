@@ -356,7 +356,7 @@ bool ItemTemplate::HasSpellPowerStat() const
             continue;
         }
 
-        for (uint8 j = EFFECT_0; j <= EFFECT_2; ++j)
+        for (uint8 j = EFFECT_0; j < MAX_SPELL_EFFECTS; ++j)
         {
             switch (spellInfo->Effects[j].ApplyAuraName)
             {

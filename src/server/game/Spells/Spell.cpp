@@ -909,7 +909,7 @@ void Spell::SelectSpellTargets()
                 return;
             }
 
-            uint8 mask = (1 << i);
+            uint32 mask = (1 << i);
             for (auto ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
             {
                 if (ihit->effectMask & mask)
@@ -2465,6 +2465,9 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
         targetInfo.missCondition = SPELL_MISS_NONE;
     }
 
+    // MergedWorlds: modules can change the hit result (an EverQuest enraged creature ripostes an on next swing ability)
+    sScriptMgr->OnAfterSpellHitResult(this, target, targetInfo);
+
     // Spell have speed - need calculate incoming time
     // Incoming time is zero for self casts. At least I think so.
     if (m_spellInfo->Speed > 0.0f && m_caster != target)
@@ -2629,7 +2632,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     target->processed = true;                               // Target checked in apply effects procedure
 
     // Get mask of effects for target
-    uint8 mask = target->effectMask;
+    uint32 mask = target->effectMask;
 
     Unit* effectUnit = m_caster->GetGUID() == target->targetGUID ? unitCaster : ObjectAccessor::GetUnit(*m_caster, target->targetGUID);
     if (!effectUnit && !target->targetGUID.IsPlayer()) // only players may be targeted across maps
@@ -2637,7 +2640,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
 
     if (!effectUnit || m_spellInfo->Id == 45927)
     {
-        uint8 farMask = 0;
+        uint32 farMask = 0;
         // create far target mask
         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
             if (m_spellInfo->Effects[i].IsFarUnitTargetEffect())
@@ -3179,7 +3182,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
         }
     }
 
-    uint8 aura_effmask = 0;
+    uint32 aura_effmask = 0;
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         if (effectMask & (1 << i) && m_spellInfo->Effects[i].IsUnitOwnedAuraEffect())
             aura_effmask |= 1 << i;
@@ -3221,7 +3224,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
         // Select rank for aura with level requirements only in specific cases
         // Unit has to be target only of aura effect, both caster and target have to be players, target has to be other than unit target
         SpellInfo const* aurSpellInfo = m_spellInfo;
-        int32 basePoints[3];
+        int32 basePoints[MAX_SPELL_EFFECTS];
         if (scaleAura)
         {
             aurSpellInfo = m_spellInfo->GetAuraRankForLevel(unitTarget->GetLevel());
@@ -3348,7 +3351,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit* unit, uint32 effectMask, bool scaleA
     return SPELL_MISS_NONE;
 }
 
-void Spell::DoTriggersOnSpellHit(Unit* unit, uint8 effMask)
+void Spell::DoTriggersOnSpellHit(Unit* unit, uint32 effMask)
 {
     Unit* unitCaster = m_caster->ToUnit();
     // Apply additional spell effects to target
@@ -3472,8 +3475,8 @@ bool Spell::UpdateChanneledTargetList()
     if (m_channelTargetEffectMask == 0)
         return true;
 
-    uint8 channelTargetEffectMask = m_channelTargetEffectMask;
-    uint8 channelAuraMask = 0;
+    uint32 channelTargetEffectMask = m_channelTargetEffectMask;
+    uint32 channelAuraMask = 0;
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         if (m_spellInfo->Effects[i].Effect == SPELL_EFFECT_APPLY_AURA)
             channelAuraMask |= 1 << i;
@@ -6305,8 +6308,8 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
         }
     }
 
-    uint8 approximateAuraEffectMask = 0;
-    uint8 nonAuraEffectMask = 0;
+    uint32 approximateAuraEffectMask = 0;
+    uint32 nonAuraEffectMask = 0;
     for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         // for effects of spells that have only one target
@@ -9120,7 +9123,7 @@ bool Spell::CheckScriptEffectImplicitTargets(uint32 effIndex, uint32 effIndexToC
     return true;
 }
 
-bool Spell::CanExecuteTriggersOnHit(uint8 effMask, SpellInfo const* triggeredByAura) const
+bool Spell::CanExecuteTriggersOnHit(uint32 effMask, SpellInfo const* triggeredByAura) const
 {
     // Relentless strikes, proc only from first effect
     if (triggeredByAura && triggeredByAura->SpellIconID == 559)

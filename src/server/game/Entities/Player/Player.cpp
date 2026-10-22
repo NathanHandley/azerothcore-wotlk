@@ -10019,7 +10019,7 @@ bool Player::IsAffectedBySpellmod(SpellInfo const* spellInfo, SpellModifier* mod
 }
 
 template <class T>
-void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* spell, bool temporaryPet)
+void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* spell, bool temporaryPet, uint8 effIndex)
 {
     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
     if (!spellInfo)
@@ -10091,6 +10091,10 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
         if (!IsAffectedBySpellmod(spellInfo, mod, spell))
             continue;
 
+        // MergedWorlds extended-effects: a per-effect mod only changes the effect it points at
+        if (effIndex < MAX_SPELL_EFFECTS && !spellInfo->IsEffectAffectedBySpellMod(mod, effIndex))
+            continue;
+
         calculateSpellMod(mod);
     }
 
@@ -10100,9 +10104,9 @@ void Player::ApplySpellMod(uint32 spellId, SpellModOp op, T& basevalue, Spell* s
         basevalue = (basevalue * totalmul) + totalflat;
 }
 
-template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, int32& basevalue, Spell* spell, bool temporaryPet);
-template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, uint32& basevalue, Spell* spell, bool temporaryPet);
-template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, float& basevalue, Spell* spell, bool temporaryPet);
+template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, int32& basevalue, Spell* spell, bool temporaryPet, uint8 effIndex);
+template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, uint32& basevalue, Spell* spell, bool temporaryPet, uint8 effIndex);
+template AC_GAME_API void Player::ApplySpellMod(uint32 spellId, SpellModOp op, float& basevalue, Spell* spell, bool temporaryPet, uint8 effIndex);
 
 void Player::AddSpellMod(SpellModifier* mod, bool apply)
 {

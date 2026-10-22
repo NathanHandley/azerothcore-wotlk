@@ -1609,16 +1609,16 @@ void Pet::_LoadAuras(PreparedQueryResult result, uint32 timediff)
     {
         do
         {
-            int32 damage[3];
-            int32 baseDamage[3];
+            int32 damage[MAX_SPELL_EFFECTS];
+            int32 baseDamage[MAX_SPELL_EFFECTS];
             Field* fields = result->Fetch();
             ObjectGuid caster_guid = ObjectGuid(fields[0].Get<uint64>());
             // nullptr guid stored - pet is the caster of the spell - see Pet::_SaveAuras
             if (!caster_guid)
                 caster_guid = GetGUID();
             uint32 spellid = fields[1].Get<uint32>();
-            uint8 effmask = fields[2].Get<uint8>();
-            uint8 recalculatemask = fields[3].Get<uint8>();
+            uint32 effmask = fields[2].Get<uint16>();
+            uint32 recalculatemask = fields[3].Get<uint16>();
             uint8 stackcount = fields[4].Get<uint8>();
             damage[0] = fields[5].Get<int32>();
             damage[1] = fields[6].Get<int32>();
@@ -1629,6 +1629,12 @@ void Pet::_LoadAuras(PreparedQueryResult result, uint32 timediff)
             int32 maxduration = fields[11].Get<int32>();
             int32 remaintime = fields[12].Get<int32>();
             uint8 remaincharges = fields[13].Get<uint8>();
+            // MergedWorlds extended-effects: effects 3 and up follow the stock columns
+            for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            {
+                damage[i] = fields[14 + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
+                baseDamage[i] = fields[14 + MAX_SPELL_EFFECTS_EXTENDED + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
+            }
 
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
             if (!spellInfo)
@@ -1719,8 +1725,8 @@ void Pet::_SaveAuras(CharacterDatabaseTransaction trans)
 
         int32 damage[MAX_SPELL_EFFECTS];
         int32 baseDamage[MAX_SPELL_EFFECTS];
-        uint8 effMask = 0;
-        uint8 recalculateMask = 0;
+        uint32 effMask = 0;
+        uint32 recalculateMask = 0;
         for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         {
             if (aura->GetEffect(i))
@@ -1747,8 +1753,8 @@ void Pet::_SaveAuras(CharacterDatabaseTransaction trans)
         stmt2->SetData(index++, m_charmInfo->GetPetNumber());
         stmt2->SetData(index++, casterGUID.GetRawValue());
         stmt2->SetData(index++, itr->second->GetId());
-        stmt2->SetData(index++, effMask);
-        stmt2->SetData(index++, recalculateMask);
+        stmt2->SetData(index++, uint16(effMask));
+        stmt2->SetData(index++, uint16(recalculateMask));
         stmt2->SetData(index++, itr->second->GetStackAmount());
         stmt2->SetData(index++, damage[0]);
         stmt2->SetData(index++, damage[1]);
@@ -1759,6 +1765,11 @@ void Pet::_SaveAuras(CharacterDatabaseTransaction trans)
         stmt2->SetData(index++, itr->second->GetMaxDuration());
         stmt2->SetData(index++, itr->second->GetDuration());
         stmt2->SetData(index++, itr->second->GetCharges());
+        // MergedWorlds extended-effects: effects 3 and up
+        for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            stmt2->SetData(index++, damage[i]);
+        for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            stmt2->SetData(index++, baseDamage[i]);
         trans->Append(stmt2);
     }
 }

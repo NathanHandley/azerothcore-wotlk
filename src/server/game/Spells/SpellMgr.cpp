@@ -3197,7 +3197,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
 
             if (attributes & SPELL_ATTR0_CU_NEGATIVE)
             {
-                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS_DBC; ++i) // MergedWorlds extended-effects: the attribute bits only cover effects 0-2
                 {
                     if (spellInfo->Effects[i].IsEffect())
                     {
@@ -3219,7 +3219,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
 
             if (attributes & SPELL_ATTR0_CU_POSITIVE)
             {
-                for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+                for (uint8 i = 0; i < MAX_SPELL_EFFECTS_DBC; ++i) // MergedWorlds extended-effects: the attribute bits only cover effects 0-2
                 {
                     if (spellInfo->Effects[i].IsEffect())
                     {
@@ -3465,6 +3465,11 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
 
         if (!spellInfo->_IsPositiveEffect(EFFECT_2, false))
             spellInfo->AttributesCu |= SPELL_ATTR0_CU_NEGATIVE_EFF2;
+
+        // MergedWorlds extended-effects
+        for (uint8 i = MAX_SPELL_EFFECTS_DBC; i < MAX_SPELL_EFFECTS; ++i)
+            if (spellInfo->Effects[i].IsEffect() && !spellInfo->_IsPositiveEffect(i, false))
+                spellInfo->SetEffectNegative(i);
 
         if (spellInfo->SpellVisual[0] == 3879)
             spellInfo->AttributesCu |= SPELL_ATTR0_CU_CONE_BACK;
