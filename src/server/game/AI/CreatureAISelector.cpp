@@ -16,6 +16,8 @@
  */
 
 #include "CreatureAISelector.h"
+#include "EQMovementHooks.h"
+#include "Map.h"
 #include "Creature.h"
 #include "CreatureAIFactory.h"
 
@@ -90,6 +92,14 @@ namespace FactorySelector
 
     MovementGenerator* SelectMovementGenerator(Unit* unit)
     {
+        // MergedWorlds EQ: a creature on an EverQuest map can idle with EverQuest movement (grids and roam boxes)
+        if (Creature* creature = unit->ToCreature())
+            if (EverQuestMovementHooks::IdleMovementSelector && !creature->GetCharmerOrOwnerPlayerOrPlayerItself())
+                if (Map* map = creature->FindMap())
+                    if (map->GetEQZoneMap())
+                        if (MovementGenerator* everQuestMovementGenerator = EverQuestMovementHooks::IdleMovementSelector(creature))
+                            return everQuestMovementGenerator;
+
         MovementGeneratorType type = IDLE_MOTION_TYPE;
         if (Creature* creature = unit->ToCreature())
             if (!creature->GetCharmerOrOwnerPlayerOrPlayerItself())

@@ -164,6 +164,8 @@ enum EncounterCreditType : uint8
     ENCOUNTER_CREDIT_CAST_SPELL     = 1,
 };
 
+class EQZoneMap;
+
 class Map : public GridRefMgr<MapGridType>
 {
     friend class MapReference;
@@ -572,6 +574,11 @@ public:
         return 0;
     };
 
+    // MergedWorlds EQ: the EverQuest zone map of an EverQuest map (nullptr for every other map), see EQZoneMap.h
+    [[nodiscard]] EQZoneMap const* GetEQZoneMap() const { return _eqZoneMap; }
+    // MergedWorlds EQ: the liquid at a point of an EverQuest map, from EQ's own liquid regions
+    [[nodiscard]] LiquidData GetEverQuestLiquidData(float x, float y, float z, float collisionHeight, Optional<uint8> reqLiquidType) const;
+
     MapCollisionData& GetMapCollisionData() { return _mapCollisionData; }
     MapCollisionData const& GetMapCollisionData()  const { return _mapCollisionData; }
 
@@ -608,6 +615,7 @@ protected:
     MapGridManager _mapGridManager;
     MapEntry const* i_mapEntry;
     MapCollisionData _mapCollisionData;
+    EQZoneMap const* _eqZoneMap; // MergedWorlds EQ
     uint8 i_spawnMode;
     uint32 i_InstanceId;
     uint32 m_unloadTimer;

@@ -89,6 +89,7 @@
 #include "UpdateTime.h"
 #include "Util.h"
 #include "VMapFactory.h"
+#include "EQZoneMap.h"
 #include "VMapMgr2.h"
 #include "Warden.h"
 #include "WardenCheckMgr.h"
@@ -321,6 +322,9 @@ void World::SetInitialWorldSettings()
 
     ///- Initialize config settings
     LoadConfigSettings();
+
+    // MergedWorlds EQ: find which maps are EverQuest zones (they have an EQ zone map), which turns on EverQuest movement for them
+    sEQZoneMapMgr->Initialize(_dataPath);
 
     ///- Initialize Allowed Security Level
     LoadDBAllowedSecurityLevel();

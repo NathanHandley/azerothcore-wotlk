@@ -16,6 +16,7 @@
  */
 
 #include "PathGenerator.h"
+#include "EQPathBuilder.h"
 #include "Creature.h"
 #include "DetourCommon.h"
 #include "Geometry.h"
@@ -127,7 +128,7 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
     _polyLength(0), _type(PATHFIND_BLANK), _useStraightPath(false), _forceDestination(false),
     _slopeCheck(false), _pointPathLimit(MAX_POINT_PATH_LENGTH), _useRaycast(false),
     _endPosition(G3D::Vector3::zero()), _source(owner), _navMesh(nullptr),
-    _navMeshQuery(nullptr)
+    _navMeshQuery(nullptr), _eqZoneMap(nullptr)
 {
     memset(_pathPolyRefs, 0, sizeof(_pathPolyRefs));
 
@@ -136,6 +137,8 @@ PathGenerator::PathGenerator(WorldObject const* owner) :
         _navMesh = _source->GetMap()->GetMapCollisionData().GetMMapData().GetNavMesh();
         _navMeshQuery = _source->GetMap()->GetMapCollisionData().GetMMapData().GetNavMeshQuery();
     }
+
+    _eqZoneMap = _source->GetMap()->GetEQZoneMap(); // MergedWorlds EQ
 
     CreateFilter();
 }
@@ -166,6 +169,13 @@ bool PathGenerator::CalculatePath(float x, float y, float z, float destX, float 
     SetStartPosition(start);
 
     _forceDestination = forceDest;
+
+    // MergedWorlds EQ: EverQuest maps build EverQuest paths
+    if (_eqZoneMap)
+    {
+        BuildEverQuestPath(start, dest);
+        return true;
+    }
 
     // make sure navMesh works - we can run on map w/o mmap
     // check if the start and end point have a .mmtile loaded (can we pass via not loaded tile on the way?)
@@ -728,6 +738,35 @@ void PathGenerator::NormalizePath()
 
         _source->UpdateAllowedPositionZ(point.x, point.y, point.z);
     }
+}
+
+// MergedWorlds EQ: the path the EverQuest way (EQPathBuilder).  A trip that can go straight does, anything else follows the navigation mesh's
+// route when there is one (or goes straight when there isn't, as EQ's movers did), and every leg is walked on the floor of the EQ zone
+void PathGenerator::BuildEverQuestPath(G3D::Vector3 const& startPos, G3D::Vector3 const& endPos)
+{
+    Clear();
+    G3D::Vector3 start = startPos;
+    start.z = EQPathBuilder::GetGroundZ(_eqZoneMap, _source, start.x, start.y, start.z);
+    G3D::Vector3 end = endPos;
+    if (!_forceDestination)
+        end.z = EQPathBuilder::GetGroundZ(_eqZoneMap, _source, end.x, end.y, end.z);
+
+    Movement::PointsArray routeCorners;
+    Unit const* sourceUnit = _source->ToUnit();
+    bool ignoresPathfinding = sourceUnit && sourceUnit->HasUnitState(UNIT_STATE_IGNORE_PATHFINDING);
+    if (!EQPathBuilder::CanFly(_source) && !EQPathBuilder::CanGoDirectly(_eqZoneMap, _source, start, end) && !ignoresPathfinding
+        && _navMesh && _navMeshQuery && HaveTile(start) && HaveTile(end))
+    {
+        UpdateFilter();
+        BuildPolyPath(start, end);
+        if (!(_type & PATHFIND_NOPATH))
+            routeCorners = _pathPoints;
+        Clear();
+    }
+
+    EQPathBuilder::BuildPath(_eqZoneMap, _source, start, end, routeCorners, _pathPoints);
+    _type = PATHFIND_NORMAL;
+    SetActualEndPosition(_pathPoints.back());
 }
 
 void PathGenerator::BuildShortcut()

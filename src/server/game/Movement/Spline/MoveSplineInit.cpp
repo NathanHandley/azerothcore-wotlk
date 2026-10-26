@@ -16,6 +16,8 @@
  */
 
 #include "MoveSplineInit.h"
+#include "EQPathBuilder.h"
+#include "EQZoneMap.h"
 #include "MoveSpline.h"
 #include "MovementPacketBuilder.h"
 #include "Opcodes.h"
@@ -212,10 +214,28 @@ namespace Movement
             }
         }
 
+        // MergedWorlds EQ: on an EverQuest map a straight move still keeps to the floor (EQ put a moving mob back on the floor every 10 units)
+        if (MoveToEverQuestStraight(start, dest))
+            return;
+
         args.path_Idx_offset = 0;
         args.path.resize(2);
         TransportPathTransform transform(unit, args.TransformForTransport);
         args.path[1] = transform(dest);
+    }
+
+    bool MoveSplineInit::MoveToEverQuestStraight(Vector3 const& start, Vector3 const& dest)
+    {
+        if (args.TransformForTransport || unit->GetTransport())
+            return false;
+        Map const* map = unit->FindMap();
+        EQZoneMap const* eqZoneMap = map ? map->GetEQZoneMap() : nullptr;
+        if (!eqZoneMap || EQPathBuilder::CanFly(unit))
+            return false;
+        Movement::PointsArray pathPoints;
+        EQPathBuilder::BuildPath(eqZoneMap, unit, start, dest, Movement::PointsArray(), pathPoints);
+        MovebyPath(pathPoints);
+        return true;
     }
 
     void MoveSplineInit::MoveTo(Vector3 const& dest, bool generatePath, bool forceDestination)
@@ -230,6 +250,10 @@ namespace Movement
                 return;
             }
         }
+
+        // MergedWorlds EQ: on an EverQuest map a straight move still keeps to the floor
+        if (MoveToEverQuestStraight(Vector3(unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ()), dest))
+            return;
 
         args.path_Idx_offset = 0;
         args.path.resize(2);

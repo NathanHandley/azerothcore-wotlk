@@ -16,6 +16,8 @@
  */
 
 #include "Creature.h"
+#include "EQPathBuilder.h"
+#include "EQZoneMap.h"
 #include "BattlegroundMgr.h"
 #include "CellImpl.h"
 #include "Common.h"
@@ -1233,6 +1235,12 @@ bool Creature::Create(ObjectGuid::LowType guidlow, Map* map, uint32 phaseMask, u
     LoadCreaturesAddon();
     LoadSparringPct();
 
+    // MergedWorlds EQ: a creature on an EverQuest map stands on the floor under where it is placed (the EQ server put every spawn back on the
+    // floor), unless it flies or is in liquid there
+    if (EQZoneMap const* eqZoneMap = map->GetEQZoneMap())
+        if (!GetTransport())
+            m_positionZ = EQPathBuilder::GetGroundZ(eqZoneMap, this, GetPositionX(), GetPositionY(), GetPositionZ());
+
     //! Need to be called after LoadCreaturesAddon - MOVEMENTFLAG_HOVER is set there
     m_positionZ += GetHoverHeight();
 
@@ -1746,7 +1754,10 @@ bool Creature::LoadCreatureFromDB(ObjectGuid::LowType spawnId, Map* map, bool ad
         return false;
 
     //We should set first home position, because then AI calls home movement
-    SetHomePosition(data->posX, data->posY, data->posZ, data->orientation);
+    float homeZ = data->posZ;
+    if (map->GetEQZoneMap()) // MergedWorlds EQ: the spawn was put on the floor
+        homeZ = GetPositionZ() - GetHoverHeight();
+    SetHomePosition(data->posX, data->posY, homeZ, data->orientation);
 
     m_wanderDistance = data->wander_distance;
 
@@ -3119,6 +3130,11 @@ void Creature::GetRespawnPosition(float& x, float& y, float& z, float* ori, floa
             x = data->posX;
             y = data->posY;
             z = data->posZ;
+
+            // MergedWorlds EQ: a spawn on an EverQuest map stands on the floor under its spawn point
+            if (Map const* map = FindMap())
+                if (EQZoneMap const* eqZoneMap = map->GetEQZoneMap())
+                    z = EQPathBuilder::GetGroundZ(eqZoneMap, this, x, y, z);
             if (ori)
                 *ori = data->orientation;
             if (dist)

@@ -26,6 +26,7 @@
 #include "SharedDefines.h"
 #include <G3D/Vector3.h>
 
+class EQZoneMap;
 class Unit;
 class WorldObject;
 
@@ -180,6 +181,10 @@ class PathGenerator
                               float* smoothPath, int* smoothPathSize, uint32 smoothPathMaxSize);
 
         void AddFarFromPolyFlags(bool startFarFromPoly, bool endFarFromPoly);
+
+        // MergedWorlds EQ: EverQuest maps (see EQPathBuilder.h)
+        EQZoneMap const* _eqZoneMap;
+        void BuildEverQuestPath(G3D::Vector3 const& startPos, G3D::Vector3 const& endPos);
 };
 
 #endif

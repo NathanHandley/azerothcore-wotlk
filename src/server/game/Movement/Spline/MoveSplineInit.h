@@ -103,6 +103,9 @@ namespace Movement
         void MoveTo(Vector3 const& destination, bool generatePath = false, bool forceDestination = false);
         void MoveTo(float x, float y, float z, bool generatePath = false, bool forceDestination = false);
 
+        // MergedWorlds EQ: a straight move on an EverQuest map, kept on the floor (false when it isn't one)
+        bool MoveToEverQuestStraight(Vector3 const& start, Vector3 const& dest);
+
         /* Sets Id of fisrt point of the path. When N-th path point will be done ILisener will notify that pointId + N done
          * Needed for waypoint movement where path splitten into parts
          */

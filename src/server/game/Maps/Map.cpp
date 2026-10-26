@@ -16,6 +16,7 @@
  */
 
 #include "Map.h"
+#include "EQZoneMap.h"
 #include "Battleground.h"
 #include "CellImpl.h"
 #include "Chat.h"
@@ -66,7 +67,7 @@ Map::~Map()
 }
 
 Map::Map(uint32 id, uint32 InstanceId, uint8 SpawnMode, Map* _parent) :
-    _mapGridManager(this), i_mapEntry(sMapStore.LookupEntry(id)), _mapCollisionData(*this, _parent),
+    _mapGridManager(this), i_mapEntry(sMapStore.LookupEntry(id)), _mapCollisionData(*this, _parent), _eqZoneMap(sEQZoneMapMgr->GetZoneMap(id)),
     i_spawnMode(SpawnMode), i_InstanceId(InstanceId), m_unloadTimer(0),
     m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE), _instanceResetPeriod(0),
     _transportsUpdateIter(_transports.end()), i_scriptLock(false), _defaultLight(GetDefaultMapLight(id))
@@ -1333,8 +1334,45 @@ void Map::GetZoneAndAreaId(uint32 phaseMask, uint32& zoneid, uint32& areaid, flo
             zoneid = area->zone;
 }
 
+// MergedWorlds EQ: liquid on an EverQuest map comes from EQ's regions, since its WMO liquid lives in groups of their own (no floor under
+// it for the vmap lookup to find), just as the EQ server took liquid from the zone's region tree
+LiquidData Map::GetEverQuestLiquidData(float x, float y, float z, float collisionHeight, Optional<uint8> reqLiquidType) const
+{
+    LiquidData liquidData;
+    liquidData.Status = LIQUID_MAP_NO_WATER;
+    EQZoneLiquidInfo liquidInfo;
+    if (!_eqZoneMap->GetLiquidInfo(x, y, z, EQ_ZONE_MAP_LIQUID_ABOVE_SEARCH_DISTANCE, liquidInfo))
+        return liquidData;
+
+    uint32 liquidFlagType = 0;
+    if (LiquidTypeEntry const* liquidTypeEntry = sLiquidTypeStore.LookupEntry(liquidInfo.LiquidTypeID))
+        liquidFlagType = liquidTypeEntry->Type;
+    uint32 liquidFlags = 1 << liquidFlagType;
+    if (reqLiquidType && (*reqLiquidType & liquidFlags) == 0)
+        return liquidData;
+
+    float floorZ = _eqZoneMap->GetFloorZ(x, y, std::min(z, liquidInfo.SurfaceZ) + 0.5f, liquidInfo.SurfaceZ - liquidInfo.BottomZ + 1.0f);
+    liquidData.Entry = liquidInfo.LiquidTypeID;
+    liquidData.Flags = liquidFlags;
+    liquidData.Level = liquidInfo.SurfaceZ;
+    liquidData.DepthLevel = floorZ > EQ_ZONE_MAP_INVALID_HEIGHT ? floorZ : liquidInfo.BottomZ;
+    float delta = liquidInfo.SurfaceZ - z;
+    if (delta > collisionHeight)
+        liquidData.Status = LIQUID_MAP_UNDER_WATER;
+    else if (delta > 0.0f)
+        liquidData.Status = LIQUID_MAP_IN_WATER;
+    else if (delta > -0.1f)
+        liquidData.Status = LIQUID_MAP_WATER_WALK;
+    else
+        liquidData.Status = LIQUID_MAP_ABOVE_WATER;
+    return liquidData;
+}
+
 LiquidData const Map::GetLiquidData(uint32 phaseMask, float x, float y, float z, float collisionHeight, Optional<uint8> ReqLiquidType)
 {
+    if (_eqZoneMap) // MergedWorlds EQ
+        return GetEverQuestLiquidData(x, y, z, collisionHeight, ReqLiquidType);
+
    LiquidData liquidData;
    liquidData.Status = LIQUID_MAP_NO_WATER;
 
@@ -1554,6 +1592,10 @@ void Map::GetFullTerrainStatusForPosition(uint32 phaseMask, float x, float y, fl
             data.liquidInfo.Entry = liquidEntry;
         }
     }
+
+    // MergedWorlds EQ: liquid on an EverQuest map comes from EQ's regions
+    if (_eqZoneMap)
+        data.liquidInfo = GetEverQuestLiquidData(x, y, z, collisionHeight, reqLiquidType);
 }
 
 float Map::GetWaterLevel(float x, float y) const
