@@ -31,8 +31,9 @@ class WorldObject;
 //  - A short trip in plain sight with no drops or walls in the way goes straight (the EQ pathfinders' direct line check)
 //  - Anything else follows the route corners it is given (the navigation mesh's), or goes straight when there is no route, as EQ's
 //    "run to target" stuck behaviour did
-//  - Every leg is walked in steps of 10 EQ units with the height put back on the floor at each step (EQ's FixZ while moving), so the
-//    path follows the ground exactly instead of cutting through hills or hanging in the air.  Steps on a straight slope are merged
+//  - Every leg is walked in steps of 10 EQ units with the height put back on the floor at each step, found from the step before it (EQ's
+//    FixZ while moving), so the path follows the ground exactly instead of cutting through hills or hanging in the air.  A step is split
+//    where the floor bends inside it, and steps on a straight slope are merged
 //  - In liquid a swimmer keeps its height (between the floor and the surface) instead, and a flyer always goes straight
 class EQPathBuilder
 {
@@ -53,7 +54,10 @@ public:
 
 private:
     static bool IsInLiquid(EQZoneMap const* zoneMap, float x, float y, float z, float& surfaceZ);
-    static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float expectedZ, float previousZ);
+    static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ);
+    static float SnapStepZOverGaps(EQZoneMap const* zoneMap, float x, float y, float nextX, float nextY, float previousZ);
+    static float GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z);
+    static void AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints);
     static void AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, bool swims, Movement::PointsArray& pathPoints);
     static void SimplifyLeg(Movement::PointsArray const& legPoints, uint32 firstIndex, uint32 lastIndex, std::vector<bool>& keep);
 };

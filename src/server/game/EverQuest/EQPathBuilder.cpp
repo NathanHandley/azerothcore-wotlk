@@ -33,10 +33,13 @@ namespace
 
     // Distances in yards
     constexpr float EQ_PATH_LOS_HEIGHT = 2.0f;               // Line of sight is checked this far above the floor at both ends
-    constexpr float EQ_PATH_STEP_CLIMB = 2.0f;               // A step's floor search starts this far above the higher of the expected and last heights
-    constexpr float EQ_PATH_STEP_SEARCH_DOWN = 10.0f;
-    constexpr float EQ_PATH_STEP_SEARCH_UP = 6.0f;
-    constexpr float EQ_PATH_STEP_MAX_CHANGE = 15.0f;         // A floor this far from the expected height is ignored (the expected height is used)
+    constexpr float EQ_PATH_STEP_CLIMB = 2.0f;               // A step's floor search starts this far above the last step's height
+    constexpr float EQ_PATH_STEP_SEARCH_DOWN = 20.0f;        // How far under the last step's height a step's floor can be (a drop)
+    constexpr float EQ_PATH_STEP_SEARCH_UP = 6.0f;           // How far over the search start a step's floor can be (a slope or stair steeper than the climb)
+    constexpr float EQ_PATH_STEP_GAP_DROP = 4.0f;            // A drop bigger than this with the floor back at the old height a step later is a gap
+    constexpr float EQ_PATH_BEND_TOLERANCE = 0.25f;          // A step is split where the floor halfway along it is further than this off its line
+    constexpr uint32 EQ_PATH_BEND_MAX_DEPTH = 3;             // A step is split at most this many times over (into eighths)
+    constexpr float EQ_PATH_CORNER_SEARCH_START = 0.5f;      // A route corner's floor is looked for from this far above it
     constexpr float EQ_PATH_SIMPLIFY_TOLERANCE = 0.15f;      // Steps within this height of a straight line between their neighbours are merged
     constexpr float EQ_PATH_SWIM_FLOOR_CLEARANCE = 0.5f;
     constexpr float EQ_PATH_SWIM_SURFACE_CLEARANCE = 0.5f;
@@ -82,23 +85,78 @@ float EQPathBuilder::GetGroundZ(EQZoneMap const* zoneMap, WorldObject const* sou
     return groundZ > EQ_ZONE_MAP_INVALID_HEIGHT ? groundZ : z;
 }
 
-// The floor for one step of a leg.  The floor straight down (from a little above the higher of where the step was expected and where
-// the last step was) and the surface straight up (when the step is under the ground) are the candidates, and the one closer to the
-// expected height wins (the EQ server's FindClosestZ)
-float EQPathBuilder::SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float expectedZ, float previousZ)
+// The floor for one step of a leg, found from the height of the step before it, as the EQ server's FixZ worked from a mover's own
+// height: the floor straight down from a little above that height, and the surface straight up from there (a slope or stair steeper than
+// the climb), with the one closer to that height winning (the EQ server's FindClosestZ).  The line between the leg's ends plays no part,
+// since the ground between two points can be far above or below it.  With no surface at all the step keeps the height
+float EQPathBuilder::SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ)
 {
-    float referenceZ = std::max(expectedZ, previousZ);
-    float downZ = zoneMap->GetFloorZ(x, y, referenceZ + EQ_PATH_STEP_CLIMB, EQ_PATH_STEP_CLIMB + EQ_PATH_STEP_SEARCH_DOWN);
-    float upZ = zoneMap->GetCeilingZ(x, y, expectedZ, EQ_PATH_STEP_SEARCH_UP);
-    bool hasDown = downZ > EQ_ZONE_MAP_INVALID_HEIGHT && std::fabs(downZ - referenceZ) <= EQ_PATH_STEP_MAX_CHANGE;
-    bool hasUp = upZ > EQ_ZONE_MAP_INVALID_HEIGHT && upZ > referenceZ + EQ_PATH_STEP_CLIMB;
+    float searchStartZ = previousZ + EQ_PATH_STEP_CLIMB;
+    float downZ = zoneMap->GetFloorZ(x, y, searchStartZ, EQ_PATH_STEP_CLIMB + EQ_PATH_STEP_SEARCH_DOWN);
+    float upZ = zoneMap->GetCeilingZ(x, y, searchStartZ, EQ_PATH_STEP_SEARCH_UP);
+    bool hasDown = downZ > EQ_ZONE_MAP_INVALID_HEIGHT;
+    bool hasUp = upZ > EQ_ZONE_MAP_INVALID_HEIGHT;
     if (hasDown && hasUp)
-        return std::fabs(downZ - referenceZ) <= std::fabs(upZ - referenceZ) ? downZ : upZ;
+        return std::fabs(downZ - previousZ) <= std::fabs(upZ - previousZ) ? downZ : upZ;
     if (hasDown)
         return downZ;
     if (hasUp)
         return upZ;
-    return expectedZ;
+    return previousZ;
+}
+
+// A step's floor, unless it is a big drop with the floor back near the old height a step further on.  That is a crack or a gap in the
+// zone's mesh (between a bridge's planks, under a doorway's sill), which the mover walks over instead of dropping into
+float EQPathBuilder::SnapStepZOverGaps(EQZoneMap const* zoneMap, float x, float y, float nextX, float nextY, float previousZ)
+{
+    float stepZ = SnapStepZ(zoneMap, x, y, previousZ);
+    if (previousZ - stepZ <= EQ_PATH_STEP_GAP_DROP)
+        return stepZ;
+    float nextZ = SnapStepZ(zoneMap, nextX, nextY, previousZ);
+    if (std::fabs(nextZ - previousZ) <= EQ_PATH_STEP_CLIMB)
+        return previousZ;
+    return stepZ;
+}
+
+// The floor under a route corner.  The navigation mesh only roughly follows the floor (its stairs are ramps), so a corner can be a little
+// under the floor as easily as over it, and the closer of the floor under it and the surface over it is the one it meant.  Taking the
+// floor under it first would drop a corner that is just under a stair to the floor below the stairs
+float EQPathBuilder::GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z)
+{
+    float surfaceZ = 0.0f;
+    if (CanFly(source) || IsInLiquid(zoneMap, x, y, z, surfaceZ))
+        return GetGroundZ(zoneMap, source, x, y, z);
+    float searchStartZ = z + EQ_PATH_CORNER_SEARCH_START;
+    float downZ = zoneMap->GetFloorZ(x, y, searchStartZ, EQ_PATH_GROUND_SEARCH_DOWN + EQ_PATH_CORNER_SEARCH_START);
+    float upZ = zoneMap->GetCeilingZ(x, y, searchStartZ, EQ_PATH_GROUND_SEARCH_UP);
+    bool hasDown = downZ > EQ_ZONE_MAP_INVALID_HEIGHT;
+    bool hasUp = upZ > EQ_ZONE_MAP_INVALID_HEIGHT;
+    if (hasDown && hasUp)
+        return std::fabs(downZ - z) <= std::fabs(upZ - z) ? downZ : upZ;
+    if (hasDown)
+        return downZ;
+    if (hasUp)
+        return upZ;
+    return z;
+}
+
+// Adds the step from one floor point to the next, split where the floor bends away from the straight line between them (a dune's crest,
+// the bottom of a dip, the edge of a stair) so the mover neither cuts through the ground nor hangs over it between the two
+void EQPathBuilder::AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints)
+{
+    if (depth < EQ_PATH_BEND_MAX_DEPTH)
+    {
+        float lineZ = (from.z + to.z) * 0.5f;
+        G3D::Vector3 middle((from.x + to.x) * 0.5f, (from.y + to.y) * 0.5f, 0.0f);
+        middle.z = SnapStepZ(zoneMap, middle.x, middle.y, lineZ);
+        if (std::fabs(middle.z - lineZ) > EQ_PATH_BEND_TOLERANCE)
+        {
+            AddStepWithBends(zoneMap, from, middle, depth + 1, legPoints);
+            AddStepWithBends(zoneMap, middle, to, depth + 1, legPoints);
+            return;
+        }
+    }
+    legPoints.push_back(to);
 }
 
 bool EQPathBuilder::CanGoDirectly(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end)
@@ -130,8 +188,7 @@ bool EQPathBuilder::CanGoDirectly(EQZoneMap const* zoneMap, WorldObject const* s
         float t = float(step) / float(stepCount);
         float x = start.x + dx * t;
         float y = start.y + dy * t;
-        float expectedZ = start.z + (end.z - start.z) * t;
-        float stepZ = SnapStepZ(zoneMap, x, y, expectedZ, previousZ);
+        float stepZ = SnapStepZ(zoneMap, x, y, previousZ);
         float surfaceZ = 0.0f;
         if (std::fabs(stepZ - previousZ) > maxJump && !IsInLiquid(zoneMap, x, y, stepZ + 0.1f, surfaceZ))
             return false;
@@ -182,28 +239,41 @@ void EQPathBuilder::AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G
     legPoints.reserve(stepCount + 1);
     legPoints.push_back(from);
     float previousZ = from.z;
+    bool previousOnFloor = true;
     for (uint32 step = 1; step <= stepCount; ++step)
     {
         float t = float(step) / float(stepCount);
         float x = from.x + dx * t;
         float y = from.y + dy * t;
-        float expectedZ = from.z + (to.z - from.z) * t;
-        float stepZ = expectedZ;
-        float surfaceZ = 0.0f;
-        if (swims && IsInLiquid(zoneMap, x, y, expectedZ, surfaceZ))
+        float stepZ = to.z; // The leg's end is already on the floor (or is a route corner the caller placed)
+        if (step < stepCount)
         {
-            // Swimming keeps the expected height, kept off the floor and under the surface
-            float floorZ = zoneMap->GetFloorZ(x, y, expectedZ + EQ_PATH_SWIM_FLOOR_CLEARANCE, EQ_PATH_STEP_SEARCH_DOWN);
-            if (floorZ > EQ_ZONE_MAP_INVALID_HEIGHT)
-                stepZ = std::max(stepZ, floorZ + EQ_PATH_SWIM_FLOOR_CLEARANCE);
-            stepZ = std::min(stepZ, surfaceZ - EQ_PATH_SWIM_SURFACE_CLEARANCE);
+            float nextT = float(step + 1) / float(stepCount);
+            stepZ = SnapStepZOverGaps(zoneMap, x, y, from.x + dx * nextT, from.y + dy * nextT, previousZ);
         }
-        else if (step == stepCount)
-            stepZ = to.z; // The leg's end is already on the floor (or is a route corner the caller placed)
+        bool onFloor = true;
+        float surfaceZ = 0.0f;
+        float expectedZ = from.z + (to.z - from.z) * t;
+        if (swims && (IsInLiquid(zoneMap, x, y, expectedZ, surfaceZ) || IsInLiquid(zoneMap, x, y, stepZ + EQ_PATH_SWIM_FLOOR_CLEARANCE, surfaceZ)))
+        {
+            // Swimming keeps the height on the line between the leg's ends, kept off the floor and under the surface
+            if (step < stepCount)
+            {
+                stepZ = expectedZ;
+                float floorZ = zoneMap->GetFloorZ(x, y, expectedZ + EQ_PATH_SWIM_FLOOR_CLEARANCE, EQ_PATH_STEP_SEARCH_DOWN);
+                if (floorZ > EQ_ZONE_MAP_INVALID_HEIGHT)
+                    stepZ = std::max(stepZ, floorZ + EQ_PATH_SWIM_FLOOR_CLEARANCE);
+                stepZ = std::min(stepZ, surfaceZ - EQ_PATH_SWIM_SURFACE_CLEARANCE);
+            }
+            onFloor = false;
+        }
+        G3D::Vector3 stepPoint(x, y, stepZ);
+        if (onFloor && previousOnFloor)
+            AddStepWithBends(zoneMap, legPoints.back(), stepPoint, 0, legPoints);
         else
-            stepZ = SnapStepZ(zoneMap, x, y, expectedZ, previousZ);
-        legPoints.push_back(G3D::Vector3(x, y, stepZ));
+            legPoints.push_back(stepPoint);
         previousZ = stepZ;
+        previousOnFloor = onFloor;
     }
 
     std::vector<bool> keep(legPoints.size(), false);
@@ -240,7 +310,7 @@ bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* sourc
         for (uint32 i = 1; i + 1 < routeCorners.size(); ++i)
         {
             G3D::Vector3 corner = routeCorners[i];
-            corner.z = GetGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
+            corner.z = GetCornerGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
             corners.push_back(corner);
         }
     }
