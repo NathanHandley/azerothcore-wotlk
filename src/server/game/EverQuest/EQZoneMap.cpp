@@ -17,6 +17,7 @@
  */
 
 #include "EQZoneMap.h"
+#include "EQAreaTriggerHooks.h"
 #include "Log.h"
 #include <algorithm>
 #include <cmath>
@@ -24,6 +25,8 @@
 #include <filesystem>
 #include <fstream>
 #include <zlib.h>
+
+EverQuestAreaTriggerHooks::GameMasterZoneLineHandlerFunction EverQuestAreaTriggerHooks::GameMasterZoneLineHandler = nullptr;
 
 namespace
 {

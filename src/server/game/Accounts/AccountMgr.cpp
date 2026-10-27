@@ -153,6 +153,21 @@ AccountOpResult AccountMgr::DeleteAccount(uint32 accountId)
     stmt->SetData(0, accountId);
     CharacterDatabase.Execute(stmt);
 
+    // MergedWorlds account bank: its items belong to the account, so they go with it
+    {
+        CharacterDatabaseTransaction accountBankTrans = CharacterDatabase.BeginTransaction();
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_INSTANCES_BY_ACCOUNT);
+        stmt->SetData(0, accountId);
+        accountBankTrans->Append(stmt);
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEMS_BY_ACCOUNT);
+        stmt->SetData(0, accountId);
+        accountBankTrans->Append(stmt);
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK);
+        stmt->SetData(0, accountId);
+        accountBankTrans->Append(stmt);
+        CharacterDatabase.CommitTransaction(accountBankTrans);
+    }
+
     LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
 
     loginStmt = LoginDatabase.GetPreparedStatement(LOGIN_DEL_ACCOUNT);

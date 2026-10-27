@@ -41,6 +41,11 @@ bool WorldSession::CanUseBank(ObjectGuid bankerGUID) const
     return true;
 }
 
+bool WorldSession::IsBankPosOutOfReach(uint8 bag, uint8 slot) const
+{
+    return bag != NULL_BAG && Player::IsBankPos(bag, slot) && !CanUseBank();
+}
+
 void WorldSession::HandleBankerActivateOpcode(WorldPacket& recvData)
 {
     ObjectGuid guid;
@@ -75,8 +80,9 @@ void WorldSession::HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& pa
     if (!item)
         return;
 
+    // MergedWorlds account bank: with the account bank tab open the item goes there instead
     ItemPosCountVec dest;
-    InventoryResult msg = _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
+    InventoryResult msg = packet.AccountBank ? _player->CanAccountBankItem(NULL_BAG, NULL_SLOT, dest, item, false) : _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
     if (msg != EQUIP_ERR_OK)
     {
         _player->SendEquipError(msg, item, nullptr);
@@ -151,14 +157,23 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
         return;
     }
 
-    uint32 slot = _player->GetBankBagSlotCount();
+    // MergedWorlds bank expansion: 24 bag slots, for the character and (bought separately, same prices) for the account bank
+    bool accountBank = buyBankSlot.AccountBank != 0;
+    if (accountBank && !_player->IsAccountBankLoaded())
+    {
+        packet.Result = ERR_BANKSLOT_FAILED_TOO_MANY;
+        SendPacket(packet.Write());
+        return;
+    }
+
+    uint32 slot = accountBank ? _player->GetAccountBankBagSlotCount() : _player->GetBankBagSlotCount();
 
     // next slot
     ++slot;
 
     BankBagSlotPricesEntry const* slotEntry = sBankBagSlotPricesStore.LookupEntry(slot);
 
-    if (!slotEntry)
+    if (!slotEntry || slot > uint32(accountBank ? MAX_ACCOUNT_BANK_BAG_SLOT_COUNT : MAX_BANK_BAG_SLOT_COUNT))
     {
         packet.Result = ERR_BANKSLOT_FAILED_TOO_MANY;
         SendPacket(packet.Write());
@@ -174,13 +189,26 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
         return;
     }
 
-    _player->SetBankBagSlotCount(slot);
+    if (accountBank)
+        _player->SetAccountBankBagSlotCount(slot);
+    else
+        _player->SetBankBagSlotCount(slot);
     _player->ModifyMoney(-int32(price));
+
+    // MergedWorlds account bank: the slot belongs to every character on the account, so it is written right away
+    // together with the money, instead of waiting for the next save of this character
+    if (accountBank)
+    {
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        _player->SaveInventoryAndGoldToDB(trans);
+        CharacterDatabase.CommitTransaction(trans);
+    }
 
     packet.Result = ERR_BANKSLOT_OK;
     SendPacket(packet.Write());
 
-    _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT);
+    if (!accountBank)
+        _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT);
 }
 
 void WorldSession::SendShowBank(ObjectGuid guid)

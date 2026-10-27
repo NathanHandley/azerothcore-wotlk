@@ -129,6 +129,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
     _logoutTime(0),
     m_inQueue(false),
     m_playerLoading(false),
+    m_delayedLoginStartMS(0),
     m_playerLogout(false),
     m_playerRecentlyLogout(false),
     m_playerSave(false),
@@ -597,6 +598,9 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
     {
         sScriptMgr->OnSessionUpdate(this, diff);
 
+        // MergedWorlds account bank
+        ProcessDelayedPlayerLogin();
+
         if (m_Socket && m_Socket->IsOpen() && _warden)
         {
             _warden->Update(diff);
@@ -803,7 +807,7 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
             for (int j = BUYBACK_SLOT_START; j < BUYBACK_SLOT_END; ++j)
             {
                 eslot = j - BUYBACK_SLOT_START;
-                _player->SetGuidValue(PLAYER_FIELD_VENDORBUYBACK_SLOT_1 + (eslot * 2), ObjectGuid::Empty);
+                _player->SetGuidValue(Player::GetInventorySlotUpdateField(BUYBACK_SLOT_START + eslot), ObjectGuid::Empty);
                 _player->SetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + eslot, 0);
                 _player->SetUInt32Value(PLAYER_FIELD_BUYBACK_TIMESTAMP_1 + eslot, 0);
             }

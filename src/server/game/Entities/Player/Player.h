@@ -650,7 +650,8 @@ enum PlayerSlots
     // first slot for item stored (in any way in player m_items data)
     PLAYER_SLOT_START           = 0,
     // last+1 slot for item stored (in any way in player m_items data)
-    PLAYER_SLOT_END             = 150,
+    // MergedWorlds bank expansion: 150 -> 237 (72 bank items, 24 bank bags, account bank bags + vaults)
+    PLAYER_SLOT_END             = 237,
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
@@ -693,36 +694,61 @@ enum InventoryPackSlots                                     // 16 slots
     INVENTORY_SLOT_ITEM_END     = 39
 };
 
-enum BankItemSlots                                          // 28 slots
+// MergedWorlds bank expansion: the bank is 12x6 item slots and 2x12 bag slots, and every range after it moved up.
+// Characters saved with the stock layout are moved by the characters DB update that adds the account bank tables
+enum BankItemSlots                                          // 72 slots
 {
     BANK_SLOT_ITEM_START        = 39,
-    BANK_SLOT_ITEM_END          = 67
+    BANK_SLOT_ITEM_END          = 111
 };
 
-enum BankBagSlots                                           // 7 slots
+enum BankBagSlots                                           // 24 slots
 {
-    BANK_SLOT_BAG_START         = 67,
-    BANK_SLOT_BAG_END           = 74
+    BANK_SLOT_BAG_START         = 111,
+    BANK_SLOT_BAG_END           = 135
 };
 
 enum BuyBackSlots                                           // 12 slots
 {
     // stored in m_items, there is no more m_buybackitems
-    BUYBACK_SLOT_START          = 74,
-    BUYBACK_SLOT_END            = 86
+    BUYBACK_SLOT_START          = 135,
+    BUYBACK_SLOT_END            = 147
 };
 
 enum KeyRingSlots                                           // 32 slots
 {
-    KEYRING_SLOT_START          = 86,
-    KEYRING_SLOT_END            = 118
+    KEYRING_SLOT_START          = 147,
+    KEYRING_SLOT_END            = 179
 };
 
 enum CurrencyTokenSlots                                     // 32 slots
 {
-    CURRENCYTOKEN_SLOT_START    = 118,
-    CURRENCYTOKEN_SLOT_END      = 150
+    CURRENCYTOKEN_SLOT_START    = 179,
+    CURRENCYTOKEN_SLOT_END      = 211
 };
+
+// MergedWorlds account bank: shared by every character on the account, loaded into these slots while a character is online.
+// The 72 item slots live in two hidden 36 slot vault bags, since inventory packets carry one byte per slot
+enum AccountBankBagSlots                                    // 24 slots
+{
+    ACCOUNT_BANK_BAG_SLOT_START     = 211,
+    ACCOUNT_BANK_BAG_SLOT_END       = 235
+};
+
+enum AccountBankVaultSlots                                  // 2 slots
+{
+    ACCOUNT_BANK_VAULT_SLOT_START   = 235,
+    ACCOUNT_BANK_VAULT_SLOT_END     = 237
+};
+
+#define MAX_BANK_BAG_SLOT_COUNT             (BANK_SLOT_BAG_END - BANK_SLOT_BAG_START)
+#define MAX_ACCOUNT_BANK_BAG_SLOT_COUNT     (ACCOUNT_BANK_BAG_SLOT_END - ACCOUNT_BANK_BAG_SLOT_START)
+#define ACCOUNT_BANK_VAULT_SIZE             36
+#define ACCOUNT_BANK_ITEM_SLOT_COUNT        ((ACCOUNT_BANK_VAULT_SLOT_END - ACCOUNT_BANK_VAULT_SLOT_START) * ACCOUNT_BANK_VAULT_SIZE)
+// Inventory slots below this sit in PLAYER_FIELD_INV_SLOT_HEAD, the rest in PLAYER_FIELD_INV_SLOT_EXTENDED
+#define PLAYER_INV_SLOT_STOCK_FIELD_COUNT   150
+// `account_bank_item` rows with bag 0 use slot 0-71 for the item slots and this + n for bag slot n
+#define ACCOUNT_BANK_DB_BAG_SLOT_START      ACCOUNT_BANK_ITEM_SLOT_COUNT
 
 enum EquipmentSetUpdateState
 {
@@ -889,6 +915,9 @@ enum PlayerLoginQueryIndex
     PLAYER_LOGIN_QUERY_LOAD_CHARACTER_SETTINGS           = 36,
     PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS                    = 37,
     PLAYER_LOGIN_QUERY_LOAD_OFFLINE_ACHIEVEMENTS_UPDATES = 38,
+    // MergedWorlds account bank
+    PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK                 = 39,
+    PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS           = 40,
     MAX_PLAYER_LOGIN_QUERY
 };
 
@@ -1286,10 +1315,30 @@ public:
     static bool IsBagPos(uint16 pos);
     static bool IsBankPos(uint16 pos) { return IsBankPos(pos >> 8, pos & 255); }
     static bool IsBankPos(uint8 bag, uint8 slot);
+    // MergedWorlds account bank: an account bank bag slot, or anything inside an account bank bag or vault (never the vault slot itself)
+    static bool IsAccountBankPos(uint16 pos) { return IsAccountBankPos(pos >> 8, pos & 255); }
+    static bool IsAccountBankPos(uint8 bag, uint8 slot);
+    static bool IsAccountBankVaultSlot(uint8 slot) { return slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < ACCOUNT_BANK_VAULT_SLOT_END; }
+    // Update field that holds the item guid of inventory slot `slot` (two fields per slot)
+    static uint16 GetInventorySlotUpdateField(uint8 slot);
     bool IsValidPos(uint16 pos, bool explicit_pos) { return IsValidPos(pos >> 8, pos & 255, explicit_pos); }
     bool IsValidPos(uint8 bag, uint8 slot, bool explicit_pos);
     [[nodiscard]] uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
     void SetBankBagSlotCount(uint8 count) { SetByteValue(PLAYER_BYTES_2, 2, count); }
+    [[nodiscard]] uint8 GetAccountBankBagSlotCount() const { return GetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0); }
+    void SetAccountBankBagSlotCount(uint8 count);
+    [[nodiscard]] bool IsAccountBankLoaded() const { return m_accountBankLoaded; }
+    // Checks that an item (and anything inside it, for a bag) may be stored in the account bank
+    InventoryResult CanPlaceItemInAccountBank(Item const* pItem) const;
+    InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap) const;
+    // Queues a bag's contents for saving (they are saved to the character or the account bank by where the bag is)
+    void MarkBagContentsChanged(Item* pItem);
+    // Unique / limit category checks for the contents of a bag leaving the account bank
+    InventoryResult CanTakeAccountBankBagContents(Item const* pItem, uint32* offendingEntry = nullptr) const;
+    // Logout saves of characters on an account; a login on that account waits until they have committed
+    static void CommitAccountBankLogoutSave(uint32 accountId, CharacterDatabaseTransaction trans);
+    static bool IsAccountBankLogoutSavePending(uint32 accountId);
+    static void ProcessAccountBankLogoutSaves();
     [[nodiscard]] bool HasItemCount(uint32 item, uint32 count = 1, bool inBankAlso = false) const;
     bool HasItemFitToSpellRequirements(SpellInfo const* spellInfo, Item const* ignoreItem = nullptr) const;
     bool CanNoReagentCast(SpellInfo const* spellInfo) const;
@@ -2772,6 +2821,8 @@ protected:
     void _LoadAuras(PreparedQueryResult result, uint32 timediff);
     void _LoadGlyphAuras();
     void _LoadInventory(PreparedQueryResult result, uint32 timeDiff);
+    void _LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff);
+    bool _CreateAccountBankVaults();
     void _LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mailItemsResult);
     static Item* _LoadMailedItem(ObjectGuid const& playerGuid, Player* player, uint32 mailId, Mail* mail, Field* fields);
     void _LoadQuestStatus(PreparedQueryResult result);
@@ -2804,6 +2855,8 @@ protected:
     void _SaveActions(CharacterDatabaseTransaction trans);
     void _SaveAuras(CharacterDatabaseTransaction trans, bool logout);
     void _SaveInventory(CharacterDatabaseTransaction trans);
+    void _SaveAccountBankSettings(CharacterDatabaseTransaction trans);
+    bool _GetAccountBankDBPosition(Item const* item, ObjectGuid::LowType& bagGuid, uint8& slot) const;
     void _SaveMail(CharacterDatabaseTransaction trans);
     void _SaveQuestStatus(CharacterDatabaseTransaction trans);
     void _SaveDailyQuestStatus(CharacterDatabaseTransaction trans);
@@ -2855,6 +2908,8 @@ protected:
 
     std::vector<Item*> m_itemUpdateQueue;
     bool m_itemUpdateQueueBlocked;
+    bool m_accountBankLoaded;
+    bool m_accountBankSettingsChanged;
 
     uint32 m_ExtraFlags;
 

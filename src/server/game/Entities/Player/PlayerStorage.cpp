@@ -16,6 +16,7 @@
  */
 
 #include "AccountMgr.h"
+#include "AsyncCallbackProcessor.h"
 #include "AchievementMgr.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
@@ -73,6 +74,8 @@
 //  there is probably some underlying problem with imports which should properly addressed
 //  see: https://github.com/azerothcore/azerothcore-wotlk/issues/9766
 #include "GridNotifiersImpl.h"
+#include <mutex>
+#include <unordered_map>
 
 /*********************************************************/
 /***                    STORAGE SYSTEM                 ***/
@@ -451,7 +454,9 @@ Item* Player::GetItemByPos(uint16 pos) const
 
 Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 {
-    if (bag == INVENTORY_SLOT_BAG_0 && (slot < BANK_SLOT_BAG_END || (slot >= KEYRING_SLOT_START && slot < CURRENCYTOKEN_SLOT_END)))
+    // MergedWorlds account bank: the account bank bag slots are reachable, the vault slots are not (only through GetBagByPos)
+    if (bag == INVENTORY_SLOT_BAG_0 && (slot < BANK_SLOT_BAG_END || (slot >= KEYRING_SLOT_START && slot < CURRENCYTOKEN_SLOT_END)
+        || (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END)))
         return m_items[slot];
     else if (Bag* pBag = GetBagByPos(bag))
         return pBag->GetItemByPos(slot);
@@ -460,9 +465,11 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 
 Bag* Player::GetBagByPos(uint8 bag) const
 {
+    // MergedWorlds account bank: account bank bags and the two vaults (m_items directly, GetItemByPos hides the vaults)
     if ((bag >= INVENTORY_SLOT_BAG_START && bag < INVENTORY_SLOT_BAG_END)
-        || (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END))
-        if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, bag))
+        || (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END)
+        || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < ACCOUNT_BANK_VAULT_SLOT_END))
+        if (Item* item = m_items[bag])
             return item->ToBag();
     return nullptr;
 }
@@ -588,7 +595,27 @@ bool Player::IsBankPos(uint8 bag, uint8 slot)
         return true;
     if (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END)
         return true;
+    // MergedWorlds account bank: it is used through the banker like the bank, so it counts as a bank position
+    if (IsAccountBankPos(bag, slot))
+        return true;
     return false;
+}
+
+bool Player::IsAccountBankPos(uint8 bag, uint8 slot)
+{
+    if (bag == INVENTORY_SLOT_BAG_0 && (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END))
+        return true;
+    if (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < ACCOUNT_BANK_VAULT_SLOT_END)
+        return true;
+    return false;
+}
+
+uint16 Player::GetInventorySlotUpdateField(uint8 slot)
+{
+    // MergedWorlds bank expansion: the stock fields hold the first 150 slots, the rest were appended to the player fields
+    if (slot < PLAYER_INV_SLOT_STOCK_FIELD_COUNT)
+        return PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2);
+    return PLAYER_FIELD_INV_SLOT_EXTENDED + ((slot - PLAYER_INV_SLOT_STOCK_FIELD_COUNT) * 2);
 }
 
 bool Player::IsBagPos(uint16 pos)
@@ -598,6 +625,9 @@ bool Player::IsBagPos(uint16 pos)
     if (bag == INVENTORY_SLOT_BAG_0 && (slot >= INVENTORY_SLOT_BAG_START && slot < INVENTORY_SLOT_BAG_END))
         return true;
     if (bag == INVENTORY_SLOT_BAG_0 && (slot >= BANK_SLOT_BAG_START && slot < BANK_SLOT_BAG_END))
+        return true;
+    // MergedWorlds account bank bag slots (the vault slots are never a position an item can be moved to or from)
+    if (bag == INVENTORY_SLOT_BAG_0 && (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END))
         return true;
     return false;
 }
@@ -636,6 +666,10 @@ bool Player::IsValidPos(uint8 bag, uint8 slot, bool explicit_pos)
 
         // bank bag slots
         if (slot >= BANK_SLOT_BAG_START && slot < BANK_SLOT_BAG_END)
+            return true;
+
+        // MergedWorlds account bank bag slots
+        if (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END)
             return true;
 
         return false;
@@ -938,8 +972,8 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
             if (slot >= CURRENCYTOKEN_SLOT_START && slot < CURRENCYTOKEN_SLOT_END && !(pProto->IsCurrencyToken()))
                 return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
 
-            // prevent cheating
-            if ((slot >= BUYBACK_SLOT_START && slot < BUYBACK_SLOT_END) || slot >= PLAYER_SLOT_END)
+            // prevent cheating (MergedWorlds account bank: the vault slots never hold anything but the vaults)
+            if ((slot >= BUYBACK_SLOT_START && slot < BUYBACK_SLOT_END) || IsAccountBankVaultSlot(slot) || slot >= PLAYER_SLOT_END)
                 return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
         }
         else
@@ -2109,6 +2143,10 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
 
 InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading) const
 {
+    // MergedWorlds account bank: an account bank destination has its own rules
+    if (bag != NULL_BAG && IsAccountBankPos(bag, slot))
+        return CanAccountBankItem(bag, slot, dest, pItem, swap);
+
     if (!pItem)
         return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_ITEM_NOT_FOUND;
 
@@ -2291,6 +2329,302 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest
         if (count == 0)
             return EQUIP_ERR_OK;
     }
+    return EQUIP_ERR_BANK_FULL;
+}
+
+InventoryResult Player::CanTakeAccountBankBagContents(Item const* pItem, uint32* offendingEntry) const
+{
+    if (offendingEntry)
+        *offendingEntry = 0;
+
+    Bag const* pBag = pItem ? pItem->ToBag() : nullptr;
+    if (!pBag)
+        return EQUIP_ERR_OK;
+
+    // add up each entry first, the bag itself may hold several copies of a unique item
+    std::map<uint32, uint32> countsByEntry;
+    for (uint32 i = 0; i < pBag->GetBagSize(); ++i)
+        if (Item const* pBagItem = pBag->GetItemByPos(i))
+            countsByEntry[pBagItem->GetEntry()] += pBagItem->GetCount();
+
+    // and each "have" limit category, different entries may share one
+    std::map<uint32, uint32> countsByLimitCategory;
+    for (std::map<uint32, uint32>::const_iterator itr = countsByEntry.begin(); itr != countsByEntry.end(); ++itr)
+    {
+        InventoryResult res = CanTakeMoreSimilarItems(itr->first, itr->second);
+        if (res != EQUIP_ERR_OK)
+        {
+            if (offendingEntry)
+                *offendingEntry = itr->first;
+            return res;
+        }
+
+        if (ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(itr->first))
+            if (pProto->ItemLimitCategory)
+                countsByLimitCategory[pProto->ItemLimitCategory] += itr->second;
+    }
+
+    for (std::map<uint32, uint32>::const_iterator itr = countsByLimitCategory.begin(); itr != countsByLimitCategory.end(); ++itr)
+    {
+        ItemLimitCategoryEntry const* limitEntry = sItemLimitCategoryStore.LookupEntry(itr->first);
+        if (limitEntry && limitEntry->mode == ITEM_LIMIT_CATEGORY_MODE_HAVE && GetItemCountWithLimitCategory(itr->first) + itr->second > uint32(limitEntry->maxCount))
+        {
+            // any entry of the category names it in the client's message
+            if (offendingEntry)
+            {
+                for (std::map<uint32, uint32>::const_iterator entryItr = countsByEntry.begin(); entryItr != countsByEntry.end(); ++entryItr)
+                {
+                    ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(entryItr->first);
+                    if (pProto && pProto->ItemLimitCategory == itr->first)
+                    {
+                        *offendingEntry = entryItr->first;
+                        break;
+                    }
+                }
+            }
+            return EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_COUNT_EXCEEDED;
+        }
+    }
+
+    return EQUIP_ERR_OK;
+}
+
+void Player::MarkBagContentsChanged(Item* pItem)
+{
+    if (Bag* pBag = pItem->ToBag())
+        for (uint32 i = 0; i < pBag->GetBagSize(); ++i)
+            if (Item* bagItem = pBag->GetItemByPos(i))
+                bagItem->SetState(ITEM_CHANGED, this);
+}
+
+InventoryResult Player::CanPlaceItemInAccountBank(Item const* pItem) const
+{
+    if (!pItem)
+        return EQUIP_ERR_ITEM_NOT_FOUND;
+
+    ItemTemplate const* pProto = pItem->GetTemplate();
+    if (!pProto || pItem->IsAccountBankVault())
+        return EQUIP_ERR_ITEM_NOT_FOUND;
+
+    // Other characters on the account can take it, so nothing bound to this character (account bound items are fine)
+    if ((pItem->IsSoulBound() && !pItem->IsBoundAccountWide()) || pItem->IsBoundByTempEnchant() || (pItem->IsBoundByEnchant() && !pItem->IsBoundAccountWide()))
+        return EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM;
+
+    // Loot release and the trade window find their item by guid among this character's items, which leaves out the account bank,
+    // so an item (or bag content) being looted or offered in a trade must stay put
+    if (pItem->m_lootGenerated || pItem->GetGUID() == GetLootGUID())
+        return EQUIP_ERR_ALREADY_LOOTED;
+
+    if (pItem->IsInTrade() || (GetTradeData() && GetTradeData()->GetTradeSlotForItem(pItem->GetGUID()) != TRADE_SLOT_INVALID))
+        return EQUIP_ERR_ITEMS_CANT_BE_SWAPPED;
+
+    // Refund data, the conjured lifetime, item durations (counted by the online / offline time of whoever holds it), gift wraps
+    // (kept with the wrapping character) and map / zone limits all follow the character, not the account
+    if (pItem->IsRefundable() || pItem->IsBOPTradable() || pItem->IsWrapped() || pProto->HasFlag(ITEM_FLAG_CONJURED) || pProto->Duration
+        || pItem->GetUInt32Value(ITEM_FIELD_DURATION) || pProto->Map || pProto->Area)
+        return EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED;
+
+    // A bag carries what it holds
+    if (Bag const* pBag = pItem->ToBag())
+    {
+        for (uint32 i = 0; i < pBag->GetBagSize(); ++i)
+        {
+            if (Item const* pBagItem = pBag->GetItemByPos(i))
+            {
+                InventoryResult res = CanPlaceItemInAccountBank(pBagItem);
+                if (res != EQUIP_ERR_OK)
+                    return res;
+            }
+        }
+    }
+
+    return EQUIP_ERR_OK;
+}
+
+InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap) const
+{
+    if (!pItem)
+        return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_ITEM_NOT_FOUND;
+
+    uint32 count = pItem->GetCount();
+
+    LOG_DEBUG("entities.player.items", "STORAGE: CanAccountBankItem bag = {}, slot = {}, item = {}, count = {}", bag, slot, pItem->GetEntry(), pItem->GetCount());
+    ItemTemplate const* pProto = pItem->GetTemplate();
+    if (!pProto)
+        return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_ITEM_NOT_FOUND;
+
+    // Nothing to put it in until the account bank has loaded
+    if (!m_accountBankLoaded)
+        return EQUIP_ERR_CANT_DO_RIGHT_NOW;
+
+    if (pItem->IsBindedNotWith(this))
+        return EQUIP_ERR_DONT_OWN_THAT_ITEM;
+
+    // Currency tokens are not supposed to be swapped out of their hidden bag
+    uint8 pItemslot = pItem->GetSlot();
+    if (pItem->GetBagSlot() == INVENTORY_SLOT_BAG_0 && pItemslot >= CURRENCYTOKEN_SLOT_START && pItemslot < CURRENCYTOKEN_SLOT_END)
+    {
+        LOG_ERROR("entities.player", "Possible hacking attempt: Player {} [{}] tried to move token [{}, entry: {}] out of the currency bag!",
+                  GetName(), GetGUID().ToString(), pItem->GetGUID().ToString(), pProto->ItemId);
+        return EQUIP_ERR_ITEMS_CANT_BE_SWAPPED;
+    }
+
+    InventoryResult res = CanPlaceItemInAccountBank(pItem);
+    if (res != EQUIP_ERR_OK)
+        return res;
+
+    // No unique / limit category check: the account bank may hold any number of copies, and it never counts towards them
+
+    // in specific slot
+    if (bag != NULL_BAG && slot != NULL_SLOT)
+    {
+        if (bag == INVENTORY_SLOT_BAG_0)
+        {
+            // only the account bank bag slots are flat slots (IsAccountBankPos checked by the caller)
+            if (slot < ACCOUNT_BANK_BAG_SLOT_START || slot >= ACCOUNT_BANK_BAG_SLOT_END)
+                return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+
+            if (!pItem->IsBag())
+                return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+
+            if (slot - ACCOUNT_BANK_BAG_SLOT_START >= GetAccountBankBagSlotCount())
+                return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
+
+            res = CanUseItem(pItem, true);
+            if (res != EQUIP_ERR_OK)
+                return res;
+        }
+
+        res = CanStoreItem_InSpecificSlot(bag, slot, dest, pProto, count, swap, pItem);
+        if (res != EQUIP_ERR_OK)
+            return res;
+
+        if (count == 0)
+            return EQUIP_ERR_OK;
+    }
+
+    // not specific slot or have space for partly store only in specific slot
+
+    // in specific bag (a vault means the account bank item slots, so both vaults are searched)
+    if (bag != NULL_BAG && bag != INVENTORY_SLOT_BAG_0)
+    {
+        if (pItem->IsNotEmptyBag())
+            return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
+
+        bool isVault = IsAccountBankVaultSlot(bag);
+        uint8 firstBag = isVault ? uint8(ACCOUNT_BANK_VAULT_SLOT_START) : bag;
+        uint8 endBag = isVault ? uint8(ACCOUNT_BANK_VAULT_SLOT_END) : uint8(bag + 1);
+
+        // search stack in bag for merge to
+        if (pProto->Stackable != 1)
+        {
+            for (uint8 i = firstBag; i < endBag; ++i)
+            {
+                res = CanStoreItem_InBag(i, dest, pProto, count, true, false, pItem, NULL_BAG, i == bag ? slot : uint8(NULL_SLOT));
+                if (res != EQUIP_ERR_OK)
+                    res = CanStoreItem_InBag(i, dest, pProto, count, true, true, pItem, NULL_BAG, i == bag ? slot : uint8(NULL_SLOT));
+
+                if (res != EQUIP_ERR_OK && !isVault)
+                    return res;
+
+                if (count == 0)
+                    return EQUIP_ERR_OK;
+            }
+        }
+
+        // search free slot in bag
+        for (uint8 i = firstBag; i < endBag; ++i)
+        {
+            res = CanStoreItem_InBag(i, dest, pProto, count, false, false, pItem, NULL_BAG, i == bag ? slot : uint8(NULL_SLOT));
+            if (res != EQUIP_ERR_OK)
+                res = CanStoreItem_InBag(i, dest, pProto, count, false, true, pItem, NULL_BAG, i == bag ? slot : uint8(NULL_SLOT));
+
+            if (res != EQUIP_ERR_OK && !isVault)
+                return res;
+
+            if (count == 0)
+                return EQUIP_ERR_OK;
+        }
+
+        return EQUIP_ERR_BANK_FULL;
+    }
+
+    // not specific bag: the item slots first, then the account bank bags (special bags before plain ones), like CanBankItem
+    if (pItem->IsNotEmptyBag())
+        return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
+
+    // search stack for merge to
+    if (pProto->Stackable != 1)
+    {
+        for (uint8 i = ACCOUNT_BANK_VAULT_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; i++)
+        {
+            res = CanStoreItem_InBag(i, dest, pProto, count, true, true, pItem, bag, slot);
+            if (res != EQUIP_ERR_OK)
+                continue;
+
+            if (count == 0)
+                return EQUIP_ERR_OK;
+        }
+
+        if (pProto->BagFamily)
+        {
+            for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
+            {
+                res = CanStoreItem_InBag(i, dest, pProto, count, true, false, pItem, bag, slot);
+                if (res != EQUIP_ERR_OK)
+                    continue;
+
+                if (count == 0)
+                    return EQUIP_ERR_OK;
+            }
+        }
+
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
+        {
+            res = CanStoreItem_InBag(i, dest, pProto, count, true, true, pItem, bag, slot);
+            if (res != EQUIP_ERR_OK)
+                continue;
+
+            if (count == 0)
+                return EQUIP_ERR_OK;
+        }
+    }
+
+    // search free place in special bag
+    if (pProto->BagFamily)
+    {
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
+        {
+            res = CanStoreItem_InBag(i, dest, pProto, count, false, false, pItem, bag, slot);
+            if (res != EQUIP_ERR_OK)
+                continue;
+
+            if (count == 0)
+                return EQUIP_ERR_OK;
+        }
+    }
+
+    // search free space
+    for (uint8 i = ACCOUNT_BANK_VAULT_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; i++)
+    {
+        res = CanStoreItem_InBag(i, dest, pProto, count, false, true, pItem, bag, slot);
+        if (res != EQUIP_ERR_OK)
+            continue;
+
+        if (count == 0)
+            return EQUIP_ERR_OK;
+    }
+
+    for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
+    {
+        res = CanStoreItem_InBag(i, dest, pProto, count, false, true, pItem, bag, slot);
+        if (res != EQUIP_ERR_OK)
+            continue;
+
+        if (count == 0)
+            return EQUIP_ERR_OK;
+    }
+
     return EQUIP_ERR_BANK_FULL;
 }
 
@@ -2735,16 +3069,17 @@ Item* Player::_StoreItem(uint16 pos, Item* pItem, uint32 count, bool clone, bool
         if (!pItem)
             return nullptr;
 
+        // MergedWorlds account bank: a bag in an account bank bag slot is not equipped by this character, so it stays unbound
         if (pItem->GetTemplate()->Bonding == BIND_WHEN_PICKED_UP ||
             pItem->GetTemplate()->Bonding == BIND_QUEST_ITEM ||
-            (pItem->GetTemplate()->Bonding == BIND_WHEN_EQUIPPED && IsBagPos(pos)))
+            (pItem->GetTemplate()->Bonding == BIND_WHEN_EQUIPPED && IsBagPos(pos) && !IsAccountBankPos(pos)))
             pItem->SetBinding(true);
 
         Bag* pBag = (bag == INVENTORY_SLOT_BAG_0) ? nullptr : GetBagByPos(bag);
         if (!pBag)
         {
             m_items[slot] = pItem;
-            SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), pItem->GetGUID());
+            SetGuidValue(GetInventorySlotUpdateField(slot), pItem->GetGUID());
             pItem->SetGuidValue(ITEM_FIELD_CONTAINED, GetGUID());
             pItem->SetGuidValue(ITEM_FIELD_OWNER, GetGUID());
 
@@ -2768,6 +3103,9 @@ Item* Player::_StoreItem(uint16 pos, Item* pItem, uint32 count, bool clone, bool
         if (pBag)
             pBag->SetState(ITEM_CHANGED, this);
 
+        // MergedWorlds account bank: a bag's contents are saved to the character or the account bank by where the bag is
+        MarkBagContentsChanged(pItem);
+
         AddEnchantmentDurations(pItem);
         AddItemDurations(pItem);
         UpdateItemObtainSpells(pItem, bag, slot);
@@ -2778,7 +3116,7 @@ Item* Player::_StoreItem(uint16 pos, Item* pItem, uint32 count, bool clone, bool
     {
         if (pItem2->GetTemplate()->Bonding == BIND_WHEN_PICKED_UP ||
             pItem2->GetTemplate()->Bonding == BIND_QUEST_ITEM ||
-            (pItem2->GetTemplate()->Bonding == BIND_WHEN_EQUIPPED && IsBagPos(pos)))
+            (pItem2->GetTemplate()->Bonding == BIND_WHEN_EQUIPPED && IsBagPos(pos) && !IsAccountBankPos(pos)))
             pItem2->SetBinding(true);
 
         pItem2->SetCount(pItem2->GetCount() + count);
@@ -2933,6 +3271,9 @@ Item* Player::EquipItem(uint16 pos, Item* pItem, bool update)
         return pItem2;
     }
 
+    // MergedWorlds account bank: a bag equipped from an account bank bag slot takes its contents along
+    MarkBagContentsChanged(pItem);
+
     // only for full equip instead adding to stack
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
     UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_EPIC_ITEM, pItem->GetEntry(), slot);
@@ -2994,7 +3335,7 @@ void Player::VisualizeItem(uint8 slot, Item* pItem)
     LOG_DEBUG("entities.player.items", "STORAGE: EquipItem slot = {}, item = {}", slot, pItem->GetEntry());
 
     m_items[slot] = pItem;
-    SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), pItem->GetGUID());
+    SetGuidValue(GetInventorySlotUpdateField(slot), pItem->GetGUID());
     pItem->SetGuidValue(ITEM_FIELD_CONTAINED, GetGUID());
     pItem->SetGuidValue(ITEM_FIELD_OWNER, GetGUID());
     pItem->SetSlot(slot);
@@ -3063,7 +3404,7 @@ void Player::RemoveItem(uint8 bag, uint8 slot, bool update)
                 }
             }
 
-            SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), ObjectGuid::Empty);
+            SetGuidValue(GetInventorySlotUpdateField(slot), ObjectGuid::Empty);
 
             if (slot < EQUIPMENT_SLOT_END)
                 SetVisibleItemSlot(slot, nullptr);
@@ -3163,7 +3504,7 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
 
         if (bag == INVENTORY_SLOT_BAG_0)
         {
-            SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), ObjectGuid::Empty);
+            SetGuidValue(GetInventorySlotUpdateField(slot), ObjectGuid::Empty);
 
             // equipment and equipped bags can have applied bonuses
             if (slot < INVENTORY_SLOT_BAG_END)
@@ -3729,6 +4070,31 @@ void Player::SwapItem(uint16 src, uint16 dst)
         }
     }
 
+    // MergedWorlds account bank: a bag moved out of it brings its contents along, so they must pass the unique / limit category
+    // checks it skipped while they were in the account bank.  (A bag exchange keeps the contents where they were.)
+    {
+        bool bagExchange = pDstItem && pSrcItem->ToBag() && pDstItem->ToBag()
+            && ((pSrcItem->ToBag()->IsEmpty() && !IsBagPos(src)) || (pDstItem->ToBag()->IsEmpty() && !IsBagPos(dst)));
+        if (!bagExchange)
+        {
+            InventoryResult contentsResult = EQUIP_ERR_OK;
+            uint32 offendingEntry = 0;
+            if (IsAccountBankPos(src) && !IsAccountBankPos(dst))
+                contentsResult = CanTakeAccountBankBagContents(pSrcItem, &offendingEntry);
+            if (contentsResult == EQUIP_ERR_OK && pDstItem && IsAccountBankPos(dst) && !IsAccountBankPos(src))
+                contentsResult = CanTakeAccountBankBagContents(pDstItem, &offendingEntry);
+            if (contentsResult != EQUIP_ERR_OK)
+            {
+                // the limit category message names the content's category, not the bag's
+                if (contentsResult == EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_COUNT_EXCEEDED && offendingEntry)
+                    SendEquipError(contentsResult, nullptr, pSrcItem, offendingEntry);
+                else
+                    SendEquipError(contentsResult, pSrcItem, pDstItem);
+                return;
+            }
+        }
+    }
+
     // NOW this is or item move (swap with empty), or swap with another item (including bags in bag possitions)
     // or swap empty bag with another empty or not empty bag (with items exchange)
 
@@ -4084,7 +4450,7 @@ void Player::AddItemToBuyBackSlot(Item* pItem, uint32 money)
         uint32 etime = uint32(base - m_logintime + (30 * 3600));
         uint32 eslot = slot - BUYBACK_SLOT_START;
 
-        SetGuidValue(PLAYER_FIELD_VENDORBUYBACK_SLOT_1 + (eslot * 2), pItem->GetGUID());
+        SetGuidValue(Player::GetInventorySlotUpdateField(BUYBACK_SLOT_START + eslot), pItem->GetGUID());
         SetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + eslot, money);
         SetUInt32Value(PLAYER_FIELD_BUYBACK_TIMESTAMP_1 + eslot, (uint32)etime);
 
@@ -4118,7 +4484,7 @@ void Player::RemoveItemFromBuyBackSlot(uint32 slot, bool del)
         m_items[slot] = nullptr;
 
         uint32 eslot = slot - BUYBACK_SLOT_START;
-        SetGuidValue(PLAYER_FIELD_VENDORBUYBACK_SLOT_1 + (eslot * 2), ObjectGuid::Empty);
+        SetGuidValue(Player::GetInventorySlotUpdateField(BUYBACK_SLOT_START + eslot), ObjectGuid::Empty);
         SetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + eslot, 0);
         SetUInt32Value(PLAYER_FIELD_BUYBACK_TIMESTAMP_1 + eslot, 0);
 
@@ -5160,7 +5526,7 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     // cleanup inventory related item value fields (its will be filled correctly in _LoadInventory)
     for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
     {
-        SetGuidValue(PLAYER_FIELD_INV_SLOT_HEAD + (slot * 2), ObjectGuid::Empty);
+        SetGuidValue(GetInventorySlotUpdateField(slot), ObjectGuid::Empty);
         SetVisibleItemSlot(slot, nullptr);
 
         delete m_items[slot];
@@ -5587,6 +5953,9 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     _LoadMail(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_MAILS), holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_MAIL_ITEMS));
 
     _LoadInventory(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_INVENTORY), time_diff);
+
+    // MergedWorlds account bank
+    _LoadAccountBank(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK), holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS), time_diff);
 
     // update items with duration and realtime
     UpdateItemDuration(time_diff, true);
@@ -6027,6 +6396,9 @@ void Player::_LoadInventory(PreparedQueryResult result, uint32 timeDiff)
                         if (err == EQUIP_ERR_OK)
                             item = BankItem(dest, item, true);
                     }
+                    // MergedWorlds: a slot no item can be in (old layout leftovers, account bank slots) - mail it instead of losing it
+                    else
+                        err = EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
 
                     // Remember bags that may contain items in them
                     if (err == EQUIP_ERR_OK)
@@ -6103,12 +6475,173 @@ void Player::_LoadInventory(PreparedQueryResult result, uint32 timeDiff)
     _ApplyAllItemMods();
 }
 
+bool Player::_CreateAccountBankVaults()
+{
+    for (uint8 vaultSlot = ACCOUNT_BANK_VAULT_SLOT_START; vaultSlot < ACCOUNT_BANK_VAULT_SLOT_END; ++vaultSlot)
+    {
+        if (m_items[vaultSlot])
+            continue;
+
+        // Fixed guids at the very top of the item range: the vaults are rebuilt at every login and never saved, so they
+        // never meet a real item (the guid generator would have to run out first)
+        Bag* vault = new Bag();
+        if (!vault->Create(ObjectGuid::GetMaxCounter(HighGuid::Item) - 1 - (vaultSlot - ACCOUNT_BANK_VAULT_SLOT_START), ACCOUNT_BANK_VAULT_ITEM_ENTRY, this))
+        {
+            LOG_ERROR("entities.player", "Player::_CreateAccountBankVaults: could not create the account bank vault (item template {} missing?) for player {}", ACCOUNT_BANK_VAULT_ITEM_ENTRY, GetGUID().ToString());
+            delete vault;
+            return false;
+        }
+
+        vault->SetBinding(true);
+        vault->SetContainer(nullptr);
+        vault->SetSlot(vaultSlot);
+        vault->SetState(ITEM_UNCHANGED, this);
+        m_items[vaultSlot] = vault;
+        SetGuidValue(GetInventorySlotUpdateField(vaultSlot), vault->GetGUID());
+    }
+    return true;
+}
+
+void Player::SetAccountBankBagSlotCount(uint8 count)
+{
+    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, count);
+    m_accountBankSettingsChanged = true;
+}
+
+void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff)
+{
+    m_accountBankLoaded = false;
+    if (!_CreateAccountBankVaults())
+        return;
+
+    uint8 bagSlots = 0;
+    if (settingsResult)
+        bagSlots = std::min<uint8>((*settingsResult)[0].Get<uint8>(), MAX_ACCOUNT_BANK_BAG_SLOT_COUNT);
+    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, bagSlots);
+    m_accountBankSettingsChanged = false;
+
+    if (itemsResult)
+    {
+        uint32 zoneId = GetZoneId();
+        std::map<ObjectGuid::LowType, Bag*> bagMap;
+        std::list<Item*> problematicItems;
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+        m_itemUpdateQueueBlocked = true;
+        do
+        {
+            Field* fields = itemsResult->Fetch();
+            ObjectGuid::LowType bagGuid = fields[11].Get<uint32>();
+            uint8 dbSlot = fields[12].Get<uint8>();
+
+            // an item is in one place only: already loaded from this character's inventory or mail, the account row is stale
+            ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(fields[13].Get<uint32>());
+            if (GetItemByGuid(itemGuid) || GetMItem(itemGuid.GetCounter()))
+            {
+                LOG_ERROR("entities.player", "Player::_LoadAccountBank: account {} has item {} in the account bank that player {} also holds. Removing the account bank row.",
+                          GetSession()->GetAccountId(), itemGuid.ToString(), GetName());
+                CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
+                stmt->SetData(0, itemGuid.GetCounter());
+                trans->Append(stmt);
+                continue;
+            }
+
+            Item* item = _LoadItem(trans, zoneId, timeDiff, fields);
+            if (!item)
+                continue;   // gone for good (broken, holiday over, zone limited...) - _LoadItem already deleted it
+
+            // Where does it go?  Anything out of place is mailed to this character (below)
+            uint8 bag = NULL_BAG;
+            uint8 slot = NULL_SLOT;
+            if (!bagGuid)
+            {
+                if (dbSlot < ACCOUNT_BANK_ITEM_SLOT_COUNT)
+                {
+                    bag = ACCOUNT_BANK_VAULT_SLOT_START + dbSlot / ACCOUNT_BANK_VAULT_SIZE;
+                    slot = dbSlot % ACCOUNT_BANK_VAULT_SIZE;
+                }
+                else if (dbSlot < ACCOUNT_BANK_DB_BAG_SLOT_START + MAX_ACCOUNT_BANK_BAG_SLOT_COUNT && item->IsBag())
+                {
+                    bag = INVENTORY_SLOT_BAG_0;
+                    slot = ACCOUNT_BANK_BAG_SLOT_START + (dbSlot - ACCOUNT_BANK_DB_BAG_SLOT_START);
+                }
+            }
+            else
+            {
+                std::map<ObjectGuid::LowType, Bag*>::const_iterator itr = bagMap.find(bagGuid);
+                if (itr != bagMap.end())
+                {
+                    bag = itr->second->GetSlot();
+                    slot = dbSlot;
+                }
+            }
+
+            Item* placed = nullptr;
+            if (bag != NULL_BAG && GetItemByPos(bag, slot) == nullptr)
+            {
+                Bag* pBag = bag == INVENTORY_SLOT_BAG_0 ? nullptr : GetBagByPos(bag);
+                if (bag == INVENTORY_SLOT_BAG_0 || (pBag && slot < pBag->GetBagSize()))
+                {
+                    item->SetContainer(nullptr);
+                    item->SetSlot(NULL_SLOT);
+                    ItemPosCountVec dest;
+                    dest.push_back(ItemPosCount((uint16(bag) << 8) | slot, item->GetCount()));
+                    placed = StoreItem(dest, item, true);
+                }
+            }
+
+            if (!placed)
+            {
+                // the same handling as broken character inventory rows: it leaves the account bank by mail to this character
+                LOG_ERROR("entities.player", "Player::_LoadAccountBank: account {} has item ({}, entry: {}) at an unusable account bank position (bag {}, slot {}). Item will be sent by mail to {}.",
+                          GetSession()->GetAccountId(), item->GetGUID().ToString(), item->GetEntry(), bagGuid, dbSlot, GetName());
+                item->DeleteFromInventoryDB(trans);
+
+                // the mail hands it to this character (account items are saved without an owner)
+                CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ITEM_OWNER);
+                stmt->SetData(0, GetGUID().GetCounter());
+                stmt->SetData(1, item->GetGUID().GetCounter());
+                trans->Append(stmt);
+
+                problematicItems.push_back(item);
+                continue;
+            }
+
+            // stored as loaded - nothing to save
+            placed->SetState(ITEM_UNCHANGED, this);
+            if (bag == INVENTORY_SLOT_BAG_0)
+                if (Bag* pBag = placed->ToBag())
+                    bagMap[placed->GetGUID().GetCounter()] = pBag;
+        } while (itemsResult->NextRow());
+        m_itemUpdateQueueBlocked = false;
+
+        while (!problematicItems.empty())
+        {
+            std::string subject = GetSession()->GetAcoreString(LANG_NOT_EQUIPPED_ITEM);
+
+            MailDraft draft(subject, "There were problems with item(s) in the account bank.");
+            for (uint8 i = 0; !problematicItems.empty() && i < MAX_MAIL_ITEMS; ++i)
+            {
+                draft.AddItem(problematicItems.front());
+                problematicItems.pop_front();
+            }
+            draft.SendMailTo(trans, this, MailSender(this, MAIL_STATIONERY_GM), MAIL_CHECK_MASK_COPIED);
+        }
+
+        CharacterDatabase.CommitTransaction(trans);
+    }
+
+    m_accountBankLoaded = true;
+}
+
 Item* Player::_LoadItem(CharacterDatabaseTransaction trans, uint32 zoneId, uint32 timeDiff, Field* fields)
 {
     Item* item = nullptr;
     ObjectGuid::LowType itemGuid  = fields[13].Get<uint32>();
     uint32 itemEntry = fields[14].Get<uint32>();
-    if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemEntry))
+    // MergedWorlds account bank: the vault template is only for the vaults built at login, never a saved item
+    ItemTemplate const* proto = itemEntry == ACCOUNT_BANK_VAULT_ITEM_ENTRY ? nullptr : sObjectMgr->GetItemTemplate(itemEntry);
+    if (proto)
     {
         bool remove = false;
         item = NewItemOrBag(proto);
@@ -7247,7 +7780,56 @@ void Player::SaveToDB(bool create, bool logout)
 
     SaveToDB(trans, create, logout);
 
-    CharacterDatabase.CommitTransaction(trans);
+    // MergedWorlds account bank: the next login on this account waits for this save, so it reads the account bank as it was left
+    if (logout)
+        CommitAccountBankLogoutSave(GetSession()->GetAccountId(), trans);
+    else
+        CharacterDatabase.CommitTransaction(trans);
+}
+
+// MergedWorlds account bank: logout saves not yet committed, per account.  Logins on the account wait for them
+// (WorldSession::HandlePlayerLoginOpcode), since the account bank is shared by all its characters
+static std::unordered_map<uint32, uint32> AccountBankPendingLogoutSaveCounts;
+static std::mutex AccountBankPendingLogoutSaveCountsMutex;
+static AsyncCallbackProcessor<TransactionCallback> AccountBankLogoutSaveCallbacks;
+static std::mutex AccountBankLogoutSaveCallbacksMutex;
+
+static void OnAccountBankLogoutSaveCommitted(uint32 accountId, bool success)
+{
+    if (!success)
+        LOG_ERROR("entities.player", "Player::SaveToDB: logout save for account {} failed to commit", accountId);
+
+    std::lock_guard<std::mutex> lock(AccountBankPendingLogoutSaveCountsMutex);
+    std::unordered_map<uint32, uint32>::iterator itr = AccountBankPendingLogoutSaveCounts.find(accountId);
+    if (itr == AccountBankPendingLogoutSaveCounts.end())
+        return;
+    if (itr->second <= 1)
+        AccountBankPendingLogoutSaveCounts.erase(itr);
+    else
+        --itr->second;
+}
+
+void Player::CommitAccountBankLogoutSave(uint32 accountId, CharacterDatabaseTransaction trans)
+{
+    {
+        std::lock_guard<std::mutex> lock(AccountBankPendingLogoutSaveCountsMutex);
+        ++AccountBankPendingLogoutSaveCounts[accountId];
+    }
+
+    std::lock_guard<std::mutex> lock(AccountBankLogoutSaveCallbacksMutex);
+    AccountBankLogoutSaveCallbacks.AddCallback(CharacterDatabase.AsyncCommitTransaction(trans)).AfterComplete(std::bind(&OnAccountBankLogoutSaveCommitted, accountId, std::placeholders::_1));
+}
+
+bool Player::IsAccountBankLogoutSavePending(uint32 accountId)
+{
+    std::lock_guard<std::mutex> lock(AccountBankPendingLogoutSaveCountsMutex);
+    return AccountBankPendingLogoutSaveCounts.find(accountId) != AccountBankPendingLogoutSaveCounts.end();
+}
+
+void Player::ProcessAccountBankLogoutSaves()
+{
+    std::lock_guard<std::mutex> lock(AccountBankLogoutSaveCallbacksMutex);
+    AccountBankLogoutSaveCallbacks.ProcessReadyCallbacks();
 }
 
 void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create, bool logout)
@@ -7449,9 +8031,50 @@ void Player::_SaveAuras(CharacterDatabaseTransaction trans, bool logout)
     }
 }
 
+void Player::_SaveAccountBankSettings(CharacterDatabaseTransaction trans)
+{
+    if (!m_accountBankSettingsChanged || !m_accountBankLoaded)
+        return;
+
+    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK);
+    stmt->SetData(0, GetSession()->GetAccountId());
+    stmt->SetData(1, GetAccountBankBagSlotCount());
+    trans->Append(stmt);
+    m_accountBankSettingsChanged = false;
+}
+
+bool Player::_GetAccountBankDBPosition(Item const* item, ObjectGuid::LowType& bagGuid, uint8& slot) const
+{
+    if (!IsAccountBankPos(item->GetBagSlot(), item->GetSlot()))
+        return false;
+
+    Bag* container = const_cast<Item*>(item)->GetContainer();
+    if (!container)
+    {
+        // an account bank bag slot
+        bagGuid = 0;
+        slot = ACCOUNT_BANK_DB_BAG_SLOT_START + (item->GetSlot() - ACCOUNT_BANK_BAG_SLOT_START);
+    }
+    else if (container->IsAccountBankVault())
+    {
+        // one of the 72 item slots
+        bagGuid = 0;
+        slot = (container->GetSlot() - ACCOUNT_BANK_VAULT_SLOT_START) * ACCOUNT_BANK_VAULT_SIZE + item->GetSlot();
+    }
+    else
+    {
+        // inside an account bank bag
+        bagGuid = container->GetGUID().GetCounter();
+        slot = item->GetSlot();
+    }
+    return true;
+}
+
 void Player::_SaveInventory(CharacterDatabaseTransaction trans)
 {
     CharacterDatabasePreparedStatement* stmt = nullptr;
+
+    _SaveAccountBankSettings(trans);
     // force items in buyback slots to new state
     // and remove those that aren't already
     for (uint8 i = BUYBACK_SLOT_START; i < BUYBACK_SLOT_END; ++i)
@@ -7535,11 +8158,26 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                 LOG_ERROR("entities.player", "Player(GUID: {} Name: {})::_SaveInventory - the bag({}) and slot({}) values for the item {} (state {}) are incorrect, the player doesn't have an item at that position!",
                           guid, GetName(), item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString(), (int32)item->GetState());
                 // according to the test that was just performed nothing should be in this slot, delete
-                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_BAG_SLOT);
-                stmt->SetData(0, bagTestGUID);
-                stmt->SetData(1, item->GetSlot());
-                stmt->SetData(2, guid);
-                trans->Append(stmt);
+                // (MergedWorlds account bank: not by position for its slots - the vaults are hidden from GetItemByPos, so that would
+                // hit a character_inventory row at bag 0 - but the item's own rows, from both tables)
+                if (!IsAccountBankPos(item->GetBagSlot(), item->GetSlot()))
+                {
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_BAG_SLOT);
+                    stmt->SetData(0, bagTestGUID);
+                    stmt->SetData(1, item->GetSlot());
+                    stmt->SetData(2, guid);
+                    trans->Append(stmt);
+                }
+                else
+                {
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+                }
 
                 RemoveTradeableItem(item); // pussywizard
                 RemoveEnchantmentDurationsReferences(item); // pussywizard
@@ -7557,32 +8195,83 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                           guid, GetName(), item->GetBagSlot(), item->GetSlot(), item->GetGUID().ToString(), test->GetGUID().ToString());
                 // save all changes to the item...
                 if (item->GetState() != ITEM_NEW) // only for existing items, no dupes
+                {
+                    bool savesItemRow = item->GetState() == ITEM_CHANGED;
                     item->SaveToDB(trans);
+
+                    // MergedWorlds account bank: SaveToDB wrote this character as the owner
+                    if (savesItemRow && IsAccountBankPos(item->GetBagSlot(), item->GetSlot()))
+                    {
+                        stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ITEM_OWNER);
+                        stmt->SetData(0, 0);
+                        stmt->SetData(1, item->GetGUID().GetCounter());
+                        trans->Append(stmt);
+                    }
+                }
                 // ...but do not save position in invntory
                 continue;
             }
         }
 
+        // MergedWorlds account bank: an item lives in exactly one of character_inventory / account_bank_item
+        ObjectGuid::LowType accountBankBagGuid = 0;
+        uint8 accountBankSlot = 0;
+        bool isInAccountBank = item->GetState() != ITEM_REMOVED && _GetAccountBankDBPosition(item, accountBankBagGuid, accountBankSlot);
+
         switch (item->GetState())
         {
             case ITEM_NEW:
             case ITEM_CHANGED:
-                stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_INVENTORY_ITEM);
-                stmt->SetData(0, guid);
-                stmt->SetData(1, bag_guid);
-                stmt->SetData (2, item->GetSlot());
-                stmt->SetData(3, item->GetGUID().GetCounter());
-                trans->Append(stmt);
+                if (isInAccountBank)
+                {
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK_ITEM);
+                    stmt->SetData(0, GetSession()->GetAccountId());
+                    stmt->SetData(1, accountBankBagGuid);
+                    stmt->SetData(2, accountBankSlot);
+                    stmt->SetData(3, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+                }
+                else
+                {
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_INVENTORY_ITEM);
+                    stmt->SetData(0, guid);
+                    stmt->SetData(1, bag_guid);
+                    stmt->SetData (2, item->GetSlot());
+                    stmt->SetData(3, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+                }
                 break;
             case ITEM_REMOVED:
                 stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
+                stmt->SetData(0, item->GetGUID().GetCounter());
+                trans->Append(stmt);
+
+                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
                 stmt->SetData(0, item->GetGUID().GetCounter());
                 trans->Append(stmt);
             case ITEM_UNCHANGED:
                 break;
         }
 
+        bool savesItemRow = item->GetState() == ITEM_NEW || item->GetState() == ITEM_CHANGED;
         item->SaveToDB(trans);                                   // item have unchanged inventory record and can be save standalone
+
+        // MergedWorlds account bank: the account owns it, so no character's deletion or dump takes it along
+        if (isInAccountBank && savesItemRow)
+        {
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ITEM_OWNER);
+            stmt->SetData(0, 0);
+            stmt->SetData(1, item->GetGUID().GetCounter());
+            trans->Append(stmt);
+        }
     }
     m_itemUpdateQueue.clear();
 }

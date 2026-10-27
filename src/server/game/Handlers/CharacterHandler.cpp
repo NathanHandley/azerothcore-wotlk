@@ -213,6 +213,15 @@ bool LoginQueryHolder::Initialize()
     stmt->SetData(0, rawGUID);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_OFFLINE_ACHIEVEMENTS_UPDATES, stmt);
 
+    // MergedWorlds account bank (the login waits for this account's previous logout save, see WorldSession::HandlePlayerLoginOpcode)
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_BANK);
+    stmt->SetData(0, _accountId);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK, stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_BANK_ITEMS);
+    stmt->SetData(0, _accountId);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS, stmt);
+
     return res;
 }
 
@@ -782,6 +791,65 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
         }
     }
 
+    // MergedWorlds account bank: every character of the account shares it, so the login reads it only once the account's
+    // other character has left the world and its logout save has committed (otherwise both could hold the same items)
+    if (IsAccountBankLoginBlocked())
+    {
+        m_playerLoading = true;
+        m_delayedLoginGuid = playerGuid;
+        m_delayedLoginStartMS = GameTime::GetGameTimeMS().count();
+        return;
+    }
+
+    QueryPlayerLogin(playerGuid);
+}
+
+bool WorldSession::IsAccountBankLoginBlocked() const
+{
+    if (Player::IsAccountBankLogoutSavePending(GetAccountId()))
+        return true;
+
+    std::shared_lock<std::shared_mutex> lock(*HashMapHolder<Player>::GetLock());
+    HashMapHolder<Player>::MapType const& players = ObjectAccessor::GetPlayers();
+    for (HashMapHolder<Player>::MapType::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+    {
+        Player* otherPlayer = itr->second;
+        if (otherPlayer && otherPlayer->GetSession() && otherPlayer->GetSession() != this && otherPlayer->GetSession()->GetAccountId() == GetAccountId())
+            return true;
+    }
+    return false;
+}
+
+void WorldSession::ProcessDelayedPlayerLogin()
+{
+    if (!m_delayedLoginGuid)
+        return;
+
+    if (IsAccountBankLoginBlocked())
+    {
+        // the other character always leaves within a few updates; give up rather than risk loading a stale account bank
+        if (getMSTimeDiff(m_delayedLoginStartMS, GameTime::GetGameTimeMS().count()) < 60 * IN_MILLISECONDS)
+            return;
+
+        LOG_ERROR("network", "WorldSession::ProcessDelayedPlayerLogin: account {} still has another character in the world or saving after 60 seconds, login of {} refused",
+            GetAccountId(), m_delayedLoginGuid.ToString());
+        m_delayedLoginGuid.Clear();
+        m_playerLoading = false;
+        SendCharLoginFailed(LoginFailureReason::Failed);
+        return;
+    }
+
+    ObjectGuid playerGuid = m_delayedLoginGuid;
+    m_delayedLoginGuid.Clear();
+    m_playerLoading = false;
+    if (GetPlayer())
+        return;
+
+    QueryPlayerLogin(playerGuid);
+}
+
+void WorldSession::QueryPlayerLogin(ObjectGuid playerGuid)
+{
     std::shared_ptr<LoginQueryHolder> holder = std::make_shared<LoginQueryHolder>(GetAccountId(), playerGuid);
     if (!holder->Initialize())
         return;

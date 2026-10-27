@@ -336,6 +336,10 @@ void Item::UpdateDuration(Player* owner, uint32 diff)
 
 void Item::SaveToDB(CharacterDatabaseTransaction trans)
 {
+    // MergedWorlds account bank: the vault bags are rebuilt at every login and never stored
+    if (IsAccountBankVault())
+        return;
+
     bool isInTransaction = static_cast<bool>(trans);
     if (!isInTransaction)
         trans = CharacterDatabase.BeginTransaction();
@@ -535,6 +539,11 @@ void Item::DeleteFromInventoryDB(CharacterDatabaseTransaction trans, ObjectGuid:
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
     stmt->SetData(0, itemGuid);
     trans->Append(stmt);
+
+    // MergedWorlds account bank: an item leaving storage (mail, auction, trade, guild bank, destroy...) may have come from it
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
+    stmt->SetData(0, itemGuid);
+    trans->Append(stmt);
 }
 
 void Item::DeleteFromInventoryDB(CharacterDatabaseTransaction trans)
@@ -714,6 +723,14 @@ void Item::UpdateItemSuffixFactor()
 
 void Item::SetState(ItemUpdateState state, Player* forplayer)
 {
+    // MergedWorlds account bank: the vault bags never enter the save queue (their contents are saved on their own)
+    if (IsAccountBankVault())
+    {
+        uState = ITEM_UNCHANGED;
+        uQueuePos = -1;
+        return;
+    }
+
     if (uState == ITEM_NEW && state == ITEM_REMOVED)
     {
         // pretend the item never existed
@@ -1095,6 +1112,10 @@ Item* Item::CreateItem(uint32 item, uint32 count, Player const* player, bool clo
 {
     if (count < 1)
         return nullptr;                                        //don't create item at zero count
+
+    // MergedWorlds account bank: the vault template is only for Player::_CreateAccountBankVaults
+    if (item == ACCOUNT_BANK_VAULT_ITEM_ENTRY)
+        return nullptr;
 
     ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item);
     if (!pProto)

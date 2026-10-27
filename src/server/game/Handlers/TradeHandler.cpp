@@ -891,9 +891,9 @@ void WorldSession::HandleSetTradeItemOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    // check cheating, can't fail with correct client operations
+    // check cheating, can't fail with correct client operations (MergedWorlds account bank: nothing straight out of the bank)
     Item* item = _player->GetItemByPos(bag, slot);
-    if (!item || (tradeSlot != TRADE_SLOT_NONTRADED && !item->CanBeTraded(false, true)))
+    if (!item || Player::IsBankPos(bag, slot) || (tradeSlot != TRADE_SLOT_NONTRADED && !item->CanBeTraded(false, true)))
     {
         info.Status = TRADE_STATUS_TRADE_CANCELED;
         SendTradeStatus(info);

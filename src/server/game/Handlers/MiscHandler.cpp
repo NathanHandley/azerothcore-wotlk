@@ -55,6 +55,7 @@
 #include <zlib.h>
 
 #include "Corpse.h"
+#include "EQAreaTriggerHooks.h"
 
 void WorldSession::HandleRepopRequestOpcode(WorldPacket& recv_data)
 {
@@ -725,6 +726,11 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recv_data)
 
     // Skip areatrigger scripts for GMs unless debug areatriggers is enabled
     if ((!player->IsGameMaster() || player->isDebugAreaTriggers) && sScriptMgr->OnAreaTrigger(player, atEntry))
+        return;
+
+    // MergedWorlds: an EverQuest zone line still keeps a GM's place along it and facing (that's done by its script)
+    if (player->IsGameMaster() && !player->isDebugAreaTriggers && EverQuestAreaTriggerHooks::GameMasterZoneLineHandler != nullptr
+        && EverQuestAreaTriggerHooks::GameMasterZoneLineHandler(player, atEntry))
         return;
 
     if (player->IsAlive())

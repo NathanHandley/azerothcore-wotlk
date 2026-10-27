@@ -3889,6 +3889,35 @@ void ObjectMgr::LoadItemTemplates()
         ++count;
     } while (result->NextRow());
 
+    // MergedWorlds account bank: the hidden 36 slot vault bags behind the account bank item slots.  Kept in code so it can't go
+    // missing from a database; it is never a real item anyone holds (see Player::_CreateAccountBankVaults)
+    if (_itemTemplateStore.find(ACCOUNT_BANK_VAULT_ITEM_ENTRY) != _itemTemplateStore.end())
+        LOG_ERROR("sql.sql", "Item (Entry: {}) is reserved for the account bank vault and is replaced by it.", ACCOUNT_BANK_VAULT_ITEM_ENTRY);
+    {
+        ItemTemplate& vaultTemplate = _itemTemplateStore[ACCOUNT_BANK_VAULT_ITEM_ENTRY];
+        vaultTemplate = ItemTemplate();
+        vaultTemplate.ItemId = ACCOUNT_BANK_VAULT_ITEM_ENTRY;
+        vaultTemplate.Class = ITEM_CLASS_CONTAINER;
+        vaultTemplate.SubClass = ITEM_SUBCLASS_CONTAINER;
+        vaultTemplate.SoundOverrideSubclass = -1;
+        vaultTemplate.Name1 = "Account Bank";
+        vaultTemplate.Quality = ITEM_QUALITY_NORMAL;
+        vaultTemplate.BuyCount = 1;
+        vaultTemplate.InventoryType = INVTYPE_BAG;
+        vaultTemplate.AllowableClass = 0xFFFFFFFF;
+        vaultTemplate.AllowableRace = 0xFFFFFFFF;
+        vaultTemplate.Stackable = 1;
+        vaultTemplate.ContainerSlots = ACCOUNT_BANK_VAULT_SIZE;
+        vaultTemplate.Bonding = BIND_WHEN_PICKED_UP;
+        vaultTemplate.Material = -1;
+        vaultTemplate.ArmorDamageModifier = 0.0f;
+        for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+        {
+            vaultTemplate.Spells[i].SpellCooldown = -1;
+            vaultTemplate.Spells[i].SpellCategoryCooldown = -1;
+        }
+    }
+
     // pussywizard:
     {
         uint32 max = 0;

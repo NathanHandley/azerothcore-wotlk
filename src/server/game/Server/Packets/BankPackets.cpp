@@ -21,6 +21,8 @@ void WorldPackets::Bank::AutoBankItem::Read()
 {
     _worldPacket >> Bag;
     _worldPacket >> Slot;
+    if (_worldPacket.rpos() < _worldPacket.size())
+        _worldPacket >> AccountBank;
 }
 
 void WorldPackets::Bank::AutoStoreBankItem::Read()
@@ -32,6 +34,8 @@ void WorldPackets::Bank::AutoStoreBankItem::Read()
 void WorldPackets::Bank::BuyBankSlot::Read()
 {
     _worldPacket >> Banker;
+    if (_worldPacket.rpos() < _worldPacket.size())
+        _worldPacket >> AccountBank;
 }
 
 WorldPacket const* WorldPackets::Bank::BuyBankSlotResult::Write()

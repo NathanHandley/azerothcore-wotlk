@@ -698,6 +698,10 @@ public:                                                 // opcodes handlers
     void HandlePlayerLoginOpcode(WorldPacket& recvPacket);
     void HandleCharEnum(PreparedQueryResult result);
     void HandlePlayerLoginFromDB(LoginQueryHolder const& holder);
+    // MergedWorlds account bank: a login waits while another character of the account is still in the world or being saved
+    void QueryPlayerLogin(ObjectGuid playerGuid);
+    bool IsAccountBankLoginBlocked() const;
+    void ProcessDelayedPlayerLogin();
     void HandlePlayerLoginToCharInWorld(Player* pCurrChar);
     void HandlePlayerLoginToCharOutOfWorld(Player* pCurrChar);
     void HandleCharFactionOrRaceChange(WorldPacket& recvData);
@@ -1272,6 +1276,8 @@ private:
     void moveItems(Item* myItems[], Item* hisItems[]);
 
     bool CanUseBank(ObjectGuid bankerGUID = ObjectGuid::Empty) const;
+    // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client)
+    bool IsBankPosOutOfReach(uint8 bag, uint8 slot) const;
 
     bool recoveryItem(Item* pItem);
 
@@ -1314,6 +1320,8 @@ private:
     time_t _logoutTime;
     bool m_inQueue;                                     // session wait in auth.queue
     bool m_playerLoading;                               // code processed in LoginPlayer
+    ObjectGuid m_delayedLoginGuid;                      // MergedWorlds account bank: login waiting for the account bank
+    uint32 m_delayedLoginStartMS;
     bool m_playerLogout;                                // code processed in LogoutPlayer
     bool m_playerRecentlyLogout;
     bool m_playerSave;

@@ -291,6 +291,8 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_resetTalentsCost = 0;
     m_resetTalentsTime = 0;
     m_itemUpdateQueueBlocked = false;
+    m_accountBankLoaded = false;
+    m_accountBankSettingsChanged = false;
 
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_forced_speed_changes[i] = 0;
@@ -4021,6 +4023,14 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
+        // MergedWorlds account bank: bag slots and the two vaults (a bag also sends what it holds)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
+        {
+            if (!m_items[i])
+                continue;
+
+            m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
+        }
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
@@ -4048,6 +4058,14 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
             m_items[i]->DestroyForPlayer(target);
         }
         for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        {
+            if (!m_items[i])
+                continue;
+
+            m_items[i]->DestroyForPlayer(target);
+        }
+        // MergedWorlds account bank
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
         {
             if (!m_items[i])
                 continue;

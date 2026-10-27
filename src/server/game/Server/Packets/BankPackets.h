@@ -34,6 +34,7 @@ namespace WorldPackets
 
             uint8 Bag = 0;
             uint8 Slot = 0;
+            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = the account bank tab is open
         };
 
         class AutoStoreBankItem final : public ClientPacket
@@ -55,6 +56,7 @@ namespace WorldPackets
             void Read() override;
 
             ObjectGuid Banker;
+            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = buy an account bank bag slot
         };
 
         class BuyBankSlotResult final : public ServerPacket

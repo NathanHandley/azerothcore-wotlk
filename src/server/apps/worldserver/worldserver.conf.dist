@@ -134,6 +134,8 @@ CharacterDatabaseInfo = "127.0.0.1;3306;acore;acore;acore_characters"
 #        Default:     1 - (LoginDatabase.WorkerThreads)
 #                     1 - (WorldDatabase.WorkerThreads)
 #                     1 - (CharacterDatabase.WorkerThreads)
+#        Note:        MergedWorlds: CharacterDatabase.WorkerThreads must stay 1, the account bank relies on
+#                     character saves committing in order (the server refuses to start otherwise).
 
 LoginDatabase.WorkerThreads     = 1
 WorldDatabase.WorkerThreads     = 1

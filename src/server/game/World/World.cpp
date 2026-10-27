@@ -329,6 +329,25 @@ void World::SetInitialWorldSettings()
     ///- Initialize Allowed Security Level
     LoadDBAllowedSecurityLevel();
 
+    // MergedWorlds bank expansion: inventory slots after the bank moved, so the characters database must have been converted
+    // (pending characters update rev_1793108000000000000.sql) before any character loads, or bank bags would load as items
+    {
+        QueryResult layoutResult = CharacterDatabase.Query("SELECT `version` FROM `character_inventory_slot_layout` WHERE `id` = 0");
+        if (!layoutResult || (*layoutResult)[0].Get<uint32>() < 2)
+        {
+            LOG_FATAL("server.loading", "The characters database still has the old inventory slot layout (table `character_inventory_slot_layout` missing or below version 2). Apply the bank expansion characters update before starting the server.");
+            exit(1);
+        }
+
+        // The account bank login gate waits for the previous character's logout save to commit; it relies on the characters
+        // database running async transactions in order, which only one worker thread guarantees (more = item duplication)
+        if (sConfigMgr->GetOption<uint8>("CharacterDatabase.WorkerThreads", 1) > 1)
+        {
+            LOG_FATAL("server.loading", "CharacterDatabase.WorkerThreads must be 1: the account bank relies on character saves committing in order.");
+            exit(1);
+        }
+    }
+
     ///- Init highest guids before any table loading to prevent using not initialized guids in some code.
     sObjectMgr->SetHighestGuids();
 
@@ -1297,6 +1316,8 @@ void World::Update(uint32 diff)
         METRIC_TIMER("world_update_time", METRIC_TAG("type", "Process query callbacks"));
         // execute callbacks from sql queries that were queued recently
         ProcessQueryCallbacks();
+        // MergedWorlds account bank: logout saves that logins on the same account wait for
+        Player::ProcessAccountBankLogoutSaves();
     }
 
     /// <li> Update uptime table

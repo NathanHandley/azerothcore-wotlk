@@ -56,6 +56,13 @@ void WorldSession::HandleSplitItemOpcode(WorldPackets::Item::SplitItem& packet)
         return;
     }
 
+    // MergedWorlds account bank
+    if (IsBankPosOutOfReach(packet.SourceBag, packet.SourceSlot) || IsBankPosOutOfReach(packet.DestinationBag, packet.DestinationSlot))
+    {
+        _player->SendEquipError(EQUIP_ERR_TOO_FAR_AWAY_FROM_BANK, nullptr, nullptr);
+        return;
+    }
+
     _player->SplitItem(src, dst, packet.Count);
 }
 
@@ -157,6 +164,17 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPackets::Item::AutoEquipItem& 
     Item* pSrcItem  = _player->GetItemByPos(packet.SourceBag, packet.SourceSlot);
     if (!pSrcItem)
         return;                                             // only at cheat
+
+    // MergedWorlds account bank
+    if (IsBankPosOutOfReach(packet.SourceBag, packet.SourceSlot))
+        return;
+
+    // MergedWorlds account bank: a bag leaving it with items inside goes through SwapItem, which checks what it carries
+    if (Player::IsAccountBankPos(packet.SourceBag, packet.SourceSlot) && pSrcItem->IsNotEmptyBag())
+    {
+        _player->SendEquipError(EQUIP_ERR_CAN_ONLY_DO_WITH_EMPTY_BAGS, pSrcItem);
+        return;
+    }
 
     ItemTemplate const* pProto = pSrcItem->GetTemplate();
     if (!pProto)
@@ -282,6 +300,13 @@ void WorldSession::HandleDestroyItemOpcode(WorldPackets::Item::DestroyItem& pack
     //LOG_DEBUG("network.opcode", "WORLD: CMSG_DESTROYITEM");
 
     uint16 pos = (packet.Bag << 8) | packet.Slot;
+
+    // MergedWorlds account bank
+    if (IsBankPosOutOfReach(packet.Bag, packet.Slot))
+    {
+        _player->SendEquipError(EQUIP_ERR_TOO_FAR_AWAY_FROM_BANK, nullptr, nullptr);
+        return;
+    }
 
     // prevent drop unequipable items (in combat, for example) and non-empty bags
     if (_player->IsEquipmentPos(pos) || _player->IsBagPos(pos))
@@ -551,6 +576,8 @@ void WorldSession::HandleReadItem(WorldPackets::Item::ReadItem& packet)
 
     //LOG_DEBUG("network.opcode", "STORAGE: Read bag = {}, slot = {}", bag, slot);
     Item* pItem = _player->GetItemByPos(packet.Bag, packet.Slot);
+    if (IsBankPosOutOfReach(packet.Bag, packet.Slot))   // MergedWorlds account bank
+        pItem = nullptr;
 
     if (pItem && pItem->GetTemplate()->PageText)
     {
@@ -971,6 +998,13 @@ void WorldSession::HandleAutoStoreBagItemOpcode(WorldPackets::Item::AutoStoreBag
     if (!pItem)
         return;
 
+    // MergedWorlds account bank
+    if (IsBankPosOutOfReach(packet.SourceBag, packet.SourceSlot) || IsBankPosOutOfReach(packet.DestinationBag, NULL_SLOT))
+    {
+        _player->SendEquipError(EQUIP_ERR_TOO_FAR_AWAY_FROM_BANK, pItem, nullptr);
+        return;
+    }
+
     if (!_player->IsValidPos(packet.DestinationBag, NULL_SLOT, false))      // can be autostore pos
     {
         _player->SendEquipError(EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, nullptr, nullptr);
@@ -990,8 +1024,10 @@ void WorldSession::HandleAutoStoreBagItemOpcode(WorldPackets::Item::AutoStoreBag
         }
     }
 
+    // MergedWorlds account bank: a bank or account bank bag has the bank's rules (bound items, bag slot purchase...)
     ItemPosCountVec dest;
-    InventoryResult msg = _player->CanStoreItem(packet.DestinationBag, NULL_SLOT, dest, pItem, false);
+    InventoryResult msg = Player::IsBankPos(packet.DestinationBag, NULL_SLOT) ? _player->CanBankItem(packet.DestinationBag, NULL_SLOT, dest, pItem, false)
+        : _player->CanStoreItem(packet.DestinationBag, NULL_SLOT, dest, pItem, false);
     if (msg != EQUIP_ERR_OK)
     {
         _player->SendEquipError(msg, pItem, nullptr);
@@ -1089,6 +1125,10 @@ void WorldSession::HandleWrapItemOpcode(WorldPackets::Item::WrapItem& packet)
     LOG_DEBUG("network", "WRAP: receive GiftBag = {}, GiftSlot = {}, ItemBag = {}, ItemSlot = {}", packet.GiftBag, packet.GiftSlot, packet.ItemBag, packet.ItemSlot);
 
     Item* gift = _player->GetItemByPos(packet.GiftBag, packet.GiftSlot);
+    // MergedWorlds account bank: out of reach, or in the account bank at all (wrapping there would tie it to this character)
+    if (IsBankPosOutOfReach(packet.GiftBag, packet.GiftSlot) || IsBankPosOutOfReach(packet.ItemBag, packet.ItemSlot)
+        || Player::IsAccountBankPos(packet.GiftBag, packet.GiftSlot) || Player::IsAccountBankPos(packet.ItemBag, packet.ItemSlot))
+        gift = nullptr;
     if (!gift)
     {
         _player->SendEquipError(EQUIP_ERR_ITEM_NOT_FOUND, gift, nullptr);
