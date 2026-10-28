@@ -650,6 +650,7 @@ public: /* SpellSC */
     bool CanSelectSpecTalent(Spell* spell);
     void OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint32 auraScaleMask, TargetInfo& targetInfo);
     void OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& targetInfo); // MergedWorlds
+    void OnDispelSelection(Spell* spell, Unit* target, bool& oldestFirst); // MergedWorlds
     void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
     void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);

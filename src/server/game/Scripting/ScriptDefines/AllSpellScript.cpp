@@ -60,6 +60,12 @@ void ScriptMgr::OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& ta
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, script->OnAfterSpellHitResult(spell, target, targetInfo));
 }
 
+// MergedWorlds
+void ScriptMgr::OnDispelSelection(Spell* spell, Unit* target, bool& oldestFirst)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_DISPEL_SELECTION, script->OnDispelSelection(spell, target, oldestFirst));
+}
+
 void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_BEFORE_AURA_RANK_FOR_LEVEL, script->OnBeforeAuraRankForLevel(spellInfo, latestSpellInfo, level));

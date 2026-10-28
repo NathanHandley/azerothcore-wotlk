@@ -39,6 +39,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_PREPARE,
     ALLSPELLHOOK_ON_IS_AURA_EXCLUSIVE_BY_SPECIFIC_WITH,
     ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, // MergedWorlds
+    ALLSPELLHOOK_ON_DISPEL_SELECTION, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -70,6 +71,9 @@ public:
 
     // MergedWorlds: the hit result (targetInfo.missCondition) was just rolled for a target, and can be changed
     virtual void OnAfterSpellHitResult(Spell* /*spell*/, Unit* /*target*/, TargetInfo& /*targetInfo*/) { }
+
+    // MergedWorlds dispel-oldest-first: a dispel effect is about to pick auras off of a target. Set oldestFirst to remove them in the order they were applied instead of at random
+    virtual void OnDispelSelection(Spell* /*spell*/, Unit* /*target*/, bool& /*oldestFirst*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 

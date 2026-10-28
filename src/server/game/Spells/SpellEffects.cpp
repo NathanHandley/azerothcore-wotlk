@@ -2718,6 +2718,13 @@ void Spell::EffectLearnSpell(SpellEffIndex effIndex)
 }
 
 typedef std::list<std::pair<uint32, ObjectGuid>> DispelList;
+
+// MergedWorlds dispel-oldest-first
+static bool IsDispelChargeAppliedEarlier(std::pair<Aura*, uint8> const& left, std::pair<Aura*, uint8> const& right)
+{
+    return left.first->GetApplySequence() < right.first->GetApplySequence();
+}
+
 void Spell::EffectDispel(SpellEffIndex effIndex)
 {
     Unit* unitCaster = m_caster->ToUnit();
@@ -2739,6 +2746,12 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
     if (dispel_list.empty())
         return;
 
+    // MergedWorlds dispel-oldest-first: a script can have the auras come off in the order they were applied
+    bool oldestFirst = false;
+    sScriptMgr->OnDispelSelection(this, unitTarget, oldestFirst);
+    if (oldestFirst)
+        dispel_list.sort(IsDispelChargeAppliedEarlier);
+
     // Ok if exist some buffs for dispel try dispel it
     uint32 failCount = 0;
     DispelChargesList success_list;
@@ -2748,7 +2761,8 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
     {
         // Random select buff for dispel
         DispelChargesList::iterator itr = dispel_list.begin();
-        std::advance(itr, urand(0, dispel_list.size() - 1));
+        if (!oldestFirst) // MergedWorlds dispel-oldest-first
+            std::advance(itr, urand(0, dispel_list.size() - 1));
 
         int32 chance = itr->first->CalcDispelChance(unitTarget, !unitTarget->IsFriendlyTo(unitCaster));
         // 2.4.3 Patch Notes: "Dispel effects will no longer attempt to remove effects that have 100% dispel resistance."
