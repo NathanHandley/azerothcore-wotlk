@@ -730,6 +730,10 @@ Spell::Spell(WorldObject* caster, SpellInfo const* info, TriggerCastFlags trigge
     // xinef:
     _spellTargetsSelected = false;
 
+    // MergedWorlds target-dest-follow
+    _dstFromExplicitTarget = false;
+    _dstFollowsExplicitTarget = false;
+
     m_weaponItem = nullptr;
 }
 
@@ -815,7 +819,10 @@ void Spell::InitExplicitTargets(SpellCastTargets const& targets)
         {
             // try to use unit target if provided
             if (WorldObject* target = targets.GetObjectTarget())
+            {
                 m_targets.SetDst(*target);
+                _dstFromExplicitTarget = true; // MergedWorlds target-dest-follow
+            }
             // or use self if not available
             else
                 m_targets.SetDst(*m_caster);
@@ -3929,6 +3936,11 @@ void Spell::_cast(bool skipCheck)
         cancel();
         return;
     }
+
+    // MergedWorlds target-dest-follow: the area lands where the target is now, not where it stood when the cast began
+    if (_dstFollowsExplicitTarget && _dstFromExplicitTarget && !_spellTargetsSelected && m_targets.HasDst())
+        if (WorldObject* target = m_targets.GetObjectTarget())
+            m_targets.SetDst(*target);
 
     // Xinef: implement attribute SPELL_ATTR1_DISMISS_PET_FIRST, on spell cast current pet is dismissed and charms are removed
     if (unitCaster && m_spellInfo->HasAttribute(SPELL_ATTR1_DISMISS_PET_FIRST))

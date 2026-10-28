@@ -54,8 +54,8 @@ public:
 
 private:
     static bool IsInLiquid(EQZoneMap const* zoneMap, float x, float y, float z, float& surfaceZ);
-    static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ);
-    static float SnapStepZOverGaps(EQZoneMap const* zoneMap, float x, float y, float nextX, float nextY, float previousZ);
+    static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ, G3D::Vector3 const* reachFrom);
+    static float SnapStepZOverGaps(EQZoneMap const* zoneMap, G3D::Vector3 const& previousStep, float x, float y, float nextX, float nextY);
     static float GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z);
     static void AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints);
     static void AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, bool swims, Movement::PointsArray& pathPoints);

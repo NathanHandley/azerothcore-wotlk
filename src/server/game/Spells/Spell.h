@@ -572,6 +572,9 @@ public:
     bool IsAutoActionResetSpell() const;
     bool IsIgnoringCooldowns() const;
 
+    // MergedWorlds target-dest-follow: a destination taken from the explicit target moves to that target's position when the cast goes off
+    void SetDstFollowsExplicitTarget(bool follows) { _dstFollowsExplicitTarget = follows; }
+
     bool IsDeletable() const { return !m_referencedFromCurrentSpell && !m_executedCurrently; }
     void SetReferencedFromCurrent(bool yes) { m_referencedFromCurrentSpell = yes; }
     bool IsInterruptable() const { return !m_executedCurrently; }
@@ -809,6 +812,10 @@ public:
 
     // xinef:
     bool _spellTargetsSelected;
+
+    // MergedWorlds target-dest-follow
+    bool _dstFromExplicitTarget;
+    bool _dstFollowsExplicitTarget;
 
     ByteBuffer* m_effectExecuteData[MAX_SPELL_EFFECTS];
 };

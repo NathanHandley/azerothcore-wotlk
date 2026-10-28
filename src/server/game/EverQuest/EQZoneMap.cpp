@@ -38,6 +38,7 @@ namespace
     constexpr uint32 EQ_ZONE_MAP_BVH_MAX_DEPTH = 40;
     constexpr float EQ_ZONE_MAP_BEST_Z_START_ADJUST = 0.5f; // Yards above the given height a best Z search starts down from
     constexpr float EQ_ZONE_MAP_LIQUID_JOIN_GAP = 0.01f;
+    constexpr float EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE = 0.1f; // EQ starts dungeon liquid exactly at the floor, so liquid starting this little over a point holds it
     constexpr float EQ_ZONE_MAP_LIQUID_SEARCH_ABOVE = 2000.0f;
 
     // Orders triangles by their center on one axis
@@ -415,7 +416,7 @@ bool EQZoneMap::GetLiquidInfo(float x, float y, float z, float maxDistanceBelow,
         RegionNode const& leaf = _regionNodes[interval.second];
         if ((leaf.RegionFlags & EQ_REGION_ANY_LIQUID) == 0)
         {
-            if (inRun && current.BottomZ <= z)
+            if (inRun && current.BottomZ <= z + EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE)
             {
                 liquidInfo = current;
                 found = true;
@@ -432,7 +433,7 @@ bool EQZoneMap::GetLiquidInfo(float x, float y, float z, float maxDistanceBelow,
         }
         else
         {
-            if (inRun && current.BottomZ <= z)
+            if (inRun && current.BottomZ <= z + EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE)
             {
                 liquidInfo = current;
                 found = true;
@@ -443,10 +444,10 @@ bool EQZoneMap::GetLiquidInfo(float x, float y, float z, float maxDistanceBelow,
             current.LiquidTypeID = leaf.LiquidTypeID;
             inRun = true;
         }
-        if (current.BottomZ > z)
+        if (current.BottomZ > z + EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE)
             break;
     }
-    if (inRun && current.BottomZ <= z)
+    if (inRun && current.BottomZ <= z + EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE)
     {
         liquidInfo = current;
         found = true;
