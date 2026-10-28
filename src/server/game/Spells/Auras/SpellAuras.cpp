@@ -365,7 +365,7 @@ Aura* Aura::Create(SpellInfo const* spellproto, uint32 effMask, WorldObject* own
     return aura;
 }
 
-// MergedWorlds dispel-oldest-first: auras are created on several map threads at once
+// MergedWorlds eq-dispel-order: auras are created on several map threads at once
 static std::atomic<uint64> AuraApplySequenceCounter(0);
 
 Aura::Aura(SpellInfo const* spellproto, WorldObject* owner, Unit* caster, Item* castItem, ObjectGuid casterGUID, ObjectGuid itemGUID /*= ObjectGuid::Empty*/) :

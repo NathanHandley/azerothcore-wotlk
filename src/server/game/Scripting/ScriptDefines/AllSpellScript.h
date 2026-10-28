@@ -19,7 +19,10 @@
 #define SCRIPT_OBJECT_ALL_SPELL_SCRIPT_H_
 
 #include "ScriptObject.h"
+#include <list>
 #include <vector>
+
+typedef std::list< std::pair<Aura*, uint8> > DispelChargesList; // MergedWorlds eq-dispel-order: same as Unit.h
 
 enum AllSpellHook
 {
@@ -72,8 +75,8 @@ public:
     // MergedWorlds: the hit result (targetInfo.missCondition) was just rolled for a target, and can be changed
     virtual void OnAfterSpellHitResult(Spell* /*spell*/, Unit* /*target*/, TargetInfo& /*targetInfo*/) { }
 
-    // MergedWorlds dispel-oldest-first: a dispel effect is about to pick auras off of a target. Set oldestFirst to remove them in the order they were applied instead of at random
-    virtual void OnDispelSelection(Spell* /*spell*/, Unit* /*target*/, bool& /*oldestFirst*/) { }
+    // MergedWorlds eq-dispel-order: a dispel effect is about to pick auras off of a target. Sort dispelList and set inListOrder to remove them front to back instead of at random
+    virtual void OnDispelSelection(Spell* /*spell*/, Unit* /*target*/, DispelChargesList& /*dispelList*/, bool& /*inListOrder*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 
