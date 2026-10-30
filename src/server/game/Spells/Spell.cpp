@@ -3672,6 +3672,10 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     // calculate cast time (calculated after first CheckCast check to prevent charge counting for first CheckCast fail)
     m_casttime = HasTriggeredCastFlag(TRIGGERED_CAST_DIRECTLY) ? 0 : m_spellInfo->CalcCastTime(m_caster, this);
 
+    // MergedWorlds: modules can replace the cast time (mod-rowow's RO skills use RO's cast time rules)
+    if (!HasTriggeredCastFlag(TRIGGERED_CAST_DIRECTLY))
+        sScriptMgr->OnSpellCalcCastTime(this, m_casttime);
+
     if (unitCaster && unitCaster->IsPlayer())
         if (unitCaster->ToPlayer()->GetCommandStatus(CHEAT_CASTTIME))
             m_casttime = 0;

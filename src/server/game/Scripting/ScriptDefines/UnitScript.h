@@ -45,6 +45,7 @@ enum UnitHook
     UNITHOOK_ON_UNIT_DEATH,
     UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM,
     UNITHOOK_ON_CALCULATE_MELEE_DAMAGE, // MergedWorlds
+    UNITHOOK_ON_UNIT_UPDATE_SPEED, // MergedWorlds
     UNITHOOK_END
 };
 
@@ -123,6 +124,16 @@ public:
      * outcome roll, damage, armor, resilience, absorbs, item procs and daze are all skipped
      */
     [[nodiscard]] virtual bool OnCalculateMeleeDamage(Unit* /*attacker*/, Unit* /*victim*/, CalcDamageInfo* /*damageInfo*/) { return false; }
+
+    /**
+     * @brief MergedWorlds: called as a unit's speed is worked out (Unit::UpdateSpeed), just before it's set.
+     *
+     * @param unit The unit whose speed changes
+     * @param moveType The movement type (UnitMoveType)
+     * @param speed The speed rate the core worked out from the unit's template and auras, which the script may change (a game's own
+     * walk speed rules, like mod-rowow's RO statuses)
+     */
+    virtual void OnUnitUpdateSpeed(Unit* /*unit*/, uint8 /*moveType*/, float& /*speed*/) { }
 };
 
 #endif

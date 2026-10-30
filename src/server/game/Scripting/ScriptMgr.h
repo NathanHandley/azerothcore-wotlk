@@ -589,6 +589,7 @@ public: /* UnitScript */
     void OnUnitDeath(Unit* unit, Unit* killer);
     void OnUnitSetShapeshiftForm(Unit* unit, uint8 form);
     bool OnCalculateMeleeDamage(Unit* attacker, Unit* victim, CalcDamageInfo* damageInfo); // MergedWorlds
+    void OnUnitUpdateSpeed(Unit* unit, uint8 moveType, float& speed); // MergedWorlds
 
 public: /* MovementHandlerScript */
     void OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 opcode);
@@ -656,6 +657,7 @@ public: /* SpellSC */
     void OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint32 auraScaleMask, TargetInfo& targetInfo);
     void OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& targetInfo); // MergedWorlds
     void OnDispelSelection(Spell* spell, Unit* target, DispelChargesList& dispelList, bool& inListOrder); // MergedWorlds
+    void OnSpellCalcCastTime(Spell* spell, int32& castTime); // MergedWorlds
     void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
     void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);

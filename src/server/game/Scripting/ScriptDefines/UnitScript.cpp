@@ -144,6 +144,11 @@ bool ScriptMgr::OnCalculateMeleeDamage(Unit* attacker, Unit* victim, CalcDamageI
     CALL_ENABLED_BOOLEAN_HOOKS_WITH_DEFAULT_FALSE(UnitScript, UNITHOOK_ON_CALCULATE_MELEE_DAMAGE, script->OnCalculateMeleeDamage(attacker, victim, damageInfo));
 }
 
+void ScriptMgr::OnUnitUpdateSpeed(Unit* unit, uint8 moveType, float& speed) // MergedWorlds
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_UPDATE_SPEED, script->OnUnitUpdateSpeed(unit, moveType, speed));
+}
+
 UnitScript::UnitScript(char const* name, bool addToScripts, std::vector<uint16> enabledHooks)
     : ScriptObject(name, UNITHOOK_END)
 {

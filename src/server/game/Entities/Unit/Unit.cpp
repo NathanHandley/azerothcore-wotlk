@@ -11072,6 +11072,8 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced)
             speed = min_speed;
     }
 
+    sScriptMgr->OnUnitUpdateSpeed(this, uint8(mtype), speed); // MergedWorlds
+
     SetSpeed(mtype, speed, forced);
 }
 
