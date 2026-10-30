@@ -1004,6 +1004,26 @@ void ScriptMgr::OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint3
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_AFTER_TRAIN_SPELL, script->OnPlayerAfterTrainSpell(player, trainer, spellId));
 }
 
+void ScriptMgr::OnPlayerSaveCharacterValues(Player* player, CharacterDatabaseTransaction trans, PlayerSaveValues& values)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_SAVE_CHARACTER_VALUES, script->OnPlayerSaveCharacterValues(player, trans, values));
+}
+
+bool ScriptMgr::OnPlayerCanLoseDurability(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_LOSE_DURABILITY, !script->OnPlayerCanLoseDurability(player));
+}
+
+bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));
+}
+
+bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {

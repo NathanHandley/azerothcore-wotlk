@@ -15152,6 +15152,16 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
 
     auto finiteAlways = [](float f) { return std::isfinite(f) ? f : 0.0f; };
 
+    // MergedWorlds: a game identity form saves the character's own values (see OnPlayerSaveCharacterValues)
+    PlayerSaveValues saveValues;
+    saveValues.Level = GetLevel();
+    saveValues.XP = GetUInt32Value(PLAYER_XP);
+    saveValues.Money = GetMoney();
+    saveValues.Health = GetHealth();
+    for (uint32 i = 0; i < MAX_POWERS; ++i)
+        saveValues.Powers[i] = GetPower(Powers(i));
+    sScriptMgr->OnPlayerSaveCharacterValues(this, trans, saveValues);
+
     if (create)
     {
         //! Insert query
@@ -15163,9 +15173,9 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, getRace(true));
         stmt->SetData(index++, getClass());
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES_3, 0));   // save gender from PLAYER_BYTES_3, UNIT_BYTES_0 changes with every transform effect
-        stmt->SetData(index++, GetLevel());
-        stmt->SetData(index++, GetUInt32Value(PLAYER_XP));
-        stmt->SetData(index++, GetMoney());
+        stmt->SetData(index++, saveValues.Level);
+        stmt->SetData(index++, saveValues.XP);
+        stmt->SetData(index++, saveValues.Money);
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 0));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 1));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 2));
@@ -15230,10 +15240,10 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, GetUInt64Value(PLAYER_FIELD_KNOWN_CURRENCIES));
         stmt->SetData(index++, GetUInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX));
         stmt->SetData(index++, GetDrunkValue());
-        stmt->SetData(index++, GetHealth());
+        stmt->SetData(index++, saveValues.Health);
 
         for (uint32 i = 0; i < MAX_POWERS; ++i)
-            stmt->SetData(index++, GetPower(Powers(i)));
+            stmt->SetData(index++, saveValues.Powers[i]);
 
         stmt->SetData(index++, GetSession()->GetLatency());
 
@@ -15281,9 +15291,9 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, getRace(true));
         stmt->SetData(index++, getClass());
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES_3, 0));   // save gender from PLAYER_BYTES_3, UNIT_BYTES_0 changes with every transform effect
-        stmt->SetData(index++, GetLevel());
-        stmt->SetData(index++, GetUInt32Value(PLAYER_XP));
-        stmt->SetData(index++, GetMoney());
+        stmt->SetData(index++, saveValues.Level);
+        stmt->SetData(index++, saveValues.XP);
+        stmt->SetData(index++, saveValues.Money);
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 0));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 1));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 2));
@@ -15370,10 +15380,10 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, GetUInt64Value(PLAYER_FIELD_KNOWN_CURRENCIES));
         stmt->SetData(index++, GetUInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX));
         stmt->SetData(index++, GetDrunkValue());
-        stmt->SetData(index++, GetHealth());
+        stmt->SetData(index++, saveValues.Health);
 
         for (uint32 i = 0; i < MAX_POWERS; ++i)
-            stmt->SetData(index++, GetPower(Powers(i)));
+            stmt->SetData(index++, saveValues.Powers[i]);
 
         stmt->SetData(index++, GetSession()->GetLatency());
 

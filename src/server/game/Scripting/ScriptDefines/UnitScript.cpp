@@ -139,6 +139,11 @@ void ScriptMgr::OnUnitSetShapeshiftForm(Unit* unit, uint8 form)
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM, script->OnUnitSetShapeshiftForm(unit, form));
 }
 
+bool ScriptMgr::OnCalculateMeleeDamage(Unit* attacker, Unit* victim, CalcDamageInfo* damageInfo)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS_WITH_DEFAULT_FALSE(UnitScript, UNITHOOK_ON_CALCULATE_MELEE_DAMAGE, script->OnCalculateMeleeDamage(attacker, victim, damageInfo));
+}
+
 UnitScript::UnitScript(char const* name, bool addToScripts, std::vector<uint16> enabledHooks)
     : ScriptObject(name, UNITHOOK_END)
 {

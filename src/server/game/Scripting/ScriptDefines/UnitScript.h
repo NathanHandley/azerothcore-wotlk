@@ -44,11 +44,13 @@ enum UnitHook
     UNITHOOK_ON_UNIT_EXIT_COMBAT,
     UNITHOOK_ON_UNIT_DEATH,
     UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM,
+    UNITHOOK_ON_CALCULATE_MELEE_DAMAGE, // MergedWorlds
     UNITHOOK_END
 };
 
 enum ReputationRank : uint8;
 class ByteBuffer;
+struct CalcDamageInfo;
 struct BuildValuesCachePosPointers;
 
 class UnitScript : public ScriptObject
@@ -110,6 +112,17 @@ public:
     virtual void OnUnitExitCombat(Unit* /*unit*/) { }
     virtual void OnUnitDeath(Unit* /*unit*/, Unit* /*killer*/) { }
     virtual void OnUnitSetShapeshiftForm(Unit* /*unit*/, uint8 /*form*/) { }
+
+    /**
+     * @brief MergedWorlds: called as a melee swing is worked out (Unit::CalculateMeleeDamage), once the attack type's proc flags are set.
+     *
+     * @param attacker Contains information about the attacking Unit
+     * @param victim Contains information about the Unit attacked
+     * @param damageInfo The swing's result, to be filled in: its damage, hitOutCome, HitInfo and TargetState
+     * @return True when the script worked out the whole swing (a game's own combat rules, like mod-rowow's RO combat), so the core's
+     * outcome roll, damage, armor, resilience, absorbs, item procs and daze are all skipped
+     */
+    [[nodiscard]] virtual bool OnCalculateMeleeDamage(Unit* /*attacker*/, Unit* /*victim*/, CalcDamageInfo* /*damageInfo*/) { return false; }
 };
 
 #endif

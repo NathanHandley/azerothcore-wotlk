@@ -1276,7 +1276,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         else                                                // victim is a player
         {
             // random durability for items (HIT TAKEN)
-            if (roll_chance_f(sWorld->getRate(RATE_DURABILITY_LOSS_DAMAGE)))
+            // MergedWorlds: not in a game identity form, which doesn't wear the character's items
+            if (roll_chance_f(sWorld->getRate(RATE_DURABILITY_LOSS_DAMAGE)) && sScriptMgr->OnPlayerCanLoseDurability(victim->ToPlayer()))
             {
                 EquipmentSlots slot = EquipmentSlots(urand(0, EQUIPMENT_SLOT_END - 1));
                 victim->ToPlayer()->DurabilityPointLossForEquipSlot(slot);
@@ -1293,7 +1294,8 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         if (attacker && attacker->IsPlayer())
         {
             // random durability for items (HIT DONE)
-            if (roll_chance_f(sWorld->getRate(RATE_DURABILITY_LOSS_DAMAGE)))
+            // MergedWorlds: not in a game identity form, which doesn't wear the character's items
+            if (roll_chance_f(sWorld->getRate(RATE_DURABILITY_LOSS_DAMAGE)) && sScriptMgr->OnPlayerCanLoseDurability(attacker->ToPlayer()))
             {
                 EquipmentSlots slot = EquipmentSlots(urand(0, EQUIPMENT_SLOT_END - 1));
                 attacker->ToPlayer()->DurabilityPointLossForEquipSlot(slot);
@@ -1720,6 +1722,11 @@ void Unit::CalculateMeleeDamage(Unit* victim, CalcDamageInfo* damageInfo, Weapon
             return;
     }
 
+    // MergedWorlds: a game's own combat rules (mod-rowow's RO combat between RO combatants) can work out the whole swing instead
+    damageInfo->isCalculatedByScript = sScriptMgr->OnCalculateMeleeDamage(this, victim, damageInfo);
+    if (damageInfo->isCalculatedByScript)
+        return;
+
     // School Immune check
     uint8 immunedMask = 0;
     bool hasNonPhysicalSchoolMask = false;
@@ -2102,7 +2109,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
     }
 
     // If this is a creature and it attacks from behind it has a probability to daze it's victim
-    if ((damageInfo->damages[0].damage + damageInfo->damages[1].damage) && ((damageInfo->hitOutCome == MELEE_HIT_CRIT || damageInfo->hitOutCome == MELEE_HIT_CRUSHING || damageInfo->hitOutCome == MELEE_HIT_NORMAL || damageInfo->hitOutCome == MELEE_HIT_GLANCING) &&
+    // MergedWorlds: not in a game's own combat rules
+    if (!damageInfo->isCalculatedByScript && (damageInfo->damages[0].damage + damageInfo->damages[1].damage) && ((damageInfo->hitOutCome == MELEE_HIT_CRIT || damageInfo->hitOutCome == MELEE_HIT_CRUSHING || damageInfo->hitOutCome == MELEE_HIT_NORMAL || damageInfo->hitOutCome == MELEE_HIT_GLANCING) &&
                                !IsPlayer() && !ToCreature()->IsControlledByPlayer() && !victim->HasInArc(M_PI, this)
                                && (victim->IsPlayer() || (!victim->ToCreature()->isWorldBoss() && !victim->IsVehicle()))))
     {
@@ -2130,7 +2138,8 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
                 CastSpell(victim, 1604, true);
     }
 
-    if (IsPlayer())
+    // MergedWorlds: not in a game's own combat rules, where the character's items aren't worn
+    if (IsPlayer() && !damageInfo->isCalculatedByScript)
     {
         DamageInfo dmgInfo(*damageInfo);
         ToPlayer()->CastItemCombatSpell(victim, damageInfo->attackType, damageInfo->procVictim, dmgInfo.GetHitMask());
@@ -13800,7 +13809,9 @@ void Unit::Kill(Unit* killer, Unit* victim, bool durabilityLoss, WeaponAttackTyp
         plrVictim->SetPvPDeath(player != nullptr);
 
         // only if not player and not controlled by player pet. And not at BG
-        if ((durabilityLoss && !player && !plrVictim->InBattleground()) || (player && sWorld->getBoolConfig(CONFIG_DURABILITY_LOSS_IN_PVP)))
+        // MergedWorlds: and not in a game identity form, which doesn't wear the character's items
+        if (((durabilityLoss && !player && !plrVictim->InBattleground()) || (player && sWorld->getBoolConfig(CONFIG_DURABILITY_LOSS_IN_PVP))) &&
+            sScriptMgr->OnPlayerCanLoseDurability(plrVictim))
         {
             LOG_DEBUG("entities.unit", "We are dead, losing {} percent durability", sWorld->getRate(RATE_DURABILITY_LOSS_ON_DEATH) / 100.0f);
             plrVictim->DurabilityLossAll(sWorld->getRate(RATE_DURABILITY_LOSS_ON_DEATH) / 100.0f, false);

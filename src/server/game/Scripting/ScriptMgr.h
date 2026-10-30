@@ -485,6 +485,10 @@ public: /* PlayerScript */
     void OnPlayerBeforeReceiveSpellListFromTrainer(Player* player, Creature* trainer, WorldPackets::NPC::TrainerList& trainerList);
     void OnPlayerGetTrainerSpellState(Player const* player, uint32 trainerId, uint32 spellId, Trainer::SpellState& state);
     void OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint32 spellId);
+    void OnPlayerSaveCharacterValues(Player* player, CharacterDatabaseTransaction trans, PlayerSaveValues& values); // MergedWorlds
+    bool OnPlayerCanLoseDurability(Player* player); // MergedWorlds
+    bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
+    bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 
     // Anti cheat
     void AnticheatSetCanFlybyServer(Player* player, bool apply);
@@ -584,6 +588,7 @@ public: /* UnitScript */
     void OnUnitExitCombat(Unit* unit);
     void OnUnitDeath(Unit* unit, Unit* killer);
     void OnUnitSetShapeshiftForm(Unit* unit, uint8 form);
+    bool OnCalculateMeleeDamage(Unit* attacker, Unit* victim, CalcDamageInfo* damageInfo); // MergedWorlds
 
 public: /* MovementHandlerScript */
     void OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 opcode);

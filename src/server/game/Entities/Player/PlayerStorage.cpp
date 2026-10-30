@@ -7914,8 +7914,18 @@ void Player::SaveInventoryAndGoldToDB(CharacterDatabaseTransaction trans)
 
 void Player::SaveGoldToDB(CharacterDatabaseTransaction trans)
 {
+    // MergedWorlds: a game identity form saves the character's own money (see OnPlayerSaveCharacterValues)
+    PlayerSaveValues saveValues;
+    saveValues.Level = GetLevel();
+    saveValues.XP = GetUInt32Value(PLAYER_XP);
+    saveValues.Money = GetMoney();
+    saveValues.Health = GetHealth();
+    for (uint32 i = 0; i < MAX_POWERS; ++i)
+        saveValues.Powers[i] = GetPower(Powers(i));
+    sScriptMgr->OnPlayerSaveCharacterValues(this, trans, saveValues);
+
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UDP_CHAR_MONEY);
-    stmt->SetData(0, GetMoney());
+    stmt->SetData(0, saveValues.Money);
     stmt->SetData(1, GetGUID().GetRawValue());
     trans->Append(stmt);
 }

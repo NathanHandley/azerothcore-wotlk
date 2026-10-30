@@ -168,9 +168,17 @@ void Player::Update(uint32 p_time)
             // carrying them (e.g. Yogg-Saron's Constrictor Tentacle grab).
             bool const victimIsVehicleBase = GetVehicleBase() == victim;
 
-            if (isAttackReady(BASE_ATTACK))
+            // MergedWorlds: a game identity form's weapon can reach further (an RO bow), has no off-hand swing of its own (an RO dual
+            // wield is one attack, and the character's off-hand weapon isn't the form's), and can be unable to swing (an RO bow with no ammo)
+            float autoAttackExtraRange = 0.0f;
+            bool hasOffhandAttack = HasOffhandWeaponForAttack();
+            bool canAutoAttack = true;
+            if (isAttackReady(BASE_ATTACK) || (hasOffhandAttack && isAttackReady(OFF_ATTACK)))
+                canAutoAttack = sScriptMgr->OnPlayerBeforeAutoAttack(this, victim, autoAttackExtraRange, hasOffhandAttack);
+
+            if (canAutoAttack && isAttackReady(BASE_ATTACK))
             {
-                if (!victimIsVehicleBase && !IsWithinMeleeRange(victim))
+                if (!victimIsVehicleBase && !IsWithinMeleeRange(victim, autoAttackExtraRange))
                 {
                     setAttackTimer(BASE_ATTACK, 100);
                     if (m_swingErrorMsg != 1) // send single time (client auto repeat)
@@ -195,7 +203,7 @@ void Player::Update(uint32 p_time)
 
                     // prevent base and off attack in same time, delay attack at
                     // 0.2 sec
-                    if (HasOffhandWeaponForAttack())
+                    if (hasOffhandAttack)
                         if (getAttackTimer(OFF_ATTACK) < ATTACK_DISPLAY_DELAY)
                             setAttackTimer(OFF_ATTACK, ATTACK_DISPLAY_DELAY);
 
@@ -208,9 +216,9 @@ void Player::Update(uint32 p_time)
                 }
             }
 
-            if (HasOffhandWeaponForAttack() && isAttackReady(OFF_ATTACK))
+            if (canAutoAttack && hasOffhandAttack && isAttackReady(OFF_ATTACK))
             {
-                if (!victimIsVehicleBase && !IsWithinMeleeRange(victim))
+                if (!victimIsVehicleBase && !IsWithinMeleeRange(victim, autoAttackExtraRange))
                     setAttackTimer(OFF_ATTACK, 100);
                 else if (!victimIsVehicleBase && !IsWithinBoundaryRadius(victim) && !HasInArc(2 * float(M_PI) / 3, victim))
                     setAttackTimer(BASE_ATTACK, 100);
@@ -316,7 +324,11 @@ void Player::Update(uint32 p_time)
     if (IsAlive())
     {
         m_regenTimer += p_time;
-        RegenerateAll();
+        // MergedWorlds: a game identity form regenerates by its own game's rules instead (OnPlayerCanRegenerate)
+        if (sScriptMgr->OnPlayerCanRegenerate(this))
+            RegenerateAll();
+        else
+            m_regenTimer = 0;
     }
 
     if (m_deathState == DeathState::JustDied)

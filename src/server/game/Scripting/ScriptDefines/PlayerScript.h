@@ -21,6 +21,7 @@
 #include "ScriptObject.h"
 #include "SharedDefines.h"
 #include "DBCStructure.h"
+#include "DatabaseEnvFwd.h"
 #include <vector>
 
 // TODO to remove
@@ -36,6 +37,16 @@ namespace WorldPackets::NPC
 {
     class TrainerList;
 }
+
+// MergedWorlds: the values of a character's row that a game identity form (mod-rowow's RO form) changes while it's on
+struct PlayerSaveValues
+{
+    uint8 Level = 0;
+    uint32 XP = 0;
+    uint32 Money = 0;
+    uint32 Health = 0;
+    uint32 Powers[MAX_POWERS] = { };
+};
 
 enum PlayerHook
 {
@@ -235,6 +246,10 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_SAVE_CHARACTER_VALUES, // MergedWorlds
+    PLAYERHOOK_CAN_LOSE_DURABILITY, // MergedWorlds
+    PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
+    PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -966,6 +981,46 @@ public:
      * @param spellId The id of the trainer spell that was bought
      */
     virtual void OnPlayerAfterTrainSpell(Player* /*player*/, Creature* /*trainer*/, uint32 /*spellId*/) {}
+
+    /**
+     * @brief MergedWorlds: called when the character row's level, experience, money, health and powers are about to be saved
+     *        (Player::_SaveCharacter, and Player::SaveGoldToDB for the money alone).
+     *
+     * A game identity form saves the character's own values in place of the form's, and its own values to its tables in the
+     * same transaction, so the two never come apart.
+     *
+     * @param player Contains information about the Player
+     * @param trans The transaction the character row is saved in
+     * @param values The values to save, to be read and overwritten
+     */
+    virtual void OnPlayerSaveCharacterValues(Player* /*player*/, CharacterDatabaseTransaction /*trans*/, PlayerSaveValues& /*values*/) {}
+
+    /**
+     * @brief MergedWorlds: called when a player's equipped items would lose durability, on dying or by chance on a hit dealt or taken.
+     *
+     * @param player Contains information about the Player
+     * @return False to keep the equipped items' durability (a game identity form doesn't wear them)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanLoseDurability(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called before a player's health and powers regenerate.
+     *
+     * @param player Contains information about the Player
+     * @return False to stop the regeneration (a game identity form regenerates by its own game's rules)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanRegenerate(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called when a player's auto attack is ready to swing, before it checks whether its victim is in reach.
+     *
+     * @param player Contains information about the Player
+     * @param victim Contains information about the Unit attacked
+     * @param extraRange The yards the attack reaches past melee range (0), to be read and changed (a game identity form's bow reaches further)
+     * @param hasOffhandAttack Whether the off-hand weapon swings too, to be read and changed (a game identity form has no off-hand swing)
+     * @return False to hold the swing (the script stops the attack itself, as an RO bow with no ammo does)
+     */
+    [[nodiscard]] virtual bool OnPlayerBeforeAutoAttack(Player* /*player*/, Unit* /*victim*/, float& /*extraRange*/, bool& /*hasOffhandAttack*/) { return true; }
 };
 
 #endif
