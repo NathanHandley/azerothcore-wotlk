@@ -1014,6 +1014,11 @@ bool ScriptMgr::OnPlayerCanLoseDurability(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_LOSE_DURABILITY, !script->OnPlayerCanLoseDurability(player));
 }
 
+bool ScriptMgr::OnPlayerCanTakeFallDamage(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, !script->OnPlayerCanTakeFallDamage(player));
+}
+
 bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));

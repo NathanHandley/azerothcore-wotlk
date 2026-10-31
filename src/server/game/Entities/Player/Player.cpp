@@ -14237,7 +14237,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored
     if (z_diff >= MIN_FALL_DMG_DIST && !isDead() && !IsGameMaster() && !GetCommandStatus(CHEAT_GOD) &&
             !HasHoverAura() && !HasFeatherFallAura() &&
-            !HasFlyAura())
+            !HasFlyAura() && sScriptMgr->OnPlayerCanTakeFallDamage(this)) // MergedWorlds: a game identity form may have no fall damage
     {
         //Safe fall, fall height reduction
         int32 safe_fall = GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);

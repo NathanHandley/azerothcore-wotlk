@@ -250,6 +250,7 @@ enum PlayerHook
     PLAYERHOOK_CAN_LOSE_DURABILITY, // MergedWorlds
     PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
+    PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1002,6 +1003,14 @@ public:
      * @return False to keep the equipped items' durability (a game identity form doesn't wear them)
      */
     [[nodiscard]] virtual bool OnPlayerCanLoseDurability(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called when a player lands from a fall long enough to hurt.
+     *
+     * @param player Contains information about the Player
+     * @return False to take no fall damage (a game identity form whose game has no falling)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanTakeFallDamage(Player* /*player*/) { return true; }
 
     /**
      * @brief MergedWorlds: called before a player's health and powers regenerate.

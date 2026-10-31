@@ -487,6 +487,7 @@ public: /* PlayerScript */
     void OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint32 spellId);
     void OnPlayerSaveCharacterValues(Player* player, CharacterDatabaseTransaction trans, PlayerSaveValues& values); // MergedWorlds
     bool OnPlayerCanLoseDurability(Player* player); // MergedWorlds
+    bool OnPlayerCanTakeFallDamage(Player* player); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 
