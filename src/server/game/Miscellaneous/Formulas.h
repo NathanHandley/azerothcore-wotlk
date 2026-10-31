@@ -114,6 +114,8 @@ namespace Acore::XP
 
     uint32 BaseGain(uint8 pl_level, uint8 mob_level, ContentLevels content);
 
+    ContentLevels GetContentLevelsForKill(Unit const* victim);
+
     uint32 Gain(Player* player, Unit* unit, bool isBattleGround = false);
 
     inline float xp_in_group_rate(uint32 count, bool isRaid)

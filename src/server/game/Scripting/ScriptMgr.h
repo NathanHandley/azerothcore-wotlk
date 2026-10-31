@@ -480,6 +480,7 @@ public: /* PlayerScript */
     void OnPlayerGetReputationPriceDiscount(Player const* player, FactionTemplateEntry const* factionTemplate, float& discount);
     void OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId);
     void OnPlayerBeforeGetLevelForXPGain(Player const* player, uint8& level);
+    void OnPlayerBeforeGetContentLevelsForXPGain(Unit const* victim, uint8& contentLevels);
     void OnPlayerAfterTakeItemFromMail(Player* player, Item* item, uint32 count);
     bool OnPlayerCanLearnSpell(Player* player, uint32 spellId);
     void OnPlayerBeforeReceiveSpellListFromTrainer(Player* player, Creature* trainer, WorldPackets::NPC::TrainerList& trainerList);

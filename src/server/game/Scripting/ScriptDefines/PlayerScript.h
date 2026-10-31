@@ -235,6 +235,7 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_BEFORE_GET_CONTENT_LEVELS_FOR_XP_GAIN,
     PLAYERHOOK_END
 };
 
@@ -889,6 +890,9 @@ public:
      * @param level The level that should be used for XP gain calculations
      */
     virtual void OnPlayerBeforeGetLevelForXPGain(Player const* /*player*/, uint8& /*level*/) {}
+
+    // Called when a kill's experience picks its base amount.  contentLevels is a ContentLevels value
+    virtual void OnPlayerBeforeGetContentLevelsForXPGain(Unit const* /*victim*/, uint8& /*contentLevels*/) {}
 
     /**
      * @brief This hook is called after a player takes an item out of a mailbox.
