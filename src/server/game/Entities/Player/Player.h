@@ -1147,6 +1147,7 @@ public:
     [[nodiscard]] time_t GetSummonExpireTimer() const { return m_summon_expire; }
 
     bool Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo);
+    uint8 GetCreateOutfitId() const { return m_createOutfitId; }
 
     void Update(uint32 time) override;
 
@@ -2812,6 +2813,7 @@ protected:
 
     ObjectGuid m_divider;
     uint32 m_ingametime;
+    uint8 m_createOutfitId = 0;
 
     /*********************************************************/
     /***                   LOAD SYSTEM                     ***/
