@@ -276,14 +276,34 @@ void WorldSession::HandleGuildPermissions(WorldPackets::Guild::GuildPermissionsQ
         guild->SendPermissions(this);
 }
 
+// MergedWorlds: the guild bank for a player in a guild with one, shown with the player as its own banker (no vault in reach): mod-rowow's
+// Kafra guild storage.  Like the bank command's SendShowBank with the player's GUID, the player may use it until it's ended (an empty GUID)
+void WorldSession::SendShowGuildBank(ObjectGuid guid)
+{
+    m_currentGuildBankerGUID = guid;
+    if (!guid)
+        return;
+
+    if (Guild* guild = GetPlayer()->GetGuild())
+        guild->SendBankTabsInfo(this, true);
+}
+
+// MergedWorlds: the guild bank's checks take a vault in reach, or the player itself after SendShowGuildBank
+bool WorldSession::CanUseGuildBank(ObjectGuid bankerGUID) const
+{
+    if (bankerGUID && bankerGUID == GetPlayer()->GetGUID() && bankerGUID == m_currentGuildBankerGUID)
+        return true;
+
+    return GetPlayer()->GetGameObjectIfCanInteractWith(bankerGUID, GAMEOBJECT_TYPE_GUILD_BANK) != nullptr;
+}
+
 // Called when clicking on Guild bank gameobject
 void WorldSession::HandleGuildBankerActivate(WorldPackets::Guild::GuildBankActivate& packet)
 {
     LOG_DEBUG("guild", "CMSG_GUILD_BANKER_ACTIVATE [{}]: Go: [{}] AllSlots: {}"
     , GetPlayerInfo(), packet.Banker.ToString(), packet.FullUpdate);
 
-    GameObject const* const go = GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK);
-    if (!go)
+    if (!CanUseGuildBank(packet.Banker)) // MergedWorlds: or the player itself (SendShowGuildBank)
         return;
 
     Guild* const guild = GetPlayer()->GetGuild();
@@ -302,7 +322,7 @@ void WorldSession::HandleGuildBankQueryTab(WorldPackets::Guild::GuildBankQueryTa
     LOG_DEBUG("guild", "CMSG_GUILD_BANK_QUERY_TAB [{}]: Go: [{}], TabId: {}, ShowTabs: {}"
     , GetPlayerInfo(), packet.Banker.ToString(), packet.Tab, packet.FullUpdate);
 
-    if (GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+    if (CanUseGuildBank(packet.Banker))
         if (Guild* guild = GetPlayer()->GetGuild())
             guild->SendBankTabData(this, packet.Tab, packet.FullUpdate);
 }
@@ -312,7 +332,7 @@ void WorldSession::HandleGuildBankDepositMoney(WorldPackets::Guild::GuildBankDep
     LOG_DEBUG("guild", "CMSG_GUILD_BANK_DEPOSIT_MONEY [{}]: Go: [{}], money: {}",
               GetPlayerInfo(), packet.Banker.ToString(), packet.Money);
 
-    if (GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+    if (CanUseGuildBank(packet.Banker))
         if (packet.Money && GetPlayer()->HasEnoughMoney(packet.Money))
             if (Guild* guild = GetPlayer()->GetGuild())
                 guild->HandleMemberDepositMoney(this, packet.Money);
@@ -322,14 +342,14 @@ void WorldSession::HandleGuildBankWithdrawMoney(WorldPackets::Guild::GuildBankWi
 {
     LOG_DEBUG("guild", "CMSG_GUILD_BANK_WITHDRAW_MONEY [{}]: Go: [{}], money: {}",
                    GetPlayerInfo(), packet.Banker.ToString(), packet.Money);
-    if (packet.Money && GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+    if (packet.Money && CanUseGuildBank(packet.Banker))
         if (Guild* guild = GetPlayer()->GetGuild())
             guild->HandleMemberWithdrawMoney(this, packet.Money);
 }
 
 void WorldSession::HandleGuildBankSwapItems(WorldPackets::Guild::GuildBankSwapItems& packet)
 {
-    if (!GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+    if (!CanUseGuildBank(packet.Banker))
     {
         return;
     }
@@ -370,7 +390,7 @@ void WorldSession::HandleGuildBankBuyTab(WorldPackets::Guild::GuildBankBuyTab& p
 {
     LOG_DEBUG("guild", "CMSG_GUILD_BANK_BUY_TAB [{}]: [{}[, TabId: {}", GetPlayerInfo(), packet.Banker .ToString(), packet.BankTab);
 
-    if (GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+    if (CanUseGuildBank(packet.Banker))
         if (Guild* guild = GetPlayer()->GetGuild())
             guild->HandleBuyBankTab(this, packet.BankTab);
 }
@@ -381,7 +401,7 @@ void WorldSession::HandleGuildBankUpdateTab(WorldPackets::Guild::GuildBankUpdate
     , GetPlayerInfo(), packet.Banker.ToString(), packet.BankTab, packet.Name, packet.Icon);
 
     if (!packet.Name.empty() && !packet.Icon.empty())
-        if (GetPlayer()->GetGameObjectIfCanInteractWith(packet.Banker, GAMEOBJECT_TYPE_GUILD_BANK))
+        if (CanUseGuildBank(packet.Banker))
             if (Guild* guild = GetPlayer()->GetGuild())
                 guild->HandleSetBankTabInfo(this, packet.BankTab, packet.Name, packet.Icon);
 }

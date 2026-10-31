@@ -570,6 +570,9 @@ public:
     void SendTrainerList(Creature* npc);
     void SendListInventory(ObjectGuid guid, uint32 vendorEntry = 0);
     void SendShowBank(ObjectGuid guid);
+    // MergedWorlds: the guild bank shown with the player as its own banker, with no vault in reach (mod-rowow's Kafra guild storage), as
+    // SendShowBank with the player's GUID shows the bank.  An empty GUID ends it
+    void SendShowGuildBank(ObjectGuid guid);
     bool CanOpenMailBox(ObjectGuid guid);
     void SendShowMailBox(ObjectGuid guid);
     void SendMailList();
@@ -1278,6 +1281,8 @@ private:
     bool CanUseBank(ObjectGuid bankerGUID = ObjectGuid::Empty) const;
     // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client)
     bool IsBankPosOutOfReach(uint8 bag, uint8 slot) const;
+    // MergedWorlds: a guild vault in reach, or the player itself after SendShowGuildBank
+    bool CanUseGuildBank(ObjectGuid bankerGUID) const;
 
     bool recoveryItem(Item* pItem);
 
@@ -1337,6 +1342,7 @@ private:
     LockedQueue<WorldPacket*> _recvQueue;
     uint32 m_currentVendorEntry;
     ObjectGuid m_currentBankerGUID;
+    ObjectGuid m_currentGuildBankerGUID; // MergedWorlds: set by SendShowGuildBank
     uint32 _offlineTime;
     bool _kicked;
     // Packets cooldown

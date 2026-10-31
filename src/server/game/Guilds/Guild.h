@@ -781,6 +781,7 @@ public:
 
     // Bank tabs
     void SetBankTabText(uint8 tabId, std::string_view text);
+    [[nodiscard]] uint8 GetPurchasedBankTabCount() const { return _GetPurchasedTabsSize(); } // MergedWorlds: whether the guild has a bank (mod-rowow's Kafra guild storage)
 
     void ResetTimes();
 
