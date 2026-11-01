@@ -17,6 +17,7 @@
 
 #include "Spell.h"
 #include "EQMount.h"
+#include "EQMovementHooks.h"
 #include "ArenaSpectator.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
@@ -3639,6 +3640,8 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     OnSpellLaunch();
 
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
+    if (EverQuestMovementHooks::SpellPowerCostModifier != nullptr)
+        m_powerCost = EverQuestMovementHooks::SpellPowerCostModifier(this, m_powerCost);
 
     // Set combo point requirement
     if (HasTriggeredCastFlag(TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem)
@@ -7111,6 +7114,8 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
 
     // xinef: Calculate power cost here, so funciton checking power can work properly and dont return bad results
     m_powerCost = m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
+    if (EverQuestMovementHooks::SpellPowerCostModifier != nullptr)
+        m_powerCost = EverQuestMovementHooks::SpellPowerCostModifier(this, m_powerCost);
 
     // cooldown
     if (Creature const* creatureCaster = unitCaster->ToCreature())

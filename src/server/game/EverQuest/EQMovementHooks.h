@@ -23,6 +23,7 @@
 
 class Creature;
 class MovementGenerator;
+class Spell;
 
 // MergedWorlds: lets mod-everquest give creatures on EverQuest maps their EverQuest idle movement (grids and roam boxes), which it keeps the
 // data for.  Only consulted for creatures on EverQuest maps (maps with an EQ zone map)
@@ -32,6 +33,11 @@ namespace EverQuestMovementHooks
     typedef MovementGenerator* (*IdleMovementSelectorFunction)(Creature* creature);
 
     AC_GAME_API extern IdleMovementSelectorFunction IdleMovementSelector;
+
+    // Lets mod-everquest change what a spell costs, for worn focus effects.  Returns the new cost
+    typedef int32 (*SpellPowerCostModifierFunction)(Spell const* spell, int32 powerCost);
+
+    AC_GAME_API extern SpellPowerCostModifierFunction SpellPowerCostModifier;
 }
 
 #endif
