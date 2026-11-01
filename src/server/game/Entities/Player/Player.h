@@ -650,8 +650,8 @@ enum PlayerSlots
     // first slot for item stored (in any way in player m_items data)
     PLAYER_SLOT_START           = 0,
     // last+1 slot for item stored (in any way in player m_items data)
-    // MergedWorlds bank expansion: 150 -> 237 (72 bank items, 24 bank bags, account bank bags + vaults)
-    PLAYER_SLOT_END             = 237,
+    // MergedWorlds bank expansion: 150 -> 237 (72 bank items, 24 bank bags, account bank bags + vaults), and the light source slot
+    PLAYER_SLOT_END             = 238,
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
@@ -743,6 +743,10 @@ enum AccountBankVaultSlots                                  // 2 slots
 
 #define MAX_BANK_BAG_SLOT_COUNT             (BANK_SLOT_BAG_END - BANK_SLOT_BAG_START)
 #define MAX_ACCOUNT_BANK_BAG_SLOT_COUNT     (ACCOUNT_BANK_BAG_SLOT_END - ACCOUNT_BANK_BAG_SLOT_START)
+
+// EQWOW light source slot: one slot on the character sheet that holds any light source, wearable or not. It is storage like the
+// keyring, so what is in it gives no stats or equip effects and nothing lands in it by itself
+#define LIGHT_SOURCE_SLOT 237
 #define ACCOUNT_BANK_VAULT_SIZE             36
 #define ACCOUNT_BANK_ITEM_SLOT_COUNT        ((ACCOUNT_BANK_VAULT_SLOT_END - ACCOUNT_BANK_VAULT_SLOT_START) * ACCOUNT_BANK_VAULT_SIZE)
 // Inventory slots below this sit in PLAYER_FIELD_INV_SLOT_HEAD, the rest in PLAYER_FIELD_INV_SLOT_EXTENDED
@@ -1319,6 +1323,11 @@ public:
     static bool IsAccountBankPos(uint16 pos) { return IsAccountBankPos(pos >> 8, pos & 255); }
     static bool IsAccountBankPos(uint8 bag, uint8 slot);
     static bool IsAccountBankVaultSlot(uint8 slot) { return slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < ACCOUNT_BANK_VAULT_SLOT_END; }
+    // EQWOW light source slot: whether an item may go in it, which only the module knows
+    typedef bool (*LightSourceItemCheck)(uint32 itemEntry);
+    static void SetLightSourceItemCheck(LightSourceItemCheck check) { s_lightSourceItemCheck = check; }
+    // Walks the keyring, the currency tokens and the light source slot: for (i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
+    static uint8 NextSpecialStorageSlot(uint8 slot) { return slot + 1 == CURRENCYTOKEN_SLOT_END ? uint8(LIGHT_SOURCE_SLOT) : uint8(slot + 1); }
     // Update field that holds the item guid of inventory slot `slot` (two fields per slot)
     static uint16 GetInventorySlotUpdateField(uint8 slot);
     bool IsValidPos(uint16 pos, bool explicit_pos) { return IsValidPos(pos >> 8, pos & 255, explicit_pos); }
@@ -2903,6 +2912,7 @@ protected:
 
     uint32 m_atLoginFlags;
 
+    static LightSourceItemCheck s_lightSourceItemCheck;
     Item* m_items[PLAYER_SLOTS_COUNT];
     uint32 m_currentBuybackSlot;
 
