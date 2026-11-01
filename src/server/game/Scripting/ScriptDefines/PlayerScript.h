@@ -251,6 +251,7 @@ enum PlayerHook
     PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
     PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, // MergedWorlds
+    PLAYERHOOK_CAN_BANK_ITEM, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1011,6 +1012,16 @@ public:
      * @return False to take no fall damage (a game identity form whose game has no falling)
      */
     [[nodiscard]] virtual bool OnPlayerCanTakeFallDamage(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called when a player moves an item to a bank tab, and for what a bag carries.
+     *
+     * @param player Contains information about the Player
+     * @param item The item going there
+     * @param world The tab's world (WorldBankWorld).  WORLD_BANK_ACCOUNT for the Character and Account tabs
+     * @param result Starts as EQUIP_ERR_OK on those two.  On a world's tab it starts refused, and only the world's module sets EQUIP_ERR_OK
+     */
+    virtual void OnPlayerCanBankItem(Player* /*player*/, Item const* /*item*/, uint8 /*world*/, InventoryResult& /*result*/) { }
 
     /**
      * @brief MergedWorlds: called before a player's health and powers regenerate.

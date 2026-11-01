@@ -1661,6 +1661,22 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+171
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+172
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+173
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+174
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+175
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+176
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+177
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+178
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+179
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+180
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+181
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+182
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+183
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+184
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+185
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+186
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+187
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+188
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+189
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_ACCOUNT_BANK_BYTES
     UF_FLAG_NONE,                                           // PLAYER_FIELD_ACCOUNT_BANK_PAD
 };

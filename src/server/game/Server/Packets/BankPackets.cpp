@@ -48,6 +48,8 @@ WorldPacket const* WorldPackets::Bank::BuyBankSlotResult::Write()
 WorldPacket const* WorldPackets::Bank::ShowBank::Write()
 {
     _worldPacket << Banker;
+    _worldPacket << World;
+    _worldPacket << WorldMask;
 
     return &_worldPacket;
 }

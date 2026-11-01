@@ -4023,8 +4023,8 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
-        // MergedWorlds account bank: bag slots and the two vaults (a bag also sends what it holds)
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
+        // MergedWorlds account bank: bag slots and the vaults, a world tab's too (a bag also sends what it holds)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
             if (!m_items[i])
                 continue;
@@ -4065,7 +4065,7 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
             m_items[i]->DestroyForPlayer(target);
         }
         // MergedWorlds account bank
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
             if (!m_items[i])
                 continue;

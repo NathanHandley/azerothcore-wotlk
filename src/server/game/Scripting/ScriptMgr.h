@@ -488,6 +488,7 @@ public: /* PlayerScript */
     void OnPlayerSaveCharacterValues(Player* player, CharacterDatabaseTransaction trans, PlayerSaveValues& values); // MergedWorlds
     bool OnPlayerCanLoseDurability(Player* player); // MergedWorlds
     bool OnPlayerCanTakeFallDamage(Player* player); // MergedWorlds
+    void OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 

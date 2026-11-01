@@ -569,7 +569,7 @@ public:
 
     void SendTrainerList(Creature* npc);
     void SendListInventory(ObjectGuid guid, uint32 vendorEntry = 0);
-    void SendShowBank(ObjectGuid guid);
+    void SendShowBank(ObjectGuid guid, uint8 world = 0); // MergedWorlds: world opens the bank window on that world's tab
     // MergedWorlds: the guild bank shown with the player as its own banker, with no vault in reach (mod-rowow's Kafra guild storage), as
     // SendShowBank with the player's GUID shows the bank.  An empty GUID ends it
     void SendShowGuildBank(ObjectGuid guid);

@@ -650,8 +650,8 @@ enum PlayerSlots
     // first slot for item stored (in any way in player m_items data)
     PLAYER_SLOT_START           = 0,
     // last+1 slot for item stored (in any way in player m_items data)
-    // MergedWorlds bank expansion: 150 -> 237 (72 bank items, 24 bank bags, account bank bags + vaults)
-    PLAYER_SLOT_END             = 237,
+    // MergedWorlds bank expansion: 150 -> 245 (72 bank items, 24 bank bags, account bank bags + vaults, world bank vaults)
+    PLAYER_SLOT_END             = 245,
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
@@ -741,6 +741,23 @@ enum AccountBankVaultSlots                                  // 2 slots
     ACCOUNT_BANK_VAULT_SLOT_END     = 237
 };
 
+// MergedWorlds world bank: an account wide tab per game world, whose item slots are hidden vault bags like the account bank's.  The block
+// is built once with room for every world, so a world's tab needs no slot, update field or client change of its own
+enum WorldBankVaultSlots                                    // 8 slots
+{
+    WORLD_BANK_VAULT_SLOT_START     = 237,
+    WORLD_BANK_VAULT_SLOT_END       = 245
+};
+
+// The bank tabs that are shared by the account.  A world's tab shows only when its module is on (Player::SetWorldBankEnabled)
+enum WorldBankWorld : uint8
+{
+    WORLD_BANK_ACCOUNT              = 0,    // The plain Account tab
+    WORLD_BANK_RAGNAROK             = 1,
+    WORLD_BANK_CITY_OF_HEROES       = 2,
+    MAX_WORLD_BANK_WORLD            = 2
+};
+
 #define MAX_BANK_BAG_SLOT_COUNT             (BANK_SLOT_BAG_END - BANK_SLOT_BAG_START)
 #define MAX_ACCOUNT_BANK_BAG_SLOT_COUNT     (ACCOUNT_BANK_BAG_SLOT_END - ACCOUNT_BANK_BAG_SLOT_START)
 #define ACCOUNT_BANK_VAULT_SIZE             36
@@ -749,6 +766,9 @@ enum AccountBankVaultSlots                                  // 2 slots
 #define PLAYER_INV_SLOT_STOCK_FIELD_COUNT   150
 // `account_bank_item` rows with bag 0 use slot 0-71 for the item slots and this + n for bag slot n
 #define ACCOUNT_BANK_DB_BAG_SLOT_START      ACCOUNT_BANK_ITEM_SLOT_COUNT
+#define WORLD_BANK_VAULTS_PER_WORLD         4
+// The item slots of a world's tab: 10 rows of 12 in the bank window.  The last vault is cut to fit (Player::_CreateAccountBankVaults)
+#define WORLD_BANK_ITEM_SLOT_COUNT          120
 
 enum EquipmentSetUpdateState
 {
@@ -1318,7 +1338,15 @@ public:
     // MergedWorlds account bank: an account bank bag slot, or anything inside an account bank bag or vault (never the vault slot itself)
     static bool IsAccountBankPos(uint16 pos) { return IsAccountBankPos(pos >> 8, pos & 255); }
     static bool IsAccountBankPos(uint8 bag, uint8 slot);
-    static bool IsAccountBankVaultSlot(uint8 slot) { return slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < ACCOUNT_BANK_VAULT_SLOT_END; }
+    static bool IsAccountBankVaultSlot(uint8 slot) { return slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < WORLD_BANK_VAULT_SLOT_END; }
+    // MergedWorlds world bank: the tab a vault slot belongs to (WORLD_BANK_ACCOUNT for the account bank's own), and the vault slots of a tab
+    static uint8 GetVaultSlotWorld(uint8 slot) { return slot < WORLD_BANK_VAULT_SLOT_START ? uint8(WORLD_BANK_ACCOUNT) : uint8(1 + (slot - WORLD_BANK_VAULT_SLOT_START) / WORLD_BANK_VAULTS_PER_WORLD); }
+    static uint8 GetWorldVaultSlotStart(uint8 world) { return world == WORLD_BANK_ACCOUNT ? uint8(ACCOUNT_BANK_VAULT_SLOT_START) : uint8(WORLD_BANK_VAULT_SLOT_START + (world - 1) * WORLD_BANK_VAULTS_PER_WORLD); }
+    static uint8 GetWorldVaultSlotEnd(uint8 world) { return world == WORLD_BANK_ACCOUNT ? uint8(ACCOUNT_BANK_VAULT_SLOT_END) : uint8(GetWorldVaultSlotStart(world) + WORLD_BANK_VAULTS_PER_WORLD); }
+    // Modules say which worlds are on at startup, before any session exists.  It's read only after that
+    static void SetWorldBankEnabled(uint8 world, bool enabled);
+    static bool IsWorldBankEnabled(uint8 world);
+    static uint8 GetWorldBankEnabledMask();                 // Bit (world - 1) for each world that's on
     // Update field that holds the item guid of inventory slot `slot` (two fields per slot)
     static uint16 GetInventorySlotUpdateField(uint8 slot);
     bool IsValidPos(uint16 pos, bool explicit_pos) { return IsValidPos(pos >> 8, pos & 255, explicit_pos); }
@@ -1330,7 +1358,9 @@ public:
     [[nodiscard]] bool IsAccountBankLoaded() const { return m_accountBankLoaded; }
     // Checks that an item (and anything inside it, for a bag) may be stored in the account bank
     InventoryResult CanPlaceItemInAccountBank(Item const* pItem) const;
-    InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap) const;
+    InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, uint8 world = WORLD_BANK_ACCOUNT) const;
+    // What the modules say about an item (and anything inside it, for a bag) going to a bank tab.  A world's tab takes nothing no module accepts
+    InventoryResult CanPlaceItemInBankTab(Item const* pItem, uint8 world) const;
     // Queues a bag's contents for saving (they are saved to the character or the account bank by where the bag is)
     void MarkBagContentsChanged(Item* pItem);
     // Unique / limit category checks for the contents of a bag leaving the account bank
@@ -2856,7 +2886,7 @@ protected:
     void _SaveAuras(CharacterDatabaseTransaction trans, bool logout);
     void _SaveInventory(CharacterDatabaseTransaction trans);
     void _SaveAccountBankSettings(CharacterDatabaseTransaction trans);
-    bool _GetAccountBankDBPosition(Item const* item, ObjectGuid::LowType& bagGuid, uint8& slot) const;
+    bool _GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGuid::LowType& bagGuid, uint8& slot) const;
     void _SaveMail(CharacterDatabaseTransaction trans);
     void _SaveQuestStatus(CharacterDatabaseTransaction trans);
     void _SaveDailyQuestStatus(CharacterDatabaseTransaction trans);

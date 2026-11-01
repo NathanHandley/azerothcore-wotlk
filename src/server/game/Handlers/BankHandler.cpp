@@ -80,9 +80,9 @@ void WorldSession::HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& pa
     if (!item)
         return;
 
-    // MergedWorlds account bank: with the account bank tab open the item goes there instead
+    // MergedWorlds account bank: with the account bank tab or a world's tab open the item goes there instead
     ItemPosCountVec dest;
-    InventoryResult msg = packet.AccountBank ? _player->CanAccountBankItem(NULL_BAG, NULL_SLOT, dest, item, false) : _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
+    InventoryResult msg = packet.AccountBank ? _player->CanAccountBankItem(NULL_BAG, NULL_SLOT, dest, item, false, packet.AccountBank - 1) : _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
     if (msg != EQUIP_ERR_OK)
     {
         _player->SendEquipError(msg, item, nullptr);
@@ -211,10 +211,12 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
         _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT);
 }
 
-void WorldSession::SendShowBank(ObjectGuid guid)
+void WorldSession::SendShowBank(ObjectGuid guid, uint8 world)
 {
     m_currentBankerGUID = guid;
     WorldPackets::Bank::ShowBank packet;
     packet.Banker = guid;
+    packet.World = world;
+    packet.WorldMask = Player::GetWorldBankEnabledMask();
     SendPacket(packet.Write());
 }

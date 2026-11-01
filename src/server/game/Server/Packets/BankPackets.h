@@ -34,7 +34,7 @@ namespace WorldPackets
 
             uint8 Bag = 0;
             uint8 Slot = 0;
-            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = the account bank tab is open
+            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = the account bank tab is open, 1 + n = world n's tab
         };
 
         class AutoStoreBankItem final : public ClientPacket
@@ -72,11 +72,13 @@ namespace WorldPackets
         class ShowBank final : public ServerPacket
         {
         public:
-            ShowBank() : ServerPacket(SMSG_SHOW_BANK, 8) { }
+            ShowBank() : ServerPacket(SMSG_SHOW_BANK, 8 + 1 + 1) { }
 
             WorldPacket const* Write() override;
 
             ObjectGuid Banker;
+            uint8 World = 0;            // MergedWorlds: the world tab to open on, 0 for the Character tab
+            uint8 WorldMask = 0;        // MergedWorlds: the worlds that have a tab, bit (world - 1)
         };
     }
 }

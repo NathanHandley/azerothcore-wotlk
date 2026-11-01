@@ -121,12 +121,14 @@ AC_API_EXPORT EnumText EnumUtils<InventoryResult>::ToString(InventoryResult valu
         case EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_EQUIPPED_EXCEEDED: return { "EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_EQUIPPED_EXCEEDED", "EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_EQUIPPED_EXCEEDED", "" };
         case EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM: return { "EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM", "EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM", "" };
         case EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED: return { "EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED", "EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED", "" };
+        case EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED: return { "EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED", "EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED", "" };
+        case EQUIP_ERR_WORLD_BANK_ITEM_WORN: return { "EQUIP_ERR_WORLD_BANK_ITEM_WORN", "EQUIP_ERR_WORLD_BANK_ITEM_WORN", "" };
         default: throw std::out_of_range("value");
     }
 }
 
 template <>
-AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::Count() { return 90; }
+AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::Count() { return 92; }
 
 template <>
 AC_API_EXPORT InventoryResult EnumUtils<InventoryResult>::FromIndex(std::size_t index)
@@ -223,6 +225,8 @@ AC_API_EXPORT InventoryResult EnumUtils<InventoryResult>::FromIndex(std::size_t 
         case 87: return EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_EQUIPPED_EXCEEDED;
         case 88: return EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM;
         case 89: return EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED;
+        case 90: return EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED;
+        case 91: return EQUIP_ERR_WORLD_BANK_ITEM_WORN;
         default: throw std::out_of_range("index");
     }
 }
@@ -322,6 +326,8 @@ AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::ToIndex(InventoryResult va
         case EQUIP_ERR_ITEM_MAX_LIMIT_CATEGORY_EQUIPPED_EXCEEDED: return 87;
         case EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM: return 88;
         case EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED: return 89;
+        case EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED: return 90;
+        case EQUIP_ERR_WORLD_BANK_ITEM_WORN: return 91;
         default: throw std::out_of_range("value");
     }
 }

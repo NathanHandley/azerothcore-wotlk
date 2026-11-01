@@ -391,10 +391,10 @@ enum EUnitFields
     PLAYER_PET_SPELL_POWER                    = UNIT_END + 0x0499, // Size: 1, Type: INT, Flags: PRIVATE
     // MergedWorlds bank expansion: inventory slots 150 and up (bank 72 items / 24 bags, account bank) continue here, so the
     // stock fields keep their indices.  Player::GetInventorySlotUpdateField maps a slot to its field
-    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 174, Type: LONG, Flags: PRIVATE
-    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x0548, // Size: 1, Type: BYTES, Flags: PRIVATE (byte 0 = purchased account bank bag slots)
-    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x0549, // Size: 1, Type: INT, Flags: NONE
-    PLAYER_END                                = UNIT_END + 0x054A,
+    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 190, Type: LONG, Flags: PRIVATE
+    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x0558, // Size: 1, Type: BYTES, Flags: PRIVATE (byte 0 = purchased account bank bag slots)
+    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x0559, // Size: 1, Type: INT, Flags: NONE
+    PLAYER_END                                = UNIT_END + 0x055A,
 };
 
 enum EGameObjectFields

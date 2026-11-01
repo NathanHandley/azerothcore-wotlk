@@ -1019,6 +1019,11 @@ bool ScriptMgr::OnPlayerCanTakeFallDamage(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, !script->OnPlayerCanTakeFallDamage(player));
 }
 
+void ScriptMgr::OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BANK_ITEM, script->OnPlayerCanBankItem(player, item, world, result));
+}
+
 bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));
