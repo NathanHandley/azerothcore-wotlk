@@ -5969,11 +5969,10 @@ void Player::CheckAreaExploreAndOutdoor()
 
     uint32 offset = areaEntry->exploreFlag / 32;
 
+    // MergedWorlds: a bit past the explored zones field is a valid area with no WoW exploration (City of Heroes has more areas than the field has
+    // bits left, and no use for it).  The client counts such an area as explored
     if (offset >= PLAYER_EXPLORED_ZONES_SIZE)
-    {
-        LOG_ERROR("entities.player", "Wrong area flag {} in map data for (X: {} Y: {}) point to field PLAYER_EXPLORED_ZONES_1 + {} ( {} must be < {} ).", areaEntry->flags, GetPositionX(), GetPositionY(), offset, offset, PLAYER_EXPLORED_ZONES_SIZE);
         return;
-    }
 
     uint32 val = (uint32)(1 << (areaEntry->exploreFlag % 32));
     uint32 currFields = GetUInt32Value(PLAYER_EXPLORED_ZONES_1 + offset);
