@@ -5752,6 +5752,9 @@ void Spell::TakeReagents()
     if (p_caster->CanNoReagentCast(m_spellInfo))
         return;
 
+    if (EverQuestMovementHooks::SpellReagentSaver != nullptr && EverQuestMovementHooks::SpellReagentSaver(this) == true)
+        return;
+
     for (uint32 x = 0; x < MAX_SPELL_REAGENTS; ++x)
     {
         if (m_spellInfo->Reagent[x] <= 0)
@@ -7368,6 +7371,9 @@ SpellCastResult Spell::CheckRange(bool strict)
 
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, max_range, this);
+
+    if (EverQuestMovementHooks::SpellRangeModifier != nullptr && unitCaster != nullptr)
+        max_range = EverQuestMovementHooks::SpellRangeModifier(unitCaster, m_spellInfo, max_range);
 
     // xinef: dont check max_range to strictly after cast
     if (range_type != SPELL_RANGE_MELEE && !strict)

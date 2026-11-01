@@ -24,6 +24,8 @@
 class Creature;
 class MovementGenerator;
 class Spell;
+class SpellInfo;
+class Unit;
 
 // MergedWorlds: lets mod-everquest give creatures on EverQuest maps their EverQuest idle movement (grids and roam boxes), which it keeps the
 // data for.  Only consulted for creatures on EverQuest maps (maps with an EQ zone map)
@@ -38,6 +40,21 @@ namespace EverQuestMovementHooks
     typedef int32 (*SpellPowerCostModifierFunction)(Spell const* spell, int32 powerCost);
 
     AC_GAME_API extern SpellPowerCostModifierFunction SpellPowerCostModifier;
+
+    // Lets mod-everquest save a spell's reagents, for worn focus effects.  True keeps them
+    typedef bool (*SpellReagentSaverFunction)(Spell const* spell);
+
+    AC_GAME_API extern SpellReagentSaverFunction SpellReagentSaver;
+
+    // Lets mod-everquest change a spell's range after spell mods, for worn focus effects.  Returns the new range
+    typedef float (*SpellRangeModifierFunction)(Unit const* caster, SpellInfo const* spellInfo, float range);
+
+    AC_GAME_API extern SpellRangeModifierFunction SpellRangeModifier;
+
+    // Lets mod-everquest change the threat a spell makes, for worn focus effects.  Returns the new threat
+    typedef float (*SpellThreatModifierFunction)(Unit const* caster, SpellInfo const* spellInfo, float threat);
+
+    AC_GAME_API extern SpellThreatModifierFunction SpellThreatModifier;
 }
 
 #endif

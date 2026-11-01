@@ -53,6 +53,9 @@ namespace
 
 EverQuestMovementHooks::IdleMovementSelectorFunction EverQuestMovementHooks::IdleMovementSelector = nullptr;
 EverQuestMovementHooks::SpellPowerCostModifierFunction EverQuestMovementHooks::SpellPowerCostModifier = nullptr;
+EverQuestMovementHooks::SpellReagentSaverFunction EverQuestMovementHooks::SpellReagentSaver = nullptr;
+EverQuestMovementHooks::SpellRangeModifierFunction EverQuestMovementHooks::SpellRangeModifier = nullptr;
+EverQuestMovementHooks::SpellThreatModifierFunction EverQuestMovementHooks::SpellThreatModifier = nullptr;
 
 bool EQPathBuilder::CanFly(WorldObject const* source)
 {

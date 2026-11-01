@@ -24,6 +24,7 @@
  */
 
 #include "ThreatManager.h"
+#include "EQMovementHooks.h"
 #include "CombatManager.h"
 #include "Containers.h"
 #include "Creature.h"
@@ -716,6 +717,9 @@ void ThreatManager::ProcessAIUpdates()
 
         if (Player* modOwner = victim->GetSpellModOwner())
             modOwner->ApplySpellMod(spell->Id, SPELLMOD_THREAT, threat);
+
+        if (EverQuestMovementHooks::SpellThreatModifier != nullptr)
+            threat = EverQuestMovementHooks::SpellThreatModifier(victim, spell, threat);
     }
 
     // modifiers by effect school
