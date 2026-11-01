@@ -2411,6 +2411,13 @@ public:
     /*********************************************************/
 
     bool IsImmuneToEnvironmentalDamage();
+
+    // MergedWorlds EQ levitation: under one of EQ's Levitate spells (their Hover effect is marked with MiscValue 57)
+    [[nodiscard]] bool IsEQLevitating() const;
+    // MergedWorlds EQ levitation: a client tells the server about a trigger it finds itself in on arrival, and floating lifts a player into
+    // the exit trigger next to many zone-in points (see HandleAreaTriggerOpcode)
+    void SetMapArrivalTime(uint32 msTime) { _mapArrivalMSTime = msTime; }
+    [[nodiscard]] bool HasJustArrivedOnMap() const;
     uint32 EnvironmentalDamage(EnviromentalDamage type, uint32 damage);
 
     /*********************************************************/
@@ -3091,6 +3098,7 @@ private:
     float  m_lastFallZ;
 
     int32 m_MirrorTimer[MAX_TIMERS];
+    uint32 _mapArrivalMSTime = 0; // MergedWorlds EQ levitation
     uint8 m_MirrorTimerFlags;
     uint8 m_MirrorTimerFlagsLast;
     bool m_isInWater;

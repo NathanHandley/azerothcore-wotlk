@@ -2309,9 +2309,9 @@ void Player::SendUpdateWorldState(uint32 variable, uint32 value) const
 
 // MergedWorlds EQ levitation: EQ Levitate spells mark their Hover effect with MiscValue 57 (EQ SE_Levitate); the
 // MergedWorlds client floats such a player over every liquid surface the way EverQuest does
-static bool IsPlayerEQLevitating(Player const* player)
+bool Player::IsEQLevitating() const
 {
-    for (AuraEffect const* hover : player->GetAuraEffectsByType(SPELL_AURA_HOVER))
+    for (AuraEffect const* hover : GetAuraEffectsByType(SPELL_AURA_HOVER))
         if (hover->GetMiscValue() == 57)
             return true;
     return false;
@@ -2326,7 +2326,7 @@ void Player::ProcessTerrainStatusUpdate()
 
     // MergedWorlds EQ levitation: floating on top of lava or slime is not being in it. Only the surface-contact status
     // (feet up to 0.1 yd above the surface) is forgiven; a levitating player inside the liquid still burns.
-    bool levitatingOnSurface = liquidData.Status == LIQUID_MAP_WATER_WALK && IsPlayerEQLevitating(this);
+    bool levitatingOnSurface = liquidData.Status == LIQUID_MAP_WATER_WALK && IsEQLevitating();
 
     // player specific logic for mirror timers
     // MergedWorlds: every state below follows the liquid at the player's position now, and Status alone doesn't say which liquid that is.  A
@@ -2368,6 +2368,14 @@ void Player::ProcessTerrainStatusUpdate()
     }
     else
         m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWATER_INDARKWATER);
+}
+
+// How long after arriving a trigger report counts as the one the client makes for where it landed
+static constexpr uint32 EQ_LEVITATION_ARRIVAL_TRIGGER_MS = 5000;
+
+bool Player::HasJustArrivedOnMap() const
+{
+    return _mapArrivalMSTime != 0 && GetMSTimeDiffToNow(_mapArrivalMSTime) < EQ_LEVITATION_ARRIVAL_TRIGGER_MS;
 }
 
 uint32 Player::GetSpellQueueWindow() const

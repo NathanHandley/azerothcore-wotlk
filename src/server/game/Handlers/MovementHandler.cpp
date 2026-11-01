@@ -55,6 +55,7 @@ void WorldSession::HandleMoveWorldportAck()
         return;
 
     GetPlayer()->SetSemaphoreTeleportFar(0);
+    GetPlayer()->SetMapArrivalTime(getMSTime()); // MergedWorlds EQ levitation
 
     // get the teleport destination
     WorldLocation const& loc = GetPlayer()->GetTeleportDest();
