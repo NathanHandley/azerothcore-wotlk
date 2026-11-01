@@ -20,8 +20,12 @@
 #include "MapDefines.h"
 #include "MapTree.h"
 #include "VMapDefinitions.h"
+#include <algorithm>
+#include <array>
 #include <boost/filesystem.hpp>
+#include <cstring>
 #include <iomanip>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -62,6 +66,53 @@ namespace VMAP
     TileAssembler::~TileAssembler()
     {
         //delete iCoordModelMapping;
+    }
+
+    // MergedWorlds: how far past a tile's edge a spawn still counts as reaching it, in yards.  It only has to cover what mmaps_generator
+    // reads past a tile's edge (its border, walkableRadius + 3 cells, under 3 yards), and a spare spawn in a tile costs next to nothing
+    static constexpr float TILE_SPAWN_MARGIN = 16.0f;
+    static constexpr float TILE_SIZE = 533.33333f;
+
+    // In vmap space a tile's first ID (its file's first number) runs along y, and its second along x
+    static bool DoesSpawnReachTile(ModelSpawn const& spawn, uint32 tileID)
+    {
+        if (!(spawn.flags & MOD_HAS_BOUND))
+        {
+            return true;
+        }
+        uint32 tileX, tileY;
+        StaticMapTree::unpackTileID(tileID, tileX, tileY);
+        Vector3 const& low = spawn.iBound.low();
+        Vector3 const& high = spawn.iBound.high();
+        return high.y >= tileX * TILE_SIZE - TILE_SPAWN_MARGIN && low.y <= (tileX + 1) * TILE_SIZE + TILE_SPAWN_MARGIN
+            && high.x >= tileY * TILE_SIZE - TILE_SPAWN_MARGIN && low.x <= (tileY + 1) * TILE_SIZE + TILE_SPAWN_MARGIN;
+    }
+
+    // MergedWorlds: raw models are triangle soup, so vertices with exactly the same position share one (the collision is unchanged)
+    static void WeldVertices(std::vector<Vector3>& vertices, std::vector<MeshTriangle>& triangles)
+    {
+        std::map<std::array<uint32, 3>, uint32> indexByPosition;
+        std::vector<Vector3> weldedVertices;
+        std::vector<uint32> newIndices(vertices.size());
+        weldedVertices.reserve(vertices.size());
+        for (std::size_t i = 0; i < vertices.size(); ++i)
+        {
+            std::array<uint32, 3> position;
+            std::memcpy(position.data(), &vertices[i], sizeof(uint32) * 3);
+            auto inserted = indexByPosition.try_emplace(position, uint32(weldedVertices.size()));
+            if (inserted.second)
+            {
+                weldedVertices.push_back(vertices[i]);
+            }
+            newIndices[i] = inserted.first->second;
+        }
+        for (MeshTriangle& triangle : triangles)
+        {
+            triangle.idx0 = newIndices[triangle.idx0];
+            triangle.idx1 = newIndices[triangle.idx1];
+            triangle.idx2 = newIndices[triangle.idx2];
+        }
+        vertices.swap(weldedVertices);
     }
 
     bool TileAssembler::convertWorld2()
@@ -153,15 +204,38 @@ namespace VMAP
 
             // write map tile files, similar to ADT files, only with extra BSP tree node info
             TileMap& tileEntries = map_iter->second->TileEntries;
+
+            // MergedWorlds: a WMO's doodads are listed on every tile the WMO touches, so a map that's one big WMO (each City of Heroes, EverQuest
+            // and Ragnarok Online zone) lists all of its doodads on all of its tiles.  A tile keeps only the spawns that reach it.  A spawn
+            // that reaches none of its tiles (a doodad just past the edge of the only tile listing it) stays on them all
+            std::set<uint32> spawnsReachingListedTile;
+            for (TileMap::iterator tileEntry = tileEntries.begin(); tileEntry != tileEntries.end(); ++tileEntry)
+            {
+                if (DoesSpawnReachTile(map_iter->second->UniqueEntries[tileEntry->second], tileEntry->first))
+                {
+                    spawnsReachingListedTile.insert(tileEntry->second);
+                }
+            }
+
             TileMap::iterator tile;
-            for (tile = tileEntries.begin(); tile != tileEntries.end(); ++tile)
+            for (tile = tileEntries.begin(); tile != tileEntries.end(); tile = tileEntries.upper_bound(tile->first))
             {
                 ModelSpawn const& spawn = map_iter->second->UniqueEntries[tile->second];
                 if (spawn.flags & MOD_WORLDSPAWN) // WDT spawn, saved as tile 65/65 currently...
                 {
                     continue;
                 }
-                uint32 nSpawns = tileEntries.count(tile->first);
+                std::vector<uint32> tileSpawnIDs;
+                pair<TileMap::iterator, TileMap::iterator> tileRange = tileEntries.equal_range(tile->first);
+                for (TileMap::iterator tileEntry = tileRange.first; tileEntry != tileRange.second; ++tileEntry)
+                {
+                    if (DoesSpawnReachTile(map_iter->second->UniqueEntries[tileEntry->second], tile->first)
+                        || spawnsReachingListedTile.find(tileEntry->second) == spawnsReachingListedTile.end())
+                    {
+                        tileSpawnIDs.push_back(tileEntry->second);
+                    }
+                }
+                uint32 nSpawns = tileSpawnIDs.size();
                 std::stringstream tilefilename;
                 tilefilename.fill('0');
                 tilefilename << iDestDir << '/' << std::setw(3) << map_iter->first << '_';
@@ -177,11 +251,7 @@ namespace VMAP
                     // write tile spawns
                     for (uint32 s = 0; s < nSpawns; ++s)
                     {
-                        if (s)
-                        {
-                            ++tile;
-                        }
-                        ModelSpawn const& spawn2 = map_iter->second->UniqueEntries[tile->second];
+                        ModelSpawn const& spawn2 = map_iter->second->UniqueEntries[tileSpawnIDs[s]];
                         success = success && ModelSpawn::writeToFile(tilefile, spawn2);
                         // MapTree nodes to update when loading tile:
                         std::map<uint32, uint32>::iterator nIdx = modelNodeIdx.find(spawn2.ID);
@@ -358,6 +428,7 @@ namespace VMAP
             for (uint32 g = 0; g < groups; ++g)
             {
                 GroupModel_Raw& raw_group = raw_model.groupsArray[g];
+                WeldVertices(raw_group.vertexArray, raw_group.triangles);
                 groupsArray.push_back(GroupModel(raw_group.mogpflags, raw_group.GroupWMOID, raw_group.bounds ));
                 groupsArray.back().setMeshData(raw_group.vertexArray, raw_group.triangles);
                 groupsArray.back().setLiquidData(raw_group.liquid);
