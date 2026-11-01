@@ -22,6 +22,7 @@
 #include "ModelInstance.h"
 #include "PathCommon.h"
 #include "VMapMgr2.h"
+#include <algorithm>
 #include <vector>
 #include <map>
 
@@ -685,6 +686,15 @@ namespace MMAP
 
         bool retval = false;
 
+        // MergedWorlds: only what reaches this tile (and the part of its neighbours the build reads) is worth copying, since the rasterizer clips
+        // to the tile anyway.  In a map that's one big WMO, copying it all for every tile is nearly all of the time and memory.  In vmap
+        // space this function's tileX runs along x and tileY along y
+        float const tileMargin = 16.0f;
+        float const reachMinX = tileX * GRID_SIZE - tileMargin;
+        float const reachMaxX = (tileX + 1) * GRID_SIZE + tileMargin;
+        float const reachMinY = tileY * GRID_SIZE - tileMargin;
+        float const reachMaxY = (tileY + 1) * GRID_SIZE + tileMargin;
+
         do
         {
             ModelInstance* models = nullptr;
@@ -706,8 +716,16 @@ namespace MMAP
                 // now we have a model to add to the meshdata
                 retval = true;
 
-                std::vector<GroupModel> groupModels;
-                worldModel->GetGroupModels(groupModels);
+                // World spawns (WDT) use another origin
+                bool const isTileSpawn = !(instance.flags & MOD_WORLDSPAWN);
+                if (isTileSpawn && (instance.flags & MOD_HAS_BOUND))
+                {
+                    G3D::AABox const& instanceBound = instance.GetBounds();
+                    if (instanceBound.high().x < reachMinX || instanceBound.low().x > reachMaxX || instanceBound.high().y < reachMinY || instanceBound.low().y > reachMaxY)
+                        continue;
+                }
+
+                std::vector<GroupModel> const& groupModels = worldModel->GetGroupModels();
 
                 // all M2s need to have triangle indices reversed
                 bool isM2 = instance.name.find(".m2") != std::string::npos || instance.name.find(".M2") != std::string::npos;
@@ -719,8 +737,32 @@ namespace MMAP
                 position.x -= 32 * GRID_SIZE;
                 position.y -= 32 * GRID_SIZE;
 
-                for (auto & groupModel : groupModels)
+                for (auto const& groupModel : groupModels)
                 {
+                    // A group's water can reach past its geometry's bound, so a group with water always goes through.  An M2's group has no
+                    // bound (the extractor writes zeros, and its instance bound was tested above), so this is for WMOs
+                    if (isTileSpawn && !isM2 && !groupModel.HasLiquid())
+                    {
+                        G3D::AABox const& groupBound = groupModel.GetBound();
+                        G3D::Vector3 const& low = groupBound.low();
+                        G3D::Vector3 const& high = groupBound.high();
+                        float groupMinX = G3D::inf();
+                        float groupMaxX = -G3D::inf();
+                        float groupMinY = G3D::inf();
+                        float groupMaxY = -G3D::inf();
+                        for (int corner = 0; corner < 8; ++corner)
+                        {
+                            G3D::Vector3 const point((corner & 1) ? high.x : low.x, (corner & 2) ? high.y : low.y, (corner & 4) ? high.z : low.z);
+                            G3D::Vector3 const placed = point * rotation * scale + instance.iPos;
+                            groupMinX = std::min(groupMinX, placed.x);
+                            groupMaxX = std::max(groupMaxX, placed.x);
+                            groupMinY = std::min(groupMinY, placed.y);
+                            groupMaxY = std::max(groupMaxY, placed.y);
+                        }
+                        if (groupMaxX < reachMinX || groupMinX > reachMaxX || groupMaxY < reachMinY || groupMinY > reachMaxY)
+                            continue;
+                    }
+
                     std::vector<G3D::Vector3> tempVertices;
                     std::vector<G3D::Vector3> transformedVertices;
                     std::vector<MeshTriangle> tempTriangles;
