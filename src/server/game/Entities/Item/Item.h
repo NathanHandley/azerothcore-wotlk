@@ -281,7 +281,7 @@ public:
     [[nodiscard]] bool HasSocket() const;
     [[nodiscard]] uint8 GetGemCountWithID(uint32 GemID) const;
     [[nodiscard]] uint8 GetGemCountWithLimitCategory(uint32 limitCategory) const;
-    InventoryResult CanBeMergedPartlyWith(ItemTemplate const* proto) const;
+    InventoryResult CanBeMergedPartlyWith(ItemTemplate const* proto, Item const* source = nullptr) const; // MergedWorlds: source, the item being stored
 
     [[nodiscard]] uint8 GetSlot() const {return m_slot;}
     Bag* GetContainer() { return m_container; }

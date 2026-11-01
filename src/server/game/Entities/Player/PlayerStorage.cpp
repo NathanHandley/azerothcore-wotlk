@@ -1000,7 +1000,7 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
     else
     {
         // can be merged at least partly
-        InventoryResult res  = pItem2->CanBeMergedPartlyWith(pProto);
+        InventoryResult res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
         if (res != EQUIP_ERR_OK)
             return res;
 
@@ -1066,7 +1066,7 @@ InventoryResult Player::CanStoreItem_InBag(uint8 bag, ItemPosCountVec& dest, Ite
         if (pItem2)
         {
             // can be merged at least partly
-            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto);
+            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
             if (res != EQUIP_ERR_OK)
                 continue;
 
@@ -1117,7 +1117,7 @@ InventoryResult Player::CanStoreItem_InInventorySlots(uint8 slot_begin, uint8 sl
         if (pItem2)
         {
             // can be merged at least partly
-            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto);
+            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
             if (res != EQUIP_ERR_OK)
                 continue;
 
