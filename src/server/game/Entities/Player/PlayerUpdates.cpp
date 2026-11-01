@@ -2329,16 +2329,16 @@ void Player::ProcessTerrainStatusUpdate()
     bool levitatingOnSurface = liquidData.Status == LIQUID_MAP_WATER_WALK && IsPlayerEQLevitating(this);
 
     // player specific logic for mirror timers
+    // MergedWorlds: every state below follows the liquid at the player's position now, and Status alone doesn't say which liquid that is.  A
+    // state only cleared while in its own liquid type stayed set after a teleport from lava to anywhere with another liquid near, which is
+    // how lava kept burning a player standing on dry ground with water under the floor
     if (liquidData.Status != LIQUID_MAP_NO_WATER)
     {
         // Breath bar state (under water in any liquid type)
-        if ((liquidData.Flags & MAP_ALL_LIQUIDS) != 0)
-        {
-            if ((liquidData.Status & LIQUID_MAP_UNDER_WATER) != 0)
-                m_MirrorTimerFlags |= UNDERWATER_INWATER;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
-        }
+        if ((liquidData.Flags & MAP_ALL_LIQUIDS) != 0 && (liquidData.Status & LIQUID_MAP_UNDER_WATER) != 0)
+            m_MirrorTimerFlags |= UNDERWATER_INWATER;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
 
         // Fatigue bar state (if not on flight path or transport)
         if ((liquidData.Flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
@@ -2355,22 +2355,16 @@ void Player::ProcessTerrainStatusUpdate()
             m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
 
         // Lava state (any contact)
-        if (liquidData.Flags & MAP_LIQUID_TYPE_MAGMA)
-        {
-            if ((liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
-                m_MirrorTimerFlags |= UNDERWATER_INLAVA;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
-        }
+        if ((liquidData.Flags & MAP_LIQUID_TYPE_MAGMA) && (liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
+            m_MirrorTimerFlags |= UNDERWATER_INLAVA;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
 
         // Slime state (any contact)
-        if (liquidData.Flags & MAP_LIQUID_TYPE_SLIME)
-        {
-            if ((liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
-                m_MirrorTimerFlags |= UNDERWATER_INSLIME;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
-        }
+        if ((liquidData.Flags & MAP_LIQUID_TYPE_SLIME) && (liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
+            m_MirrorTimerFlags |= UNDERWATER_INSLIME;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
     }
     else
         m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWATER_INDARKWATER);
