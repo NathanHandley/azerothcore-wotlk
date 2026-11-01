@@ -511,7 +511,7 @@ namespace VMAP
         return 0;
     }
 
-    void GroupModel::GetMeshData(std::vector<G3D::Vector3>& outVertices, std::vector<MeshTriangle>& outTriangles, WmoLiquid*& liquid)
+    void GroupModel::GetMeshData(std::vector<G3D::Vector3>& outVertices, std::vector<MeshTriangle>& outTriangles, WmoLiquid*& liquid) const
     {
         outVertices = vertices;
         outTriangles = triangles;
