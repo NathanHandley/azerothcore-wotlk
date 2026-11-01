@@ -24,6 +24,7 @@
 #include "CharacterCache.h"
 #include "CinematicMgr.h"
 #include "DBCStores.h"
+#include "EQMount.h"
 #include "DatabaseEnvFwd.h"
 #include "EnumFlag.h"
 #include "GroupReference.h"
@@ -2514,7 +2515,7 @@ public:
     void SetTemporaryUnsummonedPetNumber(uint32 petnumber) { m_temporaryUnsummonedPetNumber = petnumber; }
     void UnsummonPetTemporaryIfAny();
     void ResummonPetTemporaryUnSummonedIfAny();
-    [[nodiscard]] bool IsPetNeedBeTemporaryUnsummoned() const { return GetSession()->PlayerLogout() || !IsInWorld() || !IsAlive() || IsMounted()/*+in flight*/ || GetVehicle() || IsBeingTeleported(); }
+    [[nodiscard]] bool IsPetNeedBeTemporaryUnsummoned() const { return GetSession()->PlayerLogout() || !IsInWorld() || !IsAlive() || (IsMounted() && EQMount::IsRidingEQHorse(this) == false)/*+in flight*/ || GetVehicle() || IsBeingTeleported(); }
     bool CanResummonPet(uint32 spellid);
 
     void SendCinematicStart(uint32 CinematicSequenceId) const;

@@ -33,6 +33,7 @@
 #include "ConditionMgr.h"
 #include "Creature.h"
 #include "CreatureAIImpl.h"
+#include "EQMount.h"
 #include "CreatureGroups.h"
 #include "DisableMgr.h"
 #include "DynamicVisibility.h"
@@ -7095,7 +7096,7 @@ bool Unit::Attack(Unit* victim, bool meleeAttack)
         return false;
 
     // player cannot attack in mount state
-    if (IsPlayer() && IsMounted())
+    if (IsPlayer() && IsMounted() && EQMount::IsRidingEQHorse(this) == false)
         return false;
 
     // creatures cannot attack while evading
@@ -10294,7 +10295,7 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
 
         // unsummon pet
         Pet* pet = player->GetPet();
-        if (pet)
+        if (pet && EQMount::IsRidingEQHorse(this) == false)
         {
             Battleground* bg = ToPlayer()->GetBattleground();
             // don't unsummon pet in arena but SetFlag UNIT_FLAG_STUNNED to disable pet's interface

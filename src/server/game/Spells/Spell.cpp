@@ -16,6 +16,7 @@
  */
 
 #include "Spell.h"
+#include "EQMount.h"
 #include "ArenaSpectator.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
@@ -6213,7 +6214,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
 
     // not let players cast spells at mount (and let do it to creatures)
     if (unitCaster && unitCaster->IsMounted() && unitCaster->IsPlayer() && !HasTriggeredCastFlag(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE) &&
-            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED))
+            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) && EQMount::IsRidingEQHorse(unitCaster) == false)
     {
         if (unitCaster->IsInFlight())
             return SPELL_FAILED_NOT_ON_TAXI;
