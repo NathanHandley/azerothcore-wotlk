@@ -268,6 +268,21 @@ bool scan_patches(char* scanmatch, std::vector<std::string>& pArchiveNames)
         }
     }
 
+    // MergedWorlds: the lettered patches the client loads after the numbered ones (patch-enUS-A holds the merged DBCs)
+    for (char letter = 'A'; letter <= 'Z'; letter++)
+    {
+        sprintf(path, "%s-%c.MPQ", scanmatch, letter);
+#ifdef __linux__
+        if (FILE* h = fopen64(path, "rb"))
+#else
+        if (FILE* h = fopen(path, "rb"))
+#endif
+        {
+            fclose(h);
+            pArchiveNames.emplace_back(path);
+        }
+    }
+
     return (true);
 }
 

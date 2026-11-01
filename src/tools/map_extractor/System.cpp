@@ -1158,6 +1158,14 @@ void LoadLocaleMPQFiles(int const locale)
         if (FileExists(filename))
             new MPQArchive(filename);
     }
+
+    // MergedWorlds: the lettered patches the client loads after the numbered ones (patch-enUS-A holds the merged DBCs)
+    for (char letter = 'A'; letter <= 'Z'; ++letter)
+    {
+        sprintf(filename, "%s/Data/%s/patch-%s-%c.MPQ", input_path, langs[locale], langs[locale], letter);
+        if (FileExists(filename))
+            new MPQArchive(filename);
+    }
 }
 
 void LoadCommonMPQFiles()
