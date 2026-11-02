@@ -251,6 +251,8 @@ enum PlayerHook
     PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
     PLAYERHOOK_ON_GET_VENDOR_ITEM_PRICE, // MergedWorlds
+    PLAYERHOOK_CAN_USE_CLASS_ABILITIES, // MergedWorlds
+    PLAYERHOOK_CAN_AUTO_RELEASE, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1011,6 +1013,22 @@ public:
      * @return False to stop the regeneration (a game identity form regenerates by its own game's rules)
      */
     [[nodiscard]] virtual bool OnPlayerCanRegenerate(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: asked by systems that give a player auras or effects for its class (EverQuest's class auras).
+     *
+     * @param player Contains information about the Player
+     * @return False while the character's own class abilities are put away (a game identity form plays by its own game's rules)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanUseClassAbilities(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called before a dead player is released to a ghost by itself (the release timer running out, a logout while dead).
+     *
+     * @param player Contains information about the Player
+     * @return False to keep the player dead in its body (a game identity form has no spirit: it stays dead until it returns to its save point)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanAutoRelease(Player* /*player*/) { return true; }
 
     /**
      * @brief MergedWorlds: called when a player's auto attack is ready to swing, before it checks whether its victim is in reach.
