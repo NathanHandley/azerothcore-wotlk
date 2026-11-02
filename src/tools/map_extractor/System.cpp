@@ -88,6 +88,7 @@ enum Extract
 
 // Select data for extract
 int   CONF_extract = EXTRACT_MAP | EXTRACT_DBC | EXTRACT_CAMERA;
+std::set<uint32> CONF_map_ids; // MergedWorlds: with any here, only these maps
 // This option allow limit minimum height to some value (Allow save some memory)
 bool  CONF_allow_height_limit = true;
 float CONF_use_minHeight = -500.0f;
@@ -162,6 +163,7 @@ void Usage(char* prg)
         "-o set output path\n"\
         "-e extract only MAP(1)/DBC(2)/Camera(4) - standard: all(7)\n"\
         "-f height stored as int (less map size but lost some accuracy) 1 by default\n"\
+        "-m only these maps, by id (map id,map id...)\n"\
         "Example: %s -f 0 -i \"c:\\games\\game\"", prg, prg);
     exit(1);
 }
@@ -208,6 +210,19 @@ void HandleArgs(int argc, char* arg[])
                 if (c + 1 < argc)                           // all ok
                 {
                     CONF_allow_float_to_int = atoi(arg[(c++) + 1]) != 0;
+                }
+                else
+                {
+                    Usage(arg[0]);
+                }
+                break;
+            case 'm':
+                if (c + 1 < argc)                           // all ok
+                {
+                    std::stringstream mapIDs(arg[(c++) + 1]);
+                    std::string mapID;
+                    while (std::getline(mapIDs, mapID, ','))
+                        CONF_map_ids.insert(uint32(atoi(mapID.c_str())));
                 }
                 else
                 {
@@ -992,6 +1007,8 @@ void ExtractMapsFromMpq(uint32 build)
     printf("Convert map files\n");
     for (uint32 z = 0; z < map_count; ++z)
     {
+        if (!CONF_map_ids.empty() && CONF_map_ids.find(map_ids[z].id) == CONF_map_ids.end())
+            continue;
         printf("Extract %s (%d/%u)                  \n", map_ids[z].name, z + 1, map_count);
         // Loadup map grid data
         mpqMapName = Acore::StringFormat(R"(World\Maps\{}\{}.wdt)", map_ids[z].name, map_ids[z].name);

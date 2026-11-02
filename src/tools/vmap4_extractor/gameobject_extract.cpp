@@ -21,6 +21,8 @@
 #include "vmapexport.h"
 #include <cstdio>
 
+static std::unordered_map<std::string, bool> ModelExtractResults;
+
 bool ExtractSingleModel(std::string& fname)
 {
     if (fname.length() < 4)
@@ -46,14 +48,24 @@ bool ExtractSingleModel(std::string& fname)
     output += "/";
     output += name;
 
-    if (FileExists(output.c_str()))
-        return true;
+    // MergedWorlds: every tile names the models on it, and one with no collision makes no file, so it was unpacked from its archive again for each tile.  Each path is
+    // only looked into once.  A path's own result, as another path with the same plain name can still have a model
+    auto resultIter = ModelExtractResults.find(originalName);
+    if (resultIter != ModelExtractResults.end())
+        return resultIter->second;
 
-    Model mdl(originalName);
-    if (!mdl.open())
-        return false;
-
-    return mdl.ConvertToVMAPModel(output.c_str());
+    bool result = FileExists(output.c_str());
+    if (!result)
+    {
+        Model mdl(originalName);
+        if (mdl.open())
+        {
+            result = mdl.ConvertToVMAPModel(output.c_str());
+            OnModelFileChanged(name);
+        }
+    }
+    ModelExtractResults[originalName] = result;
+    return result;
 }
 
 void ExtractGameobjectModels()
