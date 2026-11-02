@@ -21,7 +21,14 @@
 #include <G3D/Matrix3.h>
 #include <G3D/Vector3.h>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "ModelInstance.h"
 #include "WorldModel.h"
@@ -52,11 +59,12 @@ namespace VMAP
     };
 
     typedef std::map<uint32, ModelSpawn> UniqueEntryMap;
-    typedef std::multimap<uint32, uint32> TileMap;
+    typedef std::vector<std::pair<uint32, uint32>> TileMap; // MergedWorlds: tile and spawn ID, as a run lists tens of millions of them.  Sorted by tile before use
 
     struct MapSpawns
     {
         UniqueEntryMap UniqueEntries;
+        std::unordered_set<uint32> ReadSpawnIDs;
         TileMap TileEntries;
     };
 
@@ -89,6 +97,9 @@ namespace VMAP
         bool Read(char const* path);
     };
 
+    // MergedWorlds: the vertices of an M2's groups, for the bounds of its spawns
+    typedef std::vector<std::vector<G3D::Vector3>> ModelVertices;
+
     class TileAssembler
     {
     private:
@@ -97,6 +108,11 @@ namespace VMAP
         G3D::Table<std::string, unsigned int > iUniqueNameIds;
         MapData mapData;
         std::set<std::string> spawnedModelFiles;
+        std::unordered_map<std::string, std::shared_ptr<ModelVertices const>> modelVerticesByName;
+        std::mutex modelVerticesLock;
+
+        bool convertMap(uint32 mapID, MapSpawns& mapSpawnData, std::set<std::string>& modelFiles);
+        std::shared_ptr<ModelVertices const> getModelVertices(std::string const& modelName);
 
     public:
         TileAssembler(std::string const& pSrcDirName, std::string const& pDestDirName);
