@@ -1345,7 +1345,8 @@ enum Opcodes : uint16
     SMSG_COH_COSTUME                                = 0x524,
     CMSG_COH_SET_COSTUME                            = 0x525,
     SMSG_COH_MAP_COMPOSITION                        = 0x526, // MergedWorlds: the pieces a composed map is made of (ComposedMap.h), for the client to place
-    NUM_MSG_TYPES                                   = 0x527
+    SMSG_COH_UNIT_NAME                              = 0x527, // MergedWorlds: a unit's own name, where it isn't its template's (a mission's named villain)
+    NUM_MSG_TYPES                                   = 0x528
 };
 
 enum OpcodeMisc : uint16
