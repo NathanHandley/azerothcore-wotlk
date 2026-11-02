@@ -375,7 +375,7 @@ void Player::Update(uint32 p_time)
 
     // not auto-free ghost from body in instances
     if (m_deathTimer > 0 && !GetMap()->Instanceable() &&
-        !HasPreventResurectionAura())
+        !HasPreventResurectionAura() && sScriptMgr->OnPlayerCanAutoRelease(this)) // MergedWorlds: the script hook
     {
         if (p_time >= m_deathTimer)
         {

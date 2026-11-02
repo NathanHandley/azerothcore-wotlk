@@ -495,6 +495,8 @@ public: /* PlayerScript */
     void OnPlayerSellItemMoney(Player* player, uint32& money); // MergedWorlds
     bool OnPlayerCanBuybackItem(Player* player, Item* item); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
+    bool OnPlayerCanUseClassAbilities(Player* player); // MergedWorlds
+    bool OnPlayerCanAutoRelease(Player* player); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 
     // Anti cheat

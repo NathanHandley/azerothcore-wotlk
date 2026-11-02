@@ -1054,6 +1054,16 @@ bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));
 }
 
+bool ScriptMgr::OnPlayerCanUseClassAbilities(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_USE_CLASS_ABILITIES, !script->OnPlayerCanUseClassAbilities(player));
+}
+
+bool ScriptMgr::OnPlayerCanAutoRelease(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_AUTO_RELEASE, !script->OnPlayerCanAutoRelease(player));
+}
+
 bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));
