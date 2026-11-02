@@ -776,6 +776,17 @@ bool Guild::PlayerMoveItemData::InitItem()
             m_pPlayer->SendEquipError(EQUIP_ERR_ITEMS_CANT_BE_SWAPPED, m_pItem);
             m_pItem = nullptr;
         }
+        else
+        {
+            // MergedWorlds: a module can keep an item out of the guild bank
+            InventoryResult result = EQUIP_ERR_OK;
+            sScriptMgr->OnPlayerCanGuildBankItem(m_pPlayer, m_pItem, result);
+            if (result != EQUIP_ERR_OK)
+            {
+                m_pPlayer->SendEquipError(result, m_pItem);
+                m_pItem = nullptr;
+            }
+        }
     }
     return (m_pItem != nullptr);
 }
@@ -952,7 +963,9 @@ bool Guild::BankMoveItemData::_ReserveSpace(uint8 slotId, Item* pItem, Item* pIt
     if (pItemDest)
     {
         // Make sure source and destination items match and destination item has space for more stacks.
-        if (pItemDest->GetEntry() != pItem->GetEntry() || pItemDest->GetCount() >= pItem->GetMaxStackCount())
+        // MergedWorlds: a stack with a maker keeps to its maker, as in the bags (Item::CanBeMergedPartlyWith)
+        if (pItemDest->GetEntry() != pItem->GetEntry() || pItemDest->GetCount() >= pItem->GetMaxStackCount() ||
+            pItemDest->GetGuidValue(ITEM_FIELD_CREATOR) != pItem->GetGuidValue(ITEM_FIELD_CREATOR))
             return false;
         requiredSpace -= pItemDest->GetCount();
     }

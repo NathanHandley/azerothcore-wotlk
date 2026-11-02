@@ -1024,6 +1024,21 @@ void ScriptMgr::OnPlayerCanBankItem(Player* player, Item const* item, uint8 worl
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BANK_ITEM, script->OnPlayerCanBankItem(player, item, world, result));
 }
 
+void ScriptMgr::OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_GUILD_BANK_ITEM, script->OnPlayerCanGuildBankItem(player, item, result));
+}
+
+void ScriptMgr::OnPlayerSellItemMoney(Player* player, uint32& money)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_SELL_ITEM_MONEY, script->OnPlayerSellItemMoney(player, money));
+}
+
+bool ScriptMgr::OnPlayerCanBuybackItem(Player* player, Item* item)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUYBACK_ITEM, !script->OnPlayerCanBuybackItem(player, item));
+}
+
 bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));

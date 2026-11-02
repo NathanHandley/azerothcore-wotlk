@@ -41,6 +41,17 @@ bool WorldSession::CanUseBank(ObjectGuid bankerGUID) const
     return true;
 }
 
+bool WorldSession::IsPlayerBanker() const
+{
+    return m_currentBankerGUID == GetPlayer()->GetGUID();
+}
+
+void WorldSession::ClearPlayerBanker()
+{
+    if (IsPlayerBanker())
+        m_currentBankerGUID.Clear();
+}
+
 bool WorldSession::IsBankPosOutOfReach(uint8 bag, uint8 slot) const
 {
     return bag != NULL_BAG && Player::IsBankPos(bag, slot) && !CanUseBank();

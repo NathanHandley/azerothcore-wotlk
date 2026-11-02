@@ -46,6 +46,7 @@ struct PlayerSaveValues
     uint32 Money = 0;
     uint32 Health = 0;
     uint32 Powers[MAX_POWERS] = { };
+    bool IsInventorySaved = true; // False for the money alone (Player::SaveGoldToDB outside SaveInventoryAndGoldToDB)
 };
 
 enum PlayerHook
@@ -252,6 +253,9 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
     PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, // MergedWorlds
     PLAYERHOOK_CAN_BANK_ITEM, // MergedWorlds
+    PLAYERHOOK_CAN_GUILD_BANK_ITEM, // MergedWorlds
+    PLAYERHOOK_SELL_ITEM_MONEY, // MergedWorlds
+    PLAYERHOOK_CAN_BUYBACK_ITEM, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1022,6 +1026,32 @@ public:
      * @param result Starts as EQUIP_ERR_OK on those two.  On a world's tab it starts refused, and only the world's module sets EQUIP_ERR_OK
      */
     virtual void OnPlayerCanBankItem(Player* /*player*/, Item const* /*item*/, uint8 /*world*/, InventoryResult& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called when an item from a player's bags would go into a guild bank.
+     *
+     * @param player Contains information about the Player
+     * @param item The item going there
+     * @param result Starts as EQUIP_ERR_OK.  Anything else refuses it, and is sent to the player
+     */
+    virtual void OnPlayerCanGuildBankItem(Player* /*player*/, Item const* /*item*/, InventoryResult& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called once a sale to a vendor can't fail, before the player is paid.
+     *
+     * @param player Contains information about the Player
+     * @param money What the sale pays, to be read and overwritten
+     */
+    virtual void OnPlayerSellItemMoney(Player* /*player*/, uint32& /*money*/) { }
+
+    /**
+     * @brief MergedWorlds: called when a player buys an item back from its buyback list.
+     *
+     * @param player Contains information about the Player
+     * @param item The item
+     * @return False to refuse it
+     */
+    [[nodiscard]] virtual bool OnPlayerCanBuybackItem(Player* /*player*/, Item* /*item*/) { return true; }
 
     /**
      * @brief MergedWorlds: called before a player's health and powers regenerate.

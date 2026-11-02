@@ -489,6 +489,9 @@ public: /* PlayerScript */
     bool OnPlayerCanLoseDurability(Player* player); // MergedWorlds
     bool OnPlayerCanTakeFallDamage(Player* player); // MergedWorlds
     void OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result); // MergedWorlds
+    void OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result); // MergedWorlds
+    void OnPlayerSellItemMoney(Player* player, uint32& money); // MergedWorlds
+    bool OnPlayerCanBuybackItem(Player* player, Item* item); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 

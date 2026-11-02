@@ -1709,7 +1709,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (uint8 t = KEYRING_SLOT_START; t < KEYRING_SLOT_END; ++t)
             {
                 item2 = keyringPointers[t - KEYRING_SLOT_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     keyringCounts[t - KEYRING_SLOT_START] += remaining_count;
                     remaining_count = keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize() ? 0 : keyringCounts[t - KEYRING_SLOT_START] - pProto->GetMaxStackSize();
@@ -1728,7 +1728,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (int t = CURRENCYTOKEN_SLOT_START; t < CURRENCYTOKEN_SLOT_END; ++t)
             {
                 item2 = currencyPointers[t - CURRENCYTOKEN_SLOT_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && currencyCounts[t - CURRENCYTOKEN_SLOT_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && currencyCounts[t - CURRENCYTOKEN_SLOT_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     currencyCounts[t - CURRENCYTOKEN_SLOT_START] += remaining_count;
                     remaining_count =
@@ -1747,7 +1747,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (int t = INVENTORY_SLOT_ITEM_START; t < INVENTORY_SLOT_ITEM_END; ++t)
             {
                 item2 = inventoryPointers[t - INVENTORY_SLOT_ITEM_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && inventoryCounts[t - INVENTORY_SLOT_ITEM_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && inventoryCounts[t - INVENTORY_SLOT_ITEM_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     inventoryCounts[t - INVENTORY_SLOT_ITEM_START] += remaining_count;
                     remaining_count =
@@ -1773,7 +1773,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
                     for (uint32 j = 0; j < bag->GetBagSize(); j++)
                     {
                         item2 = bagPointers[t - INVENTORY_SLOT_BAG_START][j];
-                        if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && bagCounts[t - INVENTORY_SLOT_BAG_START][j] < pProto->GetMaxStackSize())
+                        if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && bagCounts[t - INVENTORY_SLOT_BAG_START][j] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                         {
                             // add count to stack so that later items in the list do not double-book
                             bagCounts[t - INVENTORY_SLOT_BAG_START][j] += remaining_count;
@@ -2164,7 +2164,7 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
     return EQUIP_ERR_OK;
 }
 
-InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading) const
+InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading, bool isBagExchange) const
 {
     // MergedWorlds account bank: an account bank destination has its own rules
     if (bag != NULL_BAG && IsAccountBankPos(bag, slot))
@@ -2199,7 +2199,7 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest
     // MergedWorlds world bank: a module can keep an item out of the bank (not at login, when what's in it stays)
     if (not_loading)
     {
-        InventoryResult tabResult = CanPlaceItemInBankTab(pItem, WORLD_BANK_ACCOUNT);
+        InventoryResult tabResult = CanPlaceItemInBankTab(pItem, WORLD_BANK_ACCOUNT, isBagExchange);
         if (tabResult != EQUIP_ERR_OK)
             return tabResult;
     }
@@ -2428,7 +2428,7 @@ void Player::MarkBagContentsChanged(Item* pItem)
                 bagItem->SetState(ITEM_CHANGED, this);
 }
 
-InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world) const
+InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept) const
 {
     if (!pItem)
         return EQUIP_ERR_ITEM_NOT_FOUND;
@@ -2446,8 +2446,8 @@ InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world) co
     if (result != EQUIP_ERR_OK)
         return result;
 
-    // A bag carries what it holds
-    if (Bag const* pBag = pItem->ToBag())
+    // A bag carries what it holds, but for a bag exchange's full bag, which leaves it where it is
+    if (Bag const* pBag = !isBagContentKept ? pItem->ToBag() : nullptr)
     {
         for (uint32 i = 0; i < pBag->GetBagSize(); ++i)
         {
@@ -4295,13 +4295,18 @@ void Player::SwapItem(uint16 src, uint16 dst)
     // impossible merge/fill, do real swap
     InventoryResult msg = EQUIP_ERR_OK;
 
+    // MergedWorlds: the bag swap with item exchange below moves what the full bag holds into the empty one, so it stays where it is
+    Bag const* srcExchangeBag = pSrcItem->ToBag();
+    Bag const* dstExchangeBag = pDstItem->ToBag();
+    bool isBagExchange = srcExchangeBag && dstExchangeBag && ((srcExchangeBag->IsEmpty() && !IsBagPos(src)) || (dstExchangeBag->IsEmpty() && !IsBagPos(dst)));
+
     // check src->dest move possibility
     ItemPosCountVec sDest;
     uint16 eDest = 0;
     if (IsInventoryPos(dst))
         msg = CanStoreItem(dstbag, dstslot, sDest, pSrcItem, true);
     else if (IsBankPos(dst))
-        msg = CanBankItem(dstbag, dstslot, sDest, pSrcItem, true);
+        msg = CanBankItem(dstbag, dstslot, sDest, pSrcItem, true, true, isBagExchange); // MergedWorlds: isBagExchange
     else if (IsEquipmentPos(dst))
     {
         msg = CanEquipItem(dstslot, eDest, pSrcItem, true);
@@ -4328,7 +4333,7 @@ void Player::SwapItem(uint16 src, uint16 dst)
     if (IsInventoryPos(src))
         msg = CanStoreItem(srcbag, srcslot, sDest2, pDstItem, true);
     else if (IsBankPos(src))
-        msg = CanBankItem(srcbag, srcslot, sDest2, pDstItem, true);
+        msg = CanBankItem(srcbag, srcslot, sDest2, pDstItem, true, true, isBagExchange); // MergedWorlds: isBagExchange
     else if (IsEquipmentPos(src))
     {
         msg = CanEquipItem(srcslot, eDest2, pDstItem, true);
@@ -8009,10 +8014,10 @@ void Player::AdditionalSavingAddMask(uint8 mask)
 void Player::SaveInventoryAndGoldToDB(CharacterDatabaseTransaction trans)
 {
     _SaveInventory(trans);
-    SaveGoldToDB(trans);
+    SaveGoldToDB(trans, true); // MergedWorlds: with the inventory
 }
 
-void Player::SaveGoldToDB(CharacterDatabaseTransaction trans)
+void Player::SaveGoldToDB(CharacterDatabaseTransaction trans, bool isInventorySaved)
 {
     // MergedWorlds: a game identity form saves the character's own money (see OnPlayerSaveCharacterValues)
     PlayerSaveValues saveValues;
@@ -8022,6 +8027,7 @@ void Player::SaveGoldToDB(CharacterDatabaseTransaction trans)
     saveValues.Health = GetHealth();
     for (uint32 i = 0; i < MAX_POWERS; ++i)
         saveValues.Powers[i] = GetPower(Powers(i));
+    saveValues.IsInventorySaved = isInventorySaved;
     sScriptMgr->OnPlayerSaveCharacterValues(this, trans, saveValues);
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UDP_CHAR_MONEY);

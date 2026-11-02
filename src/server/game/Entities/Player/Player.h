@@ -1360,7 +1360,7 @@ public:
     InventoryResult CanPlaceItemInAccountBank(Item const* pItem) const;
     InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, uint8 world = WORLD_BANK_ACCOUNT) const;
     // What the modules say about an item (and anything inside it, for a bag) going to a bank tab.  A world's tab takes nothing no module accepts
-    InventoryResult CanPlaceItemInBankTab(Item const* pItem, uint8 world) const;
+    InventoryResult CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept = false) const; // MergedWorlds: isBagContentKept, a bag exchange's full bag
     // Queues a bag's contents for saving (they are saved to the character or the account bank by where the bag is)
     void MarkBagContentsChanged(Item* pItem);
     // Unique / limit category checks for the contents of a bag leaving the account bank
@@ -1400,7 +1400,7 @@ public:
     InventoryResult CanEquipUniqueItem(ItemTemplate const* itemProto, uint8 except_slot = NULL_SLOT, uint32 limit_count = 1) const;
     [[nodiscard]] InventoryResult CanUnequipItems(uint32 item, uint32 count) const;
     [[nodiscard]] InventoryResult CanUnequipItem(uint16 src, bool swap) const;
-    InventoryResult CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading = true) const;
+    InventoryResult CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading = true, bool isBagExchange = false) const; // MergedWorlds: isBagExchange
     InventoryResult CanUseItem(Item* pItem, bool not_loading = true) const;
     [[nodiscard]] bool HasItemTotemCategory(uint32 TotemCategory) const;
     bool IsTotemCategoryCompatiableWith(ItemTemplate const* pProto, uint32 requiredTotemCategoryId) const;
@@ -1682,7 +1682,7 @@ public:
     void SaveToDB(bool create, bool logout);
     void SaveToDB(CharacterDatabaseTransaction trans, bool create, bool logout);
     void SaveInventoryAndGoldToDB(CharacterDatabaseTransaction trans);                    // fast save function for item/money cheating preventing
-    void SaveGoldToDB(CharacterDatabaseTransaction trans);
+    void SaveGoldToDB(CharacterDatabaseTransaction trans, bool isInventorySaved = false); // MergedWorlds: isInventorySaved
     void _SaveSkills(CharacterDatabaseTransaction trans);
 
     static void Customize(CharacterCustomizeInfo const* customizeInfo, CharacterDatabaseTransaction trans);

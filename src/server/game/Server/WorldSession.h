@@ -570,6 +570,8 @@ public:
     void SendTrainerList(Creature* npc);
     void SendListInventory(ObjectGuid guid, uint32 vendorEntry = 0);
     void SendShowBank(ObjectGuid guid, uint8 world = 0); // MergedWorlds: world opens the bank window on that world's tab
+    bool IsPlayerBanker() const; // MergedWorlds: the player is its own banker (SendShowBank with its GUID)
+    void ClearPlayerBanker(); // MergedWorlds: ... and stops being: the window that opened is over
     // MergedWorlds: the guild bank shown with the player as its own banker, with no vault in reach (mod-rowow's Kafra guild storage), as
     // SendShowBank with the player's GUID shows the bank.  An empty GUID ends it
     void SendShowGuildBank(ObjectGuid guid);
@@ -1279,6 +1281,7 @@ private:
     void moveItems(Item* myItems[], Item* hisItems[]);
 
     bool CanUseBank(ObjectGuid bankerGUID = ObjectGuid::Empty) const;
+
     // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client)
     bool IsBankPosOutOfReach(uint8 bag, uint8 slot) const;
     // MergedWorlds: a guild vault in reach, or the player itself after SendShowGuildBank
