@@ -20,6 +20,8 @@
 #include <cstdio>
 #include <list>
 #include <map>
+#include <set>
+#include <sstream>
 #include <sys/stat.h>
 #include <vector>
 
@@ -67,6 +69,48 @@ std::unordered_map<std::string, WMODoodadData> WmoDoodads;
 
 char const* szWorkDirWmo = "./Buildings";
 
+// MergedWorlds: with any here, only these maps are extracted (and the gameobject models are left out)
+static std::set<uint32> MapIDFilter;
+
+// MergedWorlds: a placement only goes in if its model has vertices, and a WMO's doodads are placed again on every tile the WMO touches, so asking the file each time
+// opened files 80 million times over a run with the City of Heroes zones, nearly all of the run.  Each model is read once.  An answer of no holds until any model
+// file changes, as one with this name can still arrive
+struct ModelPlaceableEntry
+{
+    bool IsPlaceable = false;
+    uint32 ChangeCount = 0;
+};
+static std::unordered_map<std::string, ModelPlaceableEntry> ModelPlaceableEntries;
+uint32 ModelFileChangeCount = 0;
+
+bool IsModelPlaceable(char const* modelName)
+{
+    auto entryIter = ModelPlaceableEntries.find(modelName);
+    if (entryIter != ModelPlaceableEntries.end() && (entryIter->second.IsPlaceable || entryIter->second.ChangeCount == ModelFileChangeCount))
+        return entryIter->second.IsPlaceable;
+
+    char tempname[1036];
+    sprintf(tempname, "%s/%s", szWorkDirWmo, modelName);
+    ModelPlaceableEntry entry;
+    entry.ChangeCount = ModelFileChangeCount;
+    if (FILE* input = fopen(tempname, "rb"))
+    {
+        fseek(input, 8, SEEK_SET); // get the correct no of vertices
+        int nVertices;
+        int count = fread(&nVertices, sizeof(int), 1, input);
+        fclose(input);
+        entry.IsPlaceable = count == 1 && nVertices != 0;
+    }
+    ModelPlaceableEntries[modelName] = entry;
+    return entry.IsPlaceable;
+}
+
+void OnModelFileChanged(char const* modelName)
+{
+    ModelPlaceableEntries.erase(modelName);
+    ++ModelFileChangeCount;
+}
+
 std::map<std::pair<uint32, uint16>, uint32> uniqueObjectIds;
 
 uint32 GenerateUniqueObjectId(uint32 clientId, uint16 clientDoodadId)
@@ -95,17 +139,8 @@ void strToLower(char* str)
     }
 }
 
-bool ExtractSingleWmo(std::string& fname)
+static bool ExtractWmoFile(std::string& fname, std::string const& originalName, char* plain_name, char const* szLocalFile)
 {
-    // Copy files from archive
-    std::string originalName = fname;
-
-    char szLocalFile[1024];
-    char* plain_name = GetPlainName(&fname[0]);
-    fixnamen(plain_name, strlen(plain_name));
-    fixname2(plain_name, strlen(plain_name));
-    sprintf(szLocalFile, "%s/%s", szWorkDirWmo, plain_name);
-
     if (FileExists(szLocalFile))
         return true;
 
@@ -199,7 +234,30 @@ bool ExtractSingleWmo(std::string& fname)
     // Delete the extracted file in the case of an error
     if (!file_ok)
         remove(szLocalFile);
+    OnModelFileChanged(plain_name);
     return true;
+}
+
+// MergedWorlds: every tile names the WMOs on it, so each path is only looked into once
+static std::unordered_map<std::string, bool> WmoExtractResults;
+
+bool ExtractSingleWmo(std::string& fname)
+{
+    // Copy files from archive
+    std::string originalName = fname;
+
+    char szLocalFile[1024];
+    char* plain_name = GetPlainName(&fname[0]);
+    fixnamen(plain_name, strlen(plain_name));
+    fixname2(plain_name, strlen(plain_name));
+    sprintf(szLocalFile, "%s/%s", szWorkDirWmo, plain_name);
+
+    auto resultIter = WmoExtractResults.find(originalName);
+    if (resultIter != WmoExtractResults.end())
+        return resultIter->second;
+    bool result = ExtractWmoFile(fname, originalName, plain_name, szLocalFile);
+    WmoExtractResults[originalName] = result;
+    return result;
 }
 
 void ParsMapFiles()
@@ -208,6 +266,8 @@ void ParsMapFiles()
     //char id_filename[64];
     for (unsigned int i = 0; i < map_count; ++i)
     {
+        if (!MapIDFilter.empty() && MapIDFilter.find(map_ids[i].id) == MapIDFilter.end())
+            continue;
         sprintf(fn,"World\\Maps\\%s\\%s.wdt", map_ids[i].name, map_ids[i].name);
         WDTFile WDT(fn,map_ids[i].name);
         if (WDT.init(map_ids[i].id))
@@ -397,6 +457,21 @@ bool processArgv(int argc, char** argv, char const* versionString)
         {
             preciseVectorData = true;
         }
+        else if (strcmp("-m", argv[i]) == 0)
+        {
+            if ((i + 1) < argc)
+            {
+                std::stringstream mapIDs(argv[i + 1]);
+                std::string mapID;
+                while (std::getline(mapIDs, mapID, ','))
+                    MapIDFilter.insert(uint32(atoi(mapID.c_str())));
+                ++i;
+            }
+            else
+            {
+                result = false;
+            }
+        }
         else
         {
             result = false;
@@ -406,10 +481,11 @@ bool processArgv(int argc, char** argv, char const* versionString)
     if (!result)
     {
         printf("Extract %s.\n", versionString);
-        printf("%s [-?][-s][-l][-d <path>]\n", argv[0]);
+        printf("%s [-?][-s][-l][-d <path>][-m <map id,map id...>]\n", argv[0]);
         printf("   -s : (default) small size (data size optimization), ~500MB less vmap data.\n");
         printf("   -l : large size, ~500MB more vmap data. (might contain more details)\n");
         printf("   -d <path>: Path to the vector data source folder.\n");
+        printf("   -m <ids>: Only these maps, and no gameobject models.\n");
         printf("   -? : This message.\n");
     }
     return result;
@@ -509,7 +585,8 @@ int main(int argc, char** argv)
         ParsMapFiles();
         //nError = ERROR_SUCCESS;
         // Extract models, listed in DameObjectDisplayInfo.dbc
-        ExtractGameobjectModels();
+        if (MapIDFilter.empty())
+            ExtractGameobjectModels();
     }
 
     printf("\n");
