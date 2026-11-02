@@ -751,6 +751,16 @@ void PathGenerator::BuildEverQuestPath(G3D::Vector3 const& startPos, G3D::Vector
     if (!_forceDestination)
         end.z = EQPathBuilder::GetGroundZ(_eqZoneMap, _source, end.x, end.y, end.z);
 
+    // A raycast asks how far a straight move gets, not for a way around what stops it
+    if (_useRaycast)
+    {
+        _pathPoints.push_back(start);
+        _pathPoints.push_back(EQPathBuilder::GetFirstCollisionPoint(_eqZoneMap, _source, start, end));
+        _type = PATHFIND_NORMAL;
+        SetActualEndPosition(_pathPoints.back());
+        return;
+    }
+
     Movement::PointsArray routeCorners;
     Unit const* sourceUnit = _source->ToUnit();
     bool ignoresPathfinding = sourceUnit && sourceUnit->HasUnitState(UNIT_STATE_IGNORE_PATHFINDING);
