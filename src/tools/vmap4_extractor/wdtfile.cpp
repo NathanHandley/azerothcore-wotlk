@@ -67,6 +67,20 @@ bool WDTFile::init(uint32 mapId)
 
         if (!strcmp(fourcc, "MAIN"))
         {
+            // MergedWorlds: the tiles it has, by row.  Looking for all 4096 names in every archive on every map adds up
+            if (size >= 64 * 64 * 8)
+            {
+                _hasTileList = true;
+                for (int row = 0; row < 64; ++row)
+                {
+                    for (int column = 0; column < 64; ++column)
+                    {
+                        uint32 tileEntry[2];
+                        _file.read(tileEntry, sizeof(tileEntry));
+                        _hasTile[row][column] = (tileEntry[0] & 1) != 0;
+                    }
+                }
+            }
         }
         if (!strcmp(fourcc, "MWMO"))
         {
@@ -122,6 +136,8 @@ WDTFile::~WDTFile()
 ADTFile* WDTFile::GetMap(int x, int z)
 {
     if (!(x >= 0 && z >= 0 && x < 64 && z < 64))
+        return nullptr;
+    if (_hasTileList && !_hasTile[z][x])
         return nullptr;
 
     char name[512];

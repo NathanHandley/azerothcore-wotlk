@@ -538,23 +538,7 @@ void MapObject::Extract(ADT::MODF const& mapObjDef, char const* WmoInstName, uin
 
     //-----------add_in _dir_file----------------
 
-    char tempname[1036];
-    sprintf(tempname, "%s/%s", szWorkDirWmo, WmoInstName);
-    FILE* input;
-    input = fopen(tempname, "r+b");
-
-    if (!input)
-    {
-        printf("WMOInstance::WMOInstance: couldn't open %s\n", tempname);
-        return;
-    }
-
-    fseek(input, 8, SEEK_SET); // get the correct no of vertices
-    int nVertices;
-    int count = fread(&nVertices, sizeof (int), 1, input);
-    fclose(input);
-
-    if (count != 1 || nVertices == 0)
+    if (!IsModelPlaceable(WmoInstName))
         return;
 
     Vec3D position = mapObjDef.Position;

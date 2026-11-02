@@ -45,6 +45,11 @@ uint32 GenerateUniqueObjectId(uint32 clientId, uint16 clientDoodadId);
 bool FileExists(char const* file);
 void strToLower(char* str);
 
+// MergedWorlds: whether a placement of a model goes in the spawn list (its file has vertices), from a cache, and telling the cache a file changed
+bool IsModelPlaceable(char const* modelName);
+void OnModelFileChanged(char const* modelName);
+extern uint32 ModelFileChangeCount;
+
 bool ExtractSingleWmo(std::string& fname);
 bool ExtractSingleModel(std::string& fname);
 

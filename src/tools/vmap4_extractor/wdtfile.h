@@ -38,6 +38,8 @@ public:
 private:
     MPQFile _file;
     std::string filename;
+    bool _hasTileList = false; // MergedWorlds: which tiles it has, from its MAIN chunk
+    bool _hasTile[64][64] = { };
 };
 
 #endif
