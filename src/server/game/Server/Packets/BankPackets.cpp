@@ -38,6 +38,19 @@ void WorldPackets::Bank::BuyBankSlot::Read()
         _worldPacket >> AccountBank;
 }
 
+void WorldPackets::Bank::BankShowTab::Read()
+{
+    _worldPacket >> Tab;
+}
+
+WorldPacket const* WorldPackets::Bank::BankCurrency::Write()
+{
+    _worldPacket << World;
+    _worldPacket << Text;
+
+    return &_worldPacket;
+}
+
 WorldPacket const* WorldPackets::Bank::BuyBankSlotResult::Write()
 {
     _worldPacket << uint32(Result);
@@ -50,6 +63,7 @@ WorldPacket const* WorldPackets::Bank::ShowBank::Write()
     _worldPacket << Banker;
     _worldPacket << World;
     _worldPacket << WorldMask;
+    _worldPacket << CanBuySlots;
 
     return &_worldPacket;
 }

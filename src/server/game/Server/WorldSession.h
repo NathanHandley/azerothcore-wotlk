@@ -104,6 +104,7 @@ namespace WorldPackets
         class AutoBankItem;
         class AutoStoreBankItem;
         class BuyBankSlot;
+        class BankShowTab;
     }
 
     namespace Combat
@@ -929,6 +930,7 @@ public:                                                 // opcodes handlers
     void HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& packet);
     void HandleAutoStoreBankItemOpcode(WorldPackets::Bank::AutoStoreBankItem& packet);
     void HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyBankSlot);
+    void HandleBankShowTabOpcode(WorldPackets::Bank::BankShowTab& packet); // MergedWorlds world bank
 
     void HandleGetMailList(WorldPacket& recvData);
     void HandleSendMail(WorldPacket& recvData);

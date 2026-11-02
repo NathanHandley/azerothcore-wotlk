@@ -123,12 +123,13 @@ AC_API_EXPORT EnumText EnumUtils<InventoryResult>::ToString(InventoryResult valu
         case EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED: return { "EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED", "EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED", "" };
         case EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED: return { "EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED", "EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED", "" };
         case EQUIP_ERR_WORLD_BANK_ITEM_WORN: return { "EQUIP_ERR_WORLD_BANK_ITEM_WORN", "EQUIP_ERR_WORLD_BANK_ITEM_WORN", "" };
+        case EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED: return { "EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED", "EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED", "" };
         default: throw std::out_of_range("value");
     }
 }
 
 template <>
-AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::Count() { return 92; }
+AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::Count() { return 93; }
 
 template <>
 AC_API_EXPORT InventoryResult EnumUtils<InventoryResult>::FromIndex(std::size_t index)
@@ -227,6 +228,7 @@ AC_API_EXPORT InventoryResult EnumUtils<InventoryResult>::FromIndex(std::size_t 
         case 89: return EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED;
         case 90: return EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED;
         case 91: return EQUIP_ERR_WORLD_BANK_ITEM_WORN;
+        case 92: return EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED;
         default: throw std::out_of_range("index");
     }
 }
@@ -328,6 +330,7 @@ AC_API_EXPORT std::size_t EnumUtils<InventoryResult>::ToIndex(InventoryResult va
         case EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED: return 89;
         case EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED: return 90;
         case EQUIP_ERR_WORLD_BANK_ITEM_WORN: return 91;
+        case EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED: return 92;
         default: throw std::out_of_range("value");
     }
 }

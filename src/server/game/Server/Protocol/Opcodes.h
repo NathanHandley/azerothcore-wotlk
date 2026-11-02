@@ -1340,7 +1340,9 @@ enum Opcodes : uint16
     SMSG_MULTIPLE_MOVES                             = 0x51E, // uncompressed version of SMSG_COMPRESSED_MOVES
     TC9_CMSG_PREPARE_FOR_REDIRECT                   = 0x51F,
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
-    NUM_MSG_TYPES                                   = 0x521
+    CMSG_BANK_SHOW_TAB                              = 0x521, // MergedWorlds world bank
+    SMSG_BANK_CURRENCY                              = 0x522, // MergedWorlds world bank
+    NUM_MSG_TYPES                                   = 0x523
 };
 
 enum OpcodeMisc : uint16

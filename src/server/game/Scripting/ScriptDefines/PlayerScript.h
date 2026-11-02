@@ -253,6 +253,8 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
     PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, // MergedWorlds
     PLAYERHOOK_CAN_BANK_ITEM, // MergedWorlds
+    PLAYERHOOK_CAN_BUY_BANK_SLOT, // MergedWorlds
+    PLAYERHOOK_ON_BANK_CURRENCY_TEXT, // MergedWorlds
     PLAYERHOOK_CAN_GUILD_BANK_ITEM, // MergedWorlds
     PLAYERHOOK_SELL_ITEM_MONEY, // MergedWorlds
     PLAYERHOOK_CAN_BUYBACK_ITEM, // MergedWorlds
@@ -1022,10 +1024,29 @@ public:
      *
      * @param player Contains information about the Player
      * @param item The item going there
-     * @param world The tab's world (WorldBankWorld).  WORLD_BANK_ACCOUNT for the Character and Account tabs
-     * @param result Starts as EQUIP_ERR_OK on those two.  On a world's tab it starts refused, and only the world's module sets EQUIP_ERR_OK
+     * @param world The tab's world (WorldBankWorld).  WORLD_BANK_ACCOUNT for the Character and Account tabs, and for a bag going to a bag slot of a world's
+     *              tab, which takes a general bag of any game.  A module sees what such a bag holds, item by item, with the tab's world
+     * @param result Starts as EQUIP_ERR_OK on those.  On a world's tab it starts refused, and only the world's module sets EQUIP_ERR_OK
      */
     virtual void OnPlayerCanBankItem(Player* /*player*/, Item const* /*item*/, uint8 /*world*/, InventoryResult& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called when a bank window opens, and when a player buys a bank bag slot on any tab.
+     *
+     * @param player Contains information about the Player
+     * @param result Starts true.  False refuses the purchase and hides every purchase panel while that window is open.  A game's form can't change with
+     *               the bank open: leaving a form changes map, which closes it
+     */
+    virtual void OnPlayerCanBuyBankSlot(Player* /*player*/, bool& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called for the text in the bank window's corner, in place of the money, while a world's tab shows.
+     *
+     * @param player Contains information about the Player
+     * @param world The tab's world (WorldBankWorld).  Leave `text` alone for another module's world
+     * @param text The finished text, in the form or out of it, at most about 26 characters to fit: "1,234 z", "Influence: 1,234,567"
+     */
+    virtual void OnPlayerBankCurrencyText(Player* /*player*/, uint8 /*world*/, std::string& /*text*/) { }
 
     /**
      * @brief MergedWorlds: called when an item from a player's bags would go into a guild bank.

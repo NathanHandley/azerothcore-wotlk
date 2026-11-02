@@ -20,6 +20,7 @@
 #include "AchievementMgr.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+#include "BankPackets.h"
 #include "Battlefield.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
@@ -1008,8 +1009,7 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
             if (!pBagProto)
                 return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
 
-            // MergedWorlds world bank: the bag's own size, a world tab's last vault is smaller than its template
-            if (slot >= pBag->GetBagSize())
+            if (slot >= pBagProto->ContainerSlots)
                 return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
 
             if (!ItemCanGoIntoBag(pProto, pBagProto))
@@ -2428,21 +2428,33 @@ void Player::MarkBagContentsChanged(Item* pItem)
                 bagItem->SetState(ITEM_CHANGED, this);
 }
 
-InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept) const
+InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept, bool isBagSlot) const
 {
     if (!pItem)
         return EQUIP_ERR_ITEM_NOT_FOUND;
 
-    // A world's tab has no bags, and the core knows no game: only the world's module can accept an item
+    // The core knows no game, so only the world's module can accept an item for a world's tab.  A bag slot there takes a general bag of any game
+    // instead, and a module can only refuse that, as on the Account tab.  What the bag holds is the tab's, below
     InventoryResult result = EQUIP_ERR_OK;
+    uint8 moduleWorld = world;
     if (world != WORLD_BANK_ACCOUNT)
     {
-        result = EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED;
-        if (pItem->IsBag())
-            return result;
+        if (isBagSlot)
+        {
+            ItemTemplate const* pProto = pItem->GetTemplate();
+            if (!pProto || pProto->Class != ITEM_CLASS_CONTAINER || pProto->SubClass != ITEM_SUBCLASS_CONTAINER)
+                return EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED;
+            moduleWorld = WORLD_BANK_ACCOUNT;
+        }
+        else
+        {
+            result = EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED;
+            if (pItem->IsBag())
+                return result;
+        }
     }
 
-    sScriptMgr->OnPlayerCanBankItem(const_cast<Player*>(this), pItem, world, result);
+    sScriptMgr->OnPlayerCanBankItem(const_cast<Player*>(this), pItem, moduleWorld, result);
     if (result != EQUIP_ERR_OK)
         return result;
 
@@ -2523,9 +2535,10 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     if (!m_accountBankLoaded)
         return EQUIP_ERR_CANT_DO_RIGHT_NOW;
 
-    // MergedWorlds world bank: a vault says which tab it is.  A world that's off has no tab, whatever a client sends
-    if (IsAccountBankVaultSlot(bag))
-        world = GetVaultSlotWorld(bag);
+    // MergedWorlds world bank: a position says which tab it is: a vault is its tab's, and the bag slots and what's in them are the page's that's in
+    // them.  A world that's off has no tab, whatever a client sends
+    if (bag != NULL_BAG)
+        world = IsAccountBankVaultSlot(bag) ? GetVaultSlotWorld(bag) : m_bankBagPage;
     if (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world))
         return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
 
@@ -2542,7 +2555,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     }
 
     // The modules first, so a world's tab turns an item away for what the tab holds, not for an account bank rule
-    InventoryResult res = CanPlaceItemInBankTab(pItem, world);
+    InventoryResult res = CanPlaceItemInBankTab(pItem, world, false, bag == INVENTORY_SLOT_BAG_0 && slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END);
     if (res != EQUIP_ERR_OK)
         return res;
 
@@ -2564,7 +2577,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
             if (!pItem->IsBag())
                 return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
 
-            if (slot - ACCOUNT_BANK_BAG_SLOT_START >= GetAccountBankBagSlotCount())
+            if (slot - ACCOUNT_BANK_BAG_SLOT_START >= GetAccountBankBagSlotCount(world))
                 return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
 
             res = CanUseItem(pItem, true);
@@ -2627,13 +2640,12 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     }
 
     // not specific bag: the item slots first, then the account bank bags (special bags before plain ones), like CanBankItem.
-    // A world's tab has only its item slots
+    // The bag slots hold the bags of `world`'s tab: HandleAutoBankItemOpcode sees to that
     if (pItem->IsNotEmptyBag())
         return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
 
     uint8 firstVault = GetWorldVaultSlotStart(world);
     uint8 endVault = GetWorldVaultSlotEnd(world);
-    uint8 endAccountBag = world == WORLD_BANK_ACCOUNT ? uint8(ACCOUNT_BANK_BAG_SLOT_END) : uint8(ACCOUNT_BANK_BAG_SLOT_START);
 
     // search stack for merge to
     if (pProto->Stackable != 1)
@@ -2650,7 +2662,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
 
         if (pProto->BagFamily)
         {
-            for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < endAccountBag; i++)
+            for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
             {
                 res = CanStoreItem_InBag(i, dest, pProto, count, true, false, pItem, bag, slot);
                 if (res != EQUIP_ERR_OK)
@@ -2661,7 +2673,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
             }
         }
 
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < endAccountBag; i++)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
         {
             res = CanStoreItem_InBag(i, dest, pProto, count, true, true, pItem, bag, slot);
             if (res != EQUIP_ERR_OK)
@@ -2675,7 +2687,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     // search free place in special bag
     if (pProto->BagFamily)
     {
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < endAccountBag; i++)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
         {
             res = CanStoreItem_InBag(i, dest, pProto, count, false, false, pItem, bag, slot);
             if (res != EQUIP_ERR_OK)
@@ -2697,7 +2709,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
             return EQUIP_ERR_OK;
     }
 
-    for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < endAccountBag; i++)
+    for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_BAG_SLOT_END; i++)
     {
         res = CanStoreItem_InBag(i, dest, pProto, count, false, true, pItem, bag, slot);
         if (res != EQUIP_ERR_OK)
@@ -6584,13 +6596,6 @@ bool Player::_CreateAccountBankVaults()
             return false;
         }
 
-        // A world's tab has fewer slots than its vaults could hold, so the vaults past its last slot are cut to fit
-        if (world != WORLD_BANK_ACCOUNT)
-        {
-            uint32 slotsBefore = std::min<uint32>((vaultSlot - GetWorldVaultSlotStart(world)) * ACCOUNT_BANK_VAULT_SIZE, WORLD_BANK_ITEM_SLOT_COUNT);
-            vault->SetUInt32Value(CONTAINER_FIELD_NUM_SLOTS, std::min<uint32>(WORLD_BANK_ITEM_SLOT_COUNT - slotsBefore, ACCOUNT_BANK_VAULT_SIZE));
-        }
-
         vault->SetBinding(true);
         vault->SetContainer(nullptr);
         vault->SetSlot(vaultSlot);
@@ -6601,10 +6606,81 @@ bool Player::_CreateAccountBankVaults()
     return true;
 }
 
-void Player::SetAccountBankBagSlotCount(uint8 count)
+void Player::SetAccountBankBagSlotCount(uint8 count, uint8 world)
 {
-    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, count);
-    m_accountBankSettingsChanged = true;
+    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, world, count);
+    m_accountBankSettingsChanged |= uint8(1 << world);
+}
+
+// MergedWorlds world bank: only one character of an account is ever in world, so a tab's bags have one owner, wherever they wait
+void Player::SetBankBagPage(uint8 world)
+{
+    if (world == m_bankBagPage || world > MAX_WORLD_BANK_WORLD)
+        return;
+
+    for (uint8 i = 0; i < MAX_ACCOUNT_BANK_BAG_SLOT_COUNT; ++i)
+    {
+        uint8 slot = ACCOUNT_BANK_BAG_SLOT_START + i;
+        Item* bag = m_hiddenBankBags[world][i];
+        m_hiddenBankBags[world][i] = nullptr;
+        m_hiddenBankBags[m_bankBagPage][i] = m_items[slot];
+        m_items[slot] = bag;
+        SetGuidValue(GetInventorySlotUpdateField(slot), bag ? bag->GetGUID() : ObjectGuid::Empty);
+    }
+    m_bankBagPage = world;
+}
+
+void Player::SetBankTabShowing(uint8 tab)
+{
+    // Tab 0 is the Character tab or no bank.  Any other is a tab of the account, and its bags come into the slots
+    uint8 world = tab ? uint8(tab - 1) : uint8(WORLD_BANK_ACCOUNT);
+    if (world > MAX_WORLD_BANK_WORLD || (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world)) || !m_accountBankLoaded)
+        return;
+
+    m_bankTabShowing = tab;
+    if (tab)
+        SetBankBagPage(world);
+    SendBankCurrencyText(world);
+}
+
+void Player::SendBankCurrencyText(uint8 world)
+{
+    if (world == WORLD_BANK_ACCOUNT || m_bankTabShowing != world + 1)
+        return;
+
+    WorldPackets::Bank::BankCurrency packet;
+    packet.World = world;
+    sScriptMgr->OnPlayerBankCurrencyText(this, world, packet.Text);
+    SendDirectMessage(packet.Write());
+}
+
+// The world of a bag in a bag slot, whichever page it's on
+uint8 Player::_GetBankBagWorld(Item const* bag) const
+{
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+        if (m_hiddenBankBags[world][bag->GetSlot() - ACCOUNT_BANK_BAG_SLOT_START] == bag)
+            return world;
+    return m_bankBagPage;
+}
+
+// A bag on a page that isn't in the slots, or something inside one
+bool Player::_IsOnHiddenBankBagPage(Item* item) const
+{
+    Item const* holder = item->GetContainer() ? item->GetContainer() : item;
+    if (holder->GetBagSlot() != INVENTORY_SLOT_BAG_0 || holder->GetSlot() < ACCOUNT_BANK_BAG_SLOT_START || holder->GetSlot() >= ACCOUNT_BANK_BAG_SLOT_END)
+        return false;
+    return m_items[holder->GetSlot()] != holder && _GetBankBagWorld(holder) != m_bankBagPage;
+}
+
+// The bags of the pages that aren't in the slots.  Each needs what m_items gets from the player's world, client and destructor
+std::vector<Item*> Player::_GetHiddenBankBags() const
+{
+    std::vector<Item*> bags;
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+        for (uint8 i = 0; i < MAX_ACCOUNT_BANK_BAG_SLOT_COUNT; ++i)
+            if (m_hiddenBankBags[world][i])
+                bags.push_back(m_hiddenBankBags[world][i]);
+    return bags;
 }
 
 void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff)
@@ -6613,16 +6689,23 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
     if (!_CreateAccountBankVaults())
         return;
 
-    uint8 bagSlots = 0;
+    // MergedWorlds world bank: one row per tab with a slot bought.  A world that's off has no tab, and its row stays as it is
+    SetUInt32Value(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0);
     if (settingsResult)
-        bagSlots = std::min<uint8>((*settingsResult)[0].Get<uint8>(), MAX_ACCOUNT_BANK_BAG_SLOT_COUNT);
-    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, bagSlots);
-    m_accountBankSettingsChanged = false;
+    {
+        do
+        {
+            uint8 world = (*settingsResult)[0].Get<uint8>();
+            if (world == WORLD_BANK_ACCOUNT || IsWorldBankEnabled(world))
+                SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, world, std::min<uint8>((*settingsResult)[1].Get<uint8>(), MAX_ACCOUNT_BANK_BAG_SLOT_COUNT));
+        } while (settingsResult->NextRow());
+    }
+    m_accountBankSettingsChanged = 0;
 
     if (itemsResult)
     {
         uint32 zoneId = GetZoneId();
-        std::map<ObjectGuid::LowType, Bag*> bagMap;
+        std::map<ObjectGuid::LowType, std::pair<Bag*, uint8>> bagMap;  // Each bag and its world
         std::list<Item*> problematicItems;
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
@@ -6660,12 +6743,12 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             uint8 slot = NULL_SLOT;
             if (!bagGuid)
             {
-                if (dbSlot < (world != WORLD_BANK_ACCOUNT ? WORLD_BANK_ITEM_SLOT_COUNT : ACCOUNT_BANK_ITEM_SLOT_COUNT))
+                if (dbSlot < ACCOUNT_BANK_ITEM_SLOT_COUNT)
                 {
                     bag = GetWorldVaultSlotStart(world) + dbSlot / ACCOUNT_BANK_VAULT_SIZE;
                     slot = dbSlot % ACCOUNT_BANK_VAULT_SIZE;
                 }
-                else if (world == WORLD_BANK_ACCOUNT && dbSlot < ACCOUNT_BANK_DB_BAG_SLOT_START + MAX_ACCOUNT_BANK_BAG_SLOT_COUNT && item->IsBag())
+                else if (dbSlot < ACCOUNT_BANK_DB_BAG_SLOT_START + MAX_ACCOUNT_BANK_BAG_SLOT_COUNT && item->IsBag())
                 {
                     bag = INVENTORY_SLOT_BAG_0;
                     slot = ACCOUNT_BANK_BAG_SLOT_START + (dbSlot - ACCOUNT_BANK_DB_BAG_SLOT_START);
@@ -6673,13 +6756,17 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             }
             else
             {
-                std::map<ObjectGuid::LowType, Bag*>::const_iterator itr = bagMap.find(bagGuid);
+                std::map<ObjectGuid::LowType, std::pair<Bag*, uint8>>::const_iterator itr = bagMap.find(bagGuid);
                 if (itr != bagMap.end())
                 {
-                    bag = itr->second->GetSlot();
+                    bag = itr->second.first->GetSlot();
                     slot = dbSlot;
+                    world = itr->second.second;
                 }
             }
+
+            // MergedWorlds world bank: a tab's bags, and what's in them, go in through its page.  The slots go back to the Account tab below
+            SetBankBagPage(world);
 
             Item* placed = nullptr;
             if (bag != NULL_BAG && GetItemByPos(bag, slot) == nullptr)
@@ -6716,9 +6803,10 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             placed->SetState(ITEM_UNCHANGED, this);
             if (bag == INVENTORY_SLOT_BAG_0)
                 if (Bag* pBag = placed->ToBag())
-                    bagMap[placed->GetGUID().GetCounter()] = pBag;
+                    bagMap[placed->GetGUID().GetCounter()] = std::make_pair(pBag, world);
         } while (itemsResult->NextRow());
         m_itemUpdateQueueBlocked = false;
+        SetBankBagPage(WORLD_BANK_ACCOUNT);
 
         while (!problematicItems.empty())
         {
@@ -8152,11 +8240,19 @@ void Player::_SaveAccountBankSettings(CharacterDatabaseTransaction trans)
     if (!m_accountBankSettingsChanged || !m_accountBankLoaded)
         return;
 
-    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK);
-    stmt->SetData(0, GetSession()->GetAccountId());
-    stmt->SetData(1, GetAccountBankBagSlotCount());
-    trans->Append(stmt);
-    m_accountBankSettingsChanged = false;
+    // MergedWorlds world bank: only the tabs that changed, so a world that's off keeps its row
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+    {
+        if (!(m_accountBankSettingsChanged & (1 << world)))
+            continue;
+
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK);
+        stmt->SetData(0, GetSession()->GetAccountId());
+        stmt->SetData(1, world);
+        stmt->SetData(2, GetAccountBankBagSlotCount(world));
+        trans->Append(stmt);
+    }
+    m_accountBankSettingsChanged = 0;
 }
 
 bool Player::_GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGuid::LowType& bagGuid, uint8& slot) const
@@ -8168,8 +8264,9 @@ bool Player::_GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGui
     Bag* container = const_cast<Item*>(item)->GetContainer();
     if (!container)
     {
-        // an account bank bag slot
+        // an account bank bag slot, of the tab whose page it's on
         bagGuid = 0;
+        world = _GetBankBagWorld(item);
         slot = ACCOUNT_BANK_DB_BAG_SLOT_START + (item->GetSlot() - ACCOUNT_BANK_BAG_SLOT_START);
     }
     else if (container->IsAccountBankVault())
@@ -8183,6 +8280,7 @@ bool Player::_GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGui
     {
         // inside an account bank bag
         bagGuid = container->GetGUID().GetCounter();
+        world = _GetBankBagWorld(container);
         slot = item->GetSlot();
     }
     return true;
@@ -8267,7 +8365,8 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
 
         if (item->GetState() != ITEM_REMOVED)
         {
-            Item* test = GetItemByPos(item->GetBagSlot(), item->GetSlot());
+            // MergedWorlds world bank: the slots hold one tab's bags, so a position says nothing about another tab's
+            Item* test = _IsOnHiddenBankBagPage(item) ? item : GetItemByPos(item->GetBagSlot(), item->GetSlot());
             if (!test)
             {
                 ObjectGuid::LowType bagTestGUID = 0;

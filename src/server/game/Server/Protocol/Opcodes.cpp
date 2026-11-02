@@ -1441,6 +1441,8 @@ void OpcodeTable::Initialize()
     /*0x51E*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_MULTIPLE_MOVES, STATUS_NEVER);
     /*0x51F*/ DEFINE_HANDLER(TC9_CMSG_PREPARE_FOR_REDIRECT,                                         STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleTC9PrepareForRedirect);
     /*0x520*/ DEFINE_SERVER_OPCODE_HANDLER(TC9_SMSG_READY_FOR_REDIRECT, STATUS_NEVER);
+    /*0x521*/ DEFINE_HANDLER(CMSG_BANK_SHOW_TAB,                                                    STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleBankShowTabOpcode                  ); // MergedWorlds world bank
+    /*0x522*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_BANK_CURRENCY, STATUS_NEVER); // MergedWorlds world bank
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER

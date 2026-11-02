@@ -137,7 +137,8 @@ enum InventoryResult : uint8
     EQUIP_ERR_ACCOUNT_BANK_BOUND_ITEM                    = 92,     // 90 and 91 are taken by the client (shapeshift, satchel)
     EQUIP_ERR_ACCOUNT_BANK_ITEM_NOT_ALLOWED              = 93,
     EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED                = 94,     // Not an item of that world's tab (the client's text says what it takes)
-    EQUIP_ERR_WORLD_BANK_ITEM_WORN                       = 95      // A game's form is wearing it in the bags
+    EQUIP_ERR_WORLD_BANK_ITEM_WORN                       = 95,     // A game's form is wearing it in the bags
+    EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED                 = 96      // Not a general bag, on a world's tab's bag slot
 };
 
 // EnumUtils: DESCRIBE THIS

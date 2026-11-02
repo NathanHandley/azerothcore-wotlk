@@ -1024,6 +1024,16 @@ void ScriptMgr::OnPlayerCanBankItem(Player* player, Item const* item, uint8 worl
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BANK_ITEM, script->OnPlayerCanBankItem(player, item, world, result));
 }
 
+void ScriptMgr::OnPlayerCanBuyBankSlot(Player* player, bool& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUY_BANK_SLOT, script->OnPlayerCanBuyBankSlot(player, result));
+}
+
+void ScriptMgr::OnPlayerBankCurrencyText(Player* player, uint8 world, std::string& text)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BANK_CURRENCY_TEXT, script->OnPlayerBankCurrencyText(player, world, text));
+}
+
 void ScriptMgr::OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_GUILD_BANK_ITEM, script->OnPlayerCanGuildBankItem(player, item, result));

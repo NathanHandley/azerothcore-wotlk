@@ -205,6 +205,7 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     clearResurrectRequestData();
 
     memset(m_items, 0, sizeof(Item*)*PLAYER_SLOTS_COUNT);
+    memset(m_hiddenBankBags, 0, sizeof(m_hiddenBankBags));
 
     m_social = nullptr;
 
@@ -292,7 +293,9 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_resetTalentsTime = 0;
     m_itemUpdateQueueBlocked = false;
     m_accountBankLoaded = false;
-    m_accountBankSettingsChanged = false;
+    m_accountBankSettingsChanged = 0;
+    m_bankTabShowing = 0;
+    m_bankBagPage = WORLD_BANK_ACCOUNT;
 
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_forced_speed_changes[i] = 0;
@@ -438,6 +441,9 @@ Player::~Player()
     // Note: buy back item already deleted from DB when player was saved
     for (uint8 i = 0; i < PLAYER_SLOTS_COUNT; ++i)
         delete m_items[i];
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        delete bag;
 
     for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
         delete itr->second;
@@ -1756,6 +1762,9 @@ void Player::AddToWorld()
     for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         if (m_items[i])
             m_items[i]->AddToWorld();
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        bag->AddToWorld();
 }
 
 void Player::RemoveFromWorld()
@@ -1782,6 +1791,9 @@ void Player::RemoveFromWorld()
         if (m_items[i])
             m_items[i]->RemoveFromWorld();
     }
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        bag->RemoveFromWorld();
 
     for (ItemMap::iterator iter = mMitems.begin(); iter != mMitems.end(); ++iter)
         iter->second->RemoveFromWorld();
@@ -4031,6 +4043,9 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
+        // MergedWorlds world bank: and the bags of the pages not in the slots, so a page turn is only the slot fields
+        for (Item* bag : _GetHiddenBankBags())
+            bag->BuildCreateUpdateBlockForPlayer(data, target);
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
@@ -4072,6 +4087,8 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
 
             m_items[i]->DestroyForPlayer(target);
         }
+        for (Item* bag : _GetHiddenBankBags())
+            bag->DestroyForPlayer(target);
     }
 }
 
