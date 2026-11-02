@@ -1340,11 +1340,12 @@ enum Opcodes : uint16
     SMSG_MULTIPLE_MOVES                             = 0x51E, // uncompressed version of SMSG_COMPRESSED_MOVES
     TC9_CMSG_PREPARE_FOR_REDIRECT                   = 0x51F,
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
-    CMSG_COH_QUERY_COSTUME                          = 0x521, // MergedWorlds: a hero's costume, as CMSG_GET_MIRRORIMAGE_DATA
-    SMSG_COH_COSTUME                                = 0x522,
-    CMSG_COH_SET_COSTUME                            = 0x523,
-    SMSG_COH_MAP_COMPOSITION                        = 0x524, // MergedWorlds: the pieces a composed map is made of (ComposedMap.h), for the client to place
-    NUM_MSG_TYPES                                   = 0x525
+    // 0x521 and 0x522 are ROWOW's bank tab opcodes (CMSG_BANK_SHOW_TAB, SMSG_BANK_CURRENCY), which come with the integration merge
+    CMSG_COH_QUERY_COSTUME                          = 0x523, // MergedWorlds: a hero's costume, as CMSG_GET_MIRRORIMAGE_DATA
+    SMSG_COH_COSTUME                                = 0x524,
+    CMSG_COH_SET_COSTUME                            = 0x525,
+    SMSG_COH_MAP_COMPOSITION                        = 0x526, // MergedWorlds: the pieces a composed map is made of (ComposedMap.h), for the client to place
+    NUM_MSG_TYPES                                   = 0x527
 };
 
 enum OpcodeMisc : uint16

@@ -40,6 +40,9 @@ namespace
     constexpr float EQ_PATH_STEP_REACH_MIN_CLIMB = 0.5f;     // Climbs smaller than this aren't checked
     constexpr float EQ_PATH_STEP_REACH_UNDER_OFFSET = 0.01f; // The floor under an unreachable surface is looked for from just under it
     constexpr float EQ_PATH_STEP_GAP_DROP = 4.0f;            // A drop bigger than this with the floor back at the old height a step later is a gap
+    constexpr float EQ_PATH_WALL_CLEARANCE = 0.75f;          // A move stopped by a wall ends this far short of it
+    constexpr float EQ_PATH_ON_FLOOR_TOLERANCE = 0.1f;       // A height this close over or under a surface is on that surface
+    constexpr uint32 EQ_PATH_COLLISION_MAX_GAP_STEPS = 1;    // Steps with no floor a straight move can cross (a crack); any more is the edge of the zone's mesh
     constexpr float EQ_PATH_BEND_TOLERANCE = 0.25f;          // A step is split where the floor halfway along it is further than this off its line
     constexpr uint32 EQ_PATH_BEND_MAX_DEPTH = 3;             // A step is split at most this many times over (into eighths)
     constexpr float EQ_PATH_CORNER_SEARCH_START = 0.5f;      // A route corner's floor is looked for from this far above it
@@ -224,6 +227,74 @@ bool EQPathBuilder::CanGoDirectly(EQZoneMap const* zoneMap, WorldObject const* s
         previousStep = G3D::Vector3(x, y, stepZ);
     }
     return true;
+}
+
+bool EQPathBuilder::IsOnFloor(EQZoneMap const* zoneMap, float x, float y, float z)
+{
+    return zoneMap->GetFloorZ(x, y, z + EQ_PATH_ON_FLOOR_TOLERANCE, EQ_PATH_ON_FLOOR_TOLERANCE * 2.0f) > EQ_ZONE_MAP_INVALID_HEIGHT;
+}
+
+// How far along the line a mover stops for a wall hitDistance along it
+float EQPathBuilder::GetStopFraction(G3D::Vector3 const& from, G3D::Vector3 const& to, float hitDistance)
+{
+    return std::max(0.0f, hitDistance - EQ_PATH_WALL_CLEARANCE) / std::max(0.001f, (to - from).length());
+}
+
+// Walks the line in the steps a direct path's hazard check uses.  Between two steps a wall is whatever is on the line from a body's height
+// over one floor to the same height over the next
+G3D::Vector3 EQPathBuilder::GetFirstCollisionPoint(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end)
+{
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+    float distance2D = std::sqrt(dx * dx + dy * dy);
+    if (distance2D < 0.001f)
+        return end;
+
+    // Flyers and swimmers have no floor to stay on
+    float surfaceZ = 0.0f;
+    float hitDistance = 0.0f;
+    float bodyHeight = EQ_PATH_STEP_REACH_HEIGHT;
+    if (CanFly(source) || IsInLiquid(zoneMap, start.x, start.y, start.z, surfaceZ))
+    {
+        if (!zoneMap->GetFirstHitDistance(start.x, start.y, start.z + bodyHeight, end.x, end.y, end.z + bodyHeight, hitDistance))
+            return end;
+        return start + (end - start) * GetStopFraction(start, end, hitDistance);
+    }
+
+    float scale = zoneMap->GetWorldScale();
+    float maxJump = EQ_PATH_HAZARD_MAX_JUMP_EQ * scale;
+    uint32 stepCount = std::max(1u, uint32(std::ceil(distance2D / (EQ_PATH_HAZARD_STEP_EQ * scale))));
+    G3D::Vector3 previousStep = start;
+    G3D::Vector3 lastFloorStep = start;
+    uint32 gapSteps = 0;
+    for (uint32 step = 1; step <= stepCount; ++step)
+    {
+        float t = float(step) / float(stepCount);
+        float nextT = float(step + 1) / float(stepCount);
+        G3D::Vector3 stepPoint(start.x + dx * t, start.y + dy * t, 0.0f);
+        stepPoint.z = SnapStepZOverGaps(zoneMap, previousStep, stepPoint.x, stepPoint.y, start.x + dx * nextT, start.y + dy * nextT);
+
+        if (zoneMap->GetFirstHitDistance(previousStep.x, previousStep.y, previousStep.z + bodyHeight, stepPoint.x, stepPoint.y, stepPoint.z + bodyHeight, hitDistance))
+        {
+            G3D::Vector3 stopPoint = previousStep + (stepPoint - previousStep) * GetStopFraction(previousStep, stepPoint, hitDistance);
+            stopPoint.z = SnapStepZ(zoneMap, stopPoint.x, stopPoint.y, previousStep.z, &previousStep);
+            return IsOnFloor(zoneMap, stopPoint.x, stopPoint.y, stopPoint.z) ? stopPoint : lastFloorStep;
+        }
+
+        // A drop into liquid is a way in, as it is for a direct path
+        if (std::fabs(stepPoint.z - previousStep.z) > maxJump && !IsInLiquid(zoneMap, stepPoint.x, stepPoint.y, stepPoint.z + EQ_PATH_ON_FLOOR_TOLERANCE, surfaceZ))
+            return lastFloorStep;
+
+        if (IsOnFloor(zoneMap, stepPoint.x, stepPoint.y, stepPoint.z))
+        {
+            lastFloorStep = stepPoint;
+            gapSteps = 0;
+        }
+        else if (++gapSteps > EQ_PATH_COLLISION_MAX_GAP_STEPS)
+            return lastFloorStep;
+        previousStep = stepPoint;
+    }
+    return lastFloorStep;
 }
 
 // Douglas-Peucker on the step heights of one leg (the steps of a leg are on one line seen from above, so only the heights matter)

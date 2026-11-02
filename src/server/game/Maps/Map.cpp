@@ -3575,7 +3575,8 @@ bool Map::CheckCollisionAndGetValidCoords(WorldObject const* source, float start
     source->UpdateAllowedPositionZ(destX, destY, destZ, &groundZ);
 
     // position has no ground under it (or is too far away)
-    if (groundZ <= INVALID_HEIGHT && unit && !unit->CanFly())
+    // MergedWorlds EQ: not on an EQ map, where the terrain grid isn't its ground and the path has already found the floor
+    if (groundZ <= INVALID_HEIGHT && unit && !unit->CanFly() && !_eqZoneMap)
     {
         // fall back to gridHeight if any
         float gridHeight = GetGridHeight(destX, destY);

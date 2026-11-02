@@ -333,7 +333,7 @@ bool WorldSocket::ReadHeaderHandler()
 
 struct ClientAuthSession
 {
-    uint32 BattlegroupID = 0;
+    uint32 ClientDataVersion = 0;
     uint32 LoginServerType = 0;
     uint32 RealmID = 0;
     uint32 Build = 0;
@@ -536,7 +536,7 @@ void WorldSocket::HandleAuthSession(WorldPacket & recvPacket)
     recvPacket >> authSession->LoginServerType;
     recvPacket.read(authSession->LocalChallenge);
     recvPacket >> authSession->RegionID;
-    recvPacket >> authSession->BattlegroupID;
+    recvPacket >> authSession->ClientDataVersion;     // MergedWorlds: the battlegroup slot, which nothing here used
     recvPacket >> authSession->RealmID;               // realmId from auth_database.realmlist table
     recvPacket >> authSession->DosResponse;
     recvPacket.read(authSession->Digest);
@@ -686,6 +686,21 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<ClientAuthSession> a
         {
             SendAuthResponseError(AUTH_UNAVAILABLE);
             LOG_DEBUG("network", "WorldSocket::HandleAuthSession: User tries to login but his security level is not enough");
+            sScriptMgr->OnFailedAccountLogin(account.Id);
+            DelayedCloseSocket();
+            return;
+        }
+
+        // MergedWorlds: a client that doesn't match is turned away here, before it has a session or a character list.  The expected version
+        // follows the result, for a client that can show it.  Older clients stop reading after the result and show their own text for it
+        uint32 expectedClientDataVersion = 0;
+        if (!sScriptMgr->CanAccountLoginWithClientDataVersion(account.Id, account.Security, authSession->ClientDataVersion, expectedClientDataVersion))
+        {
+            WorldPacket packet(SMSG_AUTH_RESPONSE, 1 + 4);
+            packet << uint8(AUTH_VERSION_MISMATCH);
+            packet << uint32(expectedClientDataVersion);
+            SendPacketAndLogOpcode(packet);
+            LOG_DEBUG("network", "WorldSocket::HandleAuthSession: Account {} has client data version {}, expected {}.", account.Id, authSession->ClientDataVersion, expectedClientDataVersion);
             sScriptMgr->OnFailedAccountLogin(account.Id);
             DelayedCloseSocket();
             return;
