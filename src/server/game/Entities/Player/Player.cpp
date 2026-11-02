@@ -488,6 +488,7 @@ bool Player::Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo
 {
     // The core doesn't use outfitId in player creating, and mod-everquest reads it from OnPlayerCreate
     m_createOutfitId = createInfo->OutfitId;
+    m_createModData = createInfo->ModData;
 
     /// @todo: need more checks against packet modifications
     // should check that skin, face, hair* are valid via DBC per race/class

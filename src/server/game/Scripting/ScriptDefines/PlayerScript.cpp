@@ -252,6 +252,16 @@ void ScriptMgr::OnPlayerCreate(Player* player)
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CREATE, script->OnPlayerCreate(player));
 }
 
+void ScriptMgr::OnPlayerCharFactionOrRaceChange(ObjectGuid guid, bool factionChange, std::vector<uint8> const& modData)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_FACTION_OR_RACE_CHANGE, script->OnPlayerCharFactionOrRaceChange(guid, factionChange, modData));
+}
+
+void ScriptMgr::OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPacket& data)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_ENUM, script->OnPlayerCharEnum(guids, data));
+}
+
 void ScriptMgr::OnPlayerSave(Player* player)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_SAVE, script->OnPlayerSave(player));

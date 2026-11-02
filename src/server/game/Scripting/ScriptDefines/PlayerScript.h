@@ -80,6 +80,8 @@ enum PlayerHook
     PLAYERHOOK_ON_LOGOUT,
     PLAYERHOOK_CAN_MARK_ACCOUNT_OFFLINE,
     PLAYERHOOK_ON_CREATE,
+    PLAYERHOOK_ON_CHAR_FACTION_OR_RACE_CHANGE,
+    PLAYERHOOK_ON_CHAR_ENUM,
     PLAYERHOOK_ON_DELETE,
     PLAYERHOOK_ON_FAILED_DELETE,
     PLAYERHOOK_ON_SAVE,
@@ -367,6 +369,12 @@ public:
 
     // Called when a player is created.
     virtual void OnPlayerCreate(Player* /*player*/) { }
+
+    // Called once a character's faction or race change has been written, with whatever the client added to the end of the packet.  The character isn't in the world.
+    virtual void OnPlayerCharFactionOrRaceChange(ObjectGuid /*guid*/, bool /*factionChange*/, std::vector<uint8> const& /*modData*/) { }
+
+    // Called with a finished character list packet and the characters in it, so a module can add to the end of the packet
+    virtual void OnPlayerCharEnum(std::vector<ObjectGuid> const& /*guids*/, WorldPacket& /*data*/) { }
 
     // Called when a player is deleted.
     virtual void OnPlayerDelete(ObjectGuid /*guid*/, uint32 /*accountId*/) { }

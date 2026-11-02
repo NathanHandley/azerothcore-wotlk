@@ -1153,6 +1153,7 @@ public:
 
     bool Create(ObjectGuid::LowType guidlow, CharacterCreateInfo* createInfo);
     uint8 GetCreateOutfitId() const { return m_createOutfitId; }
+    std::vector<uint8> const& GetCreateModData() const { return m_createModData; }
 
     void Update(uint32 time) override;
 
@@ -2833,6 +2834,7 @@ protected:
     ObjectGuid m_divider;
     uint32 m_ingametime;
     uint8 m_createOutfitId = 0;
+    std::vector<uint8> m_createModData;
 
     /*********************************************************/
     /***                   LOAD SYSTEM                     ***/

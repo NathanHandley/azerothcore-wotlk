@@ -234,6 +234,7 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
     data << num;
 
     _legitCharacters.clear();
+    std::vector<ObjectGuid> enumGuids;
     if (result)
     {
         do
@@ -243,12 +244,15 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
             if (Player::BuildEnumData(result, &data))
             {
                 _legitCharacters.insert(guid);
+                enumGuids.push_back(guid);
                 ++num;
             }
         } while (result->NextRow());
     }
 
     data.put<uint8>(0, num);
+
+    sScriptMgr->OnPlayerCharEnum(enumGuids, data);
 
     SendPacket(&data);
 }
@@ -270,6 +274,20 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket& /*recvData*/)
     _queryProcessor.AddCallback(CharacterDatabase.AsyncQuery(stmt).WithPreparedCallback(std::bind(&WorldSession::HandleCharEnum, this, std::placeholders::_1)));
 }
 
+// Modules can have the client add data to the end of these packets.  It's unchecked, so anything oversized is dropped
+static void ReadModDataFromPacket(WorldPacket& recvData, std::vector<uint8>& modDataOut)
+{
+    constexpr size_t MAX_MOD_DATA_SIZE = 64;
+    size_t remainingSize = recvData.size() - recvData.rpos();
+    if (remainingSize == 0 || remainingSize > MAX_MOD_DATA_SIZE)
+    {
+        recvData.rfinish();
+        return;
+    }
+    modDataOut.resize(remainingSize);
+    recvData.read(modDataOut.data(), remainingSize);
+}
+
 void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
 {
     std::shared_ptr<CharacterCreateInfo> createInfo = std::make_shared<CharacterCreateInfo>();
@@ -284,6 +302,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
              >> createInfo->HairColor
              >> createInfo->FacialHair
              >> createInfo->OutfitId;
+    ReadModDataFromPacket(recvData, createInfo->ModData);
 
     if (!HasPermission(rbac::RBAC_PERM_SKIP_CHECK_CHARACTER_CREATION_TEAMMASK))
     {
@@ -2035,6 +2054,7 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recvData)
              >> factionChangeInfo->FacialHair
              >> factionChangeInfo->Face
              >> factionChangeInfo->Race;
+    ReadModDataFromPacket(recvData, factionChangeInfo->ModData);
 
     // pussywizard:
     if (ObjectAccessor::FindConnectedPlayer(factionChangeInfo->Guid) || sWorldSessionMgr->FindOfflineSessionForCharacterGUID(factionChangeInfo->Guid.GetCounter()))
@@ -2664,6 +2684,8 @@ void WorldSession::HandleCharFactionOrRaceChangeCallback(std::shared_ptr<Charact
     CharacterDatabase.CommitTransaction(trans);
 
     LOG_DEBUG("entities.player", "{} (IP: {}) changed race from {} to {}", GetPlayerInfo(), GetRemoteAddress(), oldRace, factionChangeInfo->Race);
+
+    sScriptMgr->OnPlayerCharFactionOrRaceChange(factionChangeInfo->Guid, factionChangeInfo->FactionChange, factionChangeInfo->ModData);
 
     SendCharFactionChange(RESPONSE_SUCCESS, factionChangeInfo.get());
 }

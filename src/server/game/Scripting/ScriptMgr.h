@@ -338,6 +338,8 @@ public: /* PlayerScript */
     void OnPlayerLogout(Player* player);
     bool OnPlayerCanMarkAccountOffline(ObjectGuid guid, uint32 accountId);
     void OnPlayerCreate(Player* player);
+    void OnPlayerCharFactionOrRaceChange(ObjectGuid guid, bool factionChange, std::vector<uint8> const& modData);
+    void OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPacket& data);
     void OnPlayerSave(Player* player);
     void OnPlayerDelete(ObjectGuid guid, uint32 accountId);
     void OnPlayerFailedDelete(ObjectGuid guid, uint32 accountId);
