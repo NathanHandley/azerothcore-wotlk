@@ -260,6 +260,7 @@ enum PlayerHook
     PLAYERHOOK_CAN_BUYBACK_ITEM, // MergedWorlds
     PLAYERHOOK_CAN_USE_CLASS_ABILITIES, // MergedWorlds
     PLAYERHOOK_CAN_AUTO_RELEASE, // MergedWorlds
+    PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1099,6 +1100,17 @@ public:
      * @return False to keep the player dead in its body (a game identity form has no spirit: it stays dead until it returns to its save point)
      */
     [[nodiscard]] virtual bool OnPlayerCanAutoRelease(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called for the distance check whenever a player would deal with a creature (Player::GetNPCIfCanInteractWith: the
+     *        gossip window and its choices, a vendor's list, purchases and sales, a banker, a trainer, a quest giver).
+     *
+     * @param player Contains information about the Player
+     * @param creature Contains information about the Creature
+     * @param isInReach Starts as the core's check (INTERACTION_DISTANCE, height included), to be read and changed (a game identity form's NPCs
+     *                  answer from its own game's reach)
+     */
+    virtual void OnPlayerCreatureInteractionReach(Player* /*player*/, Creature const* /*creature*/, bool& /*isInReach*/) { }
 
     /**
      * @brief MergedWorlds: called when a player's auto attack is ready to swing, before it checks whether its victim is in reach.

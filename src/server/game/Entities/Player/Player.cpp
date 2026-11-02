@@ -2170,7 +2170,10 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid const& guid, uint32 npcflag
     //                return nullptr;
 
     // not too far
-    if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
+    // MergedWorlds: a game identity form's NPCs can answer from its own game's reach (an RO NPC on an RO map, from RO's click range)
+    bool isInReach = creature->IsWithinDistInMap(this, INTERACTION_DISTANCE);
+    sScriptMgr->OnPlayerCreatureInteractionReach(this, creature, isInReach);
+    if (!isInReach)
         return nullptr;
 
     return creature;

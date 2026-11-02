@@ -1064,6 +1064,11 @@ bool ScriptMgr::OnPlayerCanAutoRelease(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_AUTO_RELEASE, !script->OnPlayerCanAutoRelease(player));
 }
 
+void ScriptMgr::OnPlayerCreatureInteractionReach(Player* player, Creature const* creature, bool& isInReach)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, script->OnPlayerCreatureInteractionReach(player, creature, isInReach));
+}
+
 bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));

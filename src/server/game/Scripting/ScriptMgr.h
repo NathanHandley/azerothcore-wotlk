@@ -497,6 +497,7 @@ public: /* PlayerScript */
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
     bool OnPlayerCanUseClassAbilities(Player* player); // MergedWorlds
     bool OnPlayerCanAutoRelease(Player* player); // MergedWorlds
+    void OnPlayerCreatureInteractionReach(Player* player, Creature const* creature, bool& isInReach); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 
     // Anti cheat
