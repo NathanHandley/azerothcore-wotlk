@@ -721,11 +721,14 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recv_data)
         return;
     }
 
-    // MergedWorlds EQ levitation: a zone-in point is just outside the way back out, so a player floating over it arrives inside that trigger
-    // and would be sent straight back.  The client reports a trigger once, on entering it, so ignoring this report leaves them standing in it,
-    // and walking out and back in takes them through
-    if (player->IsEQLevitating() && player->HasJustArrivedOnMap() && sObjectMgr->GetAreaTriggerTeleport(triggerId))
+    // MergedWorlds EQ levitation: a zone-in point is just outside the way back out, so a player floating over it is inside that trigger and
+    // would be sent straight back, on arrival or whenever they start to levitate there.  Until they have moved off the spot they stay put,
+    // and the trigger is looked at again then
+    if (player->IsEQLevitating() && player->IsStillAtMapArrival() && sObjectMgr->GetAreaTriggerTeleport(triggerId))
+    {
+        player->SetIgnoredArrivalTrigger(triggerId);
         return;
+    }
 
     if (player->isDebugAreaTriggers)
         ChatHandler(this).PSendSysMessage(LANG_DEBUG_AREATRIGGER_REACHED, triggerId);

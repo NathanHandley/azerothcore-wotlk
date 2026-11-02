@@ -2414,10 +2414,12 @@ public:
 
     // MergedWorlds EQ levitation: under one of EQ's Levitate spells (their Hover effect is marked with MiscValue 57)
     [[nodiscard]] bool IsEQLevitating() const;
-    // MergedWorlds EQ levitation: a client tells the server about a trigger it finds itself in on arrival, and floating lifts a player into
-    // the exit trigger next to many zone-in points (see HandleAreaTriggerOpcode)
-    void SetMapArrivalTime(uint32 msTime) { _mapArrivalMSTime = msTime; }
-    [[nodiscard]] bool HasJustArrivedOnMap() const;
+    // MergedWorlds EQ levitation: floating lifts a player into the exit trigger next to many zone-in points (see HandleAreaTriggerOpcode), so
+    // a player who has just arrived counts as still at the zone-in until they have moved a little
+    // The client reports a trigger only once, so one ignored there gets looked at again when they have moved off the spot
+    void SetArrivedOnMap();
+    [[nodiscard]] bool IsStillAtMapArrival() const { return _mapArrivalMovementLeft > 0.0f; }
+    void SetIgnoredArrivalTrigger(uint32 triggerID) { _ignoredArrivalTriggerID = triggerID; }
     uint32 EnvironmentalDamage(EnviromentalDamage type, uint32 damage);
 
     /*********************************************************/
@@ -3098,7 +3100,8 @@ private:
     float  m_lastFallZ;
 
     int32 m_MirrorTimer[MAX_TIMERS];
-    uint32 _mapArrivalMSTime = 0; // MergedWorlds EQ levitation
+    float _mapArrivalMovementLeft = 0.0f; // MergedWorlds EQ levitation
+    uint32 _ignoredArrivalTriggerID = 0;  // MergedWorlds EQ levitation
     uint8 m_MirrorTimerFlags;
     uint8 m_MirrorTimerFlagsLast;
     bool m_isInWater;

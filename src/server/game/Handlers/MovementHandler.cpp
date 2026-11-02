@@ -55,7 +55,6 @@ void WorldSession::HandleMoveWorldportAck()
         return;
 
     GetPlayer()->SetSemaphoreTeleportFar(0);
-    GetPlayer()->SetMapArrivalTime(getMSTime()); // MergedWorlds EQ levitation
 
     // get the teleport destination
     WorldLocation const& loc = GetPlayer()->GetTeleportDest();
@@ -100,6 +99,7 @@ void WorldSession::HandleMoveWorldportAck()
 
     float z = loc.GetPositionZ() + GetPlayer()->GetHoverHeight();
     GetPlayer()->Relocate(loc.GetPositionX(), loc.GetPositionY(), z, loc.GetOrientation());
+    GetPlayer()->SetArrivedOnMap(); // MergedWorlds EQ levitation
 
     GetPlayer()->ResetMap();
     GetPlayer()->SetMap(newMap);

@@ -1185,6 +1185,21 @@ void Player::UpdateSkillsToMaxSkillsForLevel()
 bool Player::UpdatePosition(float x, float y, float z, float orientation,
                             bool teleport)
 {
+    // MergedWorlds EQ levitation: height does not count, since levitating bobs up and down on the spot.  A trigger ignored at the zone-in is
+    // reported again as though the client sent it, so it is handled at the new position: a player who kept moving into it goes through it,
+    // and one who moved out of it stays
+    if (_mapArrivalMovementLeft > 0.0f)
+    {
+        _mapArrivalMovementLeft -= GetExactDist2d(x, y);
+        if (_mapArrivalMovementLeft <= 0.0f && _ignoredArrivalTriggerID != 0)
+        {
+            WorldPacket* triggerReport = new WorldPacket(CMSG_AREATRIGGER, 4);
+            *triggerReport << uint32(_ignoredArrivalTriggerID);
+            GetSession()->QueuePacket(triggerReport);
+            _ignoredArrivalTriggerID = 0;
+        }
+    }
+
     if (!Unit::UpdatePosition(x, y, z, orientation, teleport))
         return false;
 
@@ -2370,12 +2385,13 @@ void Player::ProcessTerrainStatusUpdate()
         m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWATER_INDARKWATER);
 }
 
-// How long after arriving a trigger report counts as the one the client makes for where it landed
-static constexpr uint32 EQ_LEVITATION_ARRIVAL_TRIGGER_MS = 5000;
+// How far a player moves along the ground, in total, before they stop counting as at the zone-in they arrived at
+static constexpr float EQ_LEVITATION_ARRIVAL_MOVEMENT = 2.0f;
 
-bool Player::HasJustArrivedOnMap() const
+void Player::SetArrivedOnMap()
 {
-    return _mapArrivalMSTime != 0 && GetMSTimeDiffToNow(_mapArrivalMSTime) < EQ_LEVITATION_ARRIVAL_TRIGGER_MS;
+    _mapArrivalMovementLeft = EQ_LEVITATION_ARRIVAL_MOVEMENT;
+    _ignoredArrivalTriggerID = 0;
 }
 
 uint32 Player::GetSpellQueueWindow() const
