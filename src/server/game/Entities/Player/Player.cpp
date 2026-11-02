@@ -4028,17 +4028,18 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
-        for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         {
             if (!m_items[i])
                 continue;
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
-        // MergedWorlds account bank: bag slots and the vaults, a world tab's too (a bag also sends what it holds)
+        // MergedWorlds account bank: bag slots and the vaults, a world tab's too (a bag also sends what it holds).  The light source slot
+        // between them went with the keyring
         for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
-            if (!m_items[i])
+            if (i == LIGHT_SOURCE_SLOT || !m_items[i])
                 continue;
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
@@ -4072,17 +4073,17 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
 
             m_items[i]->DestroyForPlayer(target);
         }
-        for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         {
             if (!m_items[i])
                 continue;
 
             m_items[i]->DestroyForPlayer(target);
         }
-        // MergedWorlds account bank
+        // MergedWorlds account bank (the light source slot between went with the keyring)
         for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
-            if (!m_items[i])
+            if (i == LIGHT_SOURCE_SLOT || !m_items[i])
                 continue;
 
             m_items[i]->DestroyForPlayer(target);

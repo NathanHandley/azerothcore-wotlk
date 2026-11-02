@@ -47,6 +47,11 @@ public:
     // True when a unit can go straight between the points the EQ way (close enough, in line of sight, and no big drop or climb on the way)
     static bool CanGoDirectly(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end);
 
+    // How far a unit gets on a straight line from start toward end before something stops it, which is what a navigation mesh raycast finds:
+    // the point just short of the first wall, or the last floor before a drop or climb too big to take.  Returns the end, on the floor, when
+    // nothing does.  Flyers and swimmers only stop at walls
+    static G3D::Vector3 GetFirstCollisionPoint(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end);
+
     // The floor height under a point for a unit on an EQ map (or its own height when it flies or swims there)
     static float GetGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z);
 
@@ -57,6 +62,8 @@ private:
     static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ, G3D::Vector3 const* reachFrom);
     static float SnapStepZOverGaps(EQZoneMap const* zoneMap, G3D::Vector3 const& previousStep, float x, float y, float nextX, float nextY);
     static float GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z);
+    static bool IsOnFloor(EQZoneMap const* zoneMap, float x, float y, float z);
+    static float GetStopFraction(G3D::Vector3 const& from, G3D::Vector3 const& to, float hitDistance);
     static void AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints);
     static void AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, bool swims, Movement::PointsArray& pathPoints);
     static void SimplifyLeg(Movement::PointsArray const& legPoints, uint32 firstIndex, uint32 lastIndex, std::vector<bool>& keep);

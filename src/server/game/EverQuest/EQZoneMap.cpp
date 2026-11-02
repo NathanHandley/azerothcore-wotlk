@@ -340,14 +340,19 @@ float EQZoneMap::FindBestZ(float x, float y, float z, float maxDistanceUp, float
 
 bool EQZoneMap::IsInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2) const
 {
+    float hitDistance = 0.0f;
+    return !GetFirstHitDistance(x1, y1, z1, x2, y2, z2, hitDistance);
+}
+
+bool EQZoneMap::GetFirstHitDistance(float x1, float y1, float z1, float x2, float y2, float z2, float& hitDistance) const
+{
     float dx = x2 - x1;
     float dy = y2 - y1;
     float dz = z2 - z1;
     float length = std::sqrt(dx * dx + dy * dy + dz * dz);
     if (length < 0.001f)
-        return true;
-    float hitDistance = 0.0f;
-    return !Raycast({ x1, y1, z1 }, { dx / length, dy / length, dz / length }, length, hitDistance);
+        return false;
+    return Raycast({ x1, y1, z1 }, { dx / length, dy / length, dz / length }, length, hitDistance);
 }
 
 uint32 EQZoneMap::GetRegionFlags(float x, float y, float z) const

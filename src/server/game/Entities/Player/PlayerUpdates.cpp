@@ -1197,6 +1197,21 @@ void Player::UpdateSkillsToMaxSkillsForLevel()
 bool Player::UpdatePosition(float x, float y, float z, float orientation,
                             bool teleport)
 {
+    // MergedWorlds EQ levitation: height does not count, since levitating bobs up and down on the spot.  A trigger ignored at the zone-in is
+    // reported again as though the client sent it, so it is handled at the new position: a player who kept moving into it goes through it,
+    // and one who moved out of it stays
+    if (_mapArrivalMovementLeft > 0.0f)
+    {
+        _mapArrivalMovementLeft -= GetExactDist2d(x, y);
+        if (_mapArrivalMovementLeft <= 0.0f && _ignoredArrivalTriggerID != 0)
+        {
+            WorldPacket* triggerReport = new WorldPacket(CMSG_AREATRIGGER, 4);
+            *triggerReport << uint32(_ignoredArrivalTriggerID);
+            GetSession()->QueuePacket(triggerReport);
+            _ignoredArrivalTriggerID = 0;
+        }
+    }
+
     if (!Unit::UpdatePosition(x, y, z, orientation, teleport))
         return false;
 
@@ -2321,9 +2336,9 @@ void Player::SendUpdateWorldState(uint32 variable, uint32 value) const
 
 // MergedWorlds EQ levitation: EQ Levitate spells mark their Hover effect with MiscValue 57 (EQ SE_Levitate); the
 // MergedWorlds client floats such a player over every liquid surface the way EverQuest does
-static bool IsPlayerEQLevitating(Player const* player)
+bool Player::IsEQLevitating() const
 {
-    for (AuraEffect const* hover : player->GetAuraEffectsByType(SPELL_AURA_HOVER))
+    for (AuraEffect const* hover : GetAuraEffectsByType(SPELL_AURA_HOVER))
         if (hover->GetMiscValue() == 57)
             return true;
     return false;
@@ -2338,19 +2353,19 @@ void Player::ProcessTerrainStatusUpdate()
 
     // MergedWorlds EQ levitation: floating on top of lava or slime is not being in it. Only the surface-contact status
     // (feet up to 0.1 yd above the surface) is forgiven; a levitating player inside the liquid still burns.
-    bool levitatingOnSurface = liquidData.Status == LIQUID_MAP_WATER_WALK && IsPlayerEQLevitating(this);
+    bool levitatingOnSurface = liquidData.Status == LIQUID_MAP_WATER_WALK && IsEQLevitating();
 
     // player specific logic for mirror timers
+    // MergedWorlds: every state below follows the liquid at the player's position now, and Status alone doesn't say which liquid that is.  A
+    // state only cleared while in its own liquid type stayed set after a teleport from lava to anywhere with another liquid near, which is
+    // how lava kept burning a player standing on dry ground with water under the floor
     if (liquidData.Status != LIQUID_MAP_NO_WATER)
     {
         // Breath bar state (under water in any liquid type)
-        if ((liquidData.Flags & MAP_ALL_LIQUIDS) != 0)
-        {
-            if ((liquidData.Status & LIQUID_MAP_UNDER_WATER) != 0)
-                m_MirrorTimerFlags |= UNDERWATER_INWATER;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
-        }
+        if ((liquidData.Flags & MAP_ALL_LIQUIDS) != 0 && (liquidData.Status & LIQUID_MAP_UNDER_WATER) != 0)
+            m_MirrorTimerFlags |= UNDERWATER_INWATER;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
 
         // Fatigue bar state (if not on flight path or transport)
         if ((liquidData.Flags & MAP_LIQUID_TYPE_DARK_WATER) && !IsInFlight() && !GetTransport())
@@ -2367,25 +2382,28 @@ void Player::ProcessTerrainStatusUpdate()
             m_MirrorTimerFlags &= ~UNDERWATER_INDARKWATER;
 
         // Lava state (any contact)
-        if (liquidData.Flags & MAP_LIQUID_TYPE_MAGMA)
-        {
-            if ((liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
-                m_MirrorTimerFlags |= UNDERWATER_INLAVA;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
-        }
+        if ((liquidData.Flags & MAP_LIQUID_TYPE_MAGMA) && (liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
+            m_MirrorTimerFlags |= UNDERWATER_INLAVA;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INLAVA;
 
         // Slime state (any contact)
-        if (liquidData.Flags & MAP_LIQUID_TYPE_SLIME)
-        {
-            if ((liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
-                m_MirrorTimerFlags |= UNDERWATER_INSLIME;
-            else
-                m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
-        }
+        if ((liquidData.Flags & MAP_LIQUID_TYPE_SLIME) && (liquidData.Status & MAP_LIQUID_STATUS_IN_CONTACT) && !levitatingOnSurface)
+            m_MirrorTimerFlags |= UNDERWATER_INSLIME;
+        else
+            m_MirrorTimerFlags &= ~UNDERWATER_INSLIME;
     }
     else
         m_MirrorTimerFlags &= ~(UNDERWATER_INWATER | UNDERWATER_INLAVA | UNDERWATER_INSLIME | UNDERWATER_INDARKWATER);
+}
+
+// How far a player moves along the ground, in total, before they stop counting as at the zone-in they arrived at
+static constexpr float EQ_LEVITATION_ARRIVAL_MOVEMENT = 2.0f;
+
+void Player::SetArrivedOnMap()
+{
+    _mapArrivalMovementLeft = EQ_LEVITATION_ARRIVAL_MOVEMENT;
+    _ignoredArrivalTriggerID = 0;
 }
 
 uint32 Player::GetSpellQueueWindow() const

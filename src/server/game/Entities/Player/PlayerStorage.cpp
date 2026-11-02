@@ -308,7 +308,7 @@ InventoryResult Player::CanUnequipItems(uint32 item, uint32 count) const
                     return EQUIP_ERR_OK;
             }
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->GetEntry() == item)
             {
@@ -340,7 +340,7 @@ uint32 Player::GetItemCount(uint32 item, bool inBankAlso, Item* skipItem) const
             if (pItem != skipItem &&  pItem->GetEntry() == item)
                 count += pItem->GetCount();
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem != skipItem && pItem->GetEntry() == item)
                 count += pItem->GetCount();
@@ -387,7 +387,7 @@ uint32 Player::GetItemCountWithLimitCategory(uint32 limitCategory, Item* skipIte
                     if (pProto->ItemLimitCategory == limitCategory)
                         count += pItem->GetCount();
 
-    for (int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem != skipItem)
                 if (ItemTemplate const* pProto = pItem->GetTemplate())
@@ -419,7 +419,7 @@ Item* Player::GetItemByGuid(ObjectGuid guid) const
             if (pItem->GetGUID() == guid)
                 return pItem;
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->GetGUID() == guid)
                 return pItem;
@@ -453,11 +453,13 @@ Item* Player::GetItemByPos(uint16 pos) const
     return GetItemByPos(bag, slot);
 }
 
+Player::LightSourceItemCheck Player::s_lightSourceItemCheck = nullptr;
+
 Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 {
     // MergedWorlds account bank: the account bank bag slots are reachable, the vault slots are not (only through GetBagByPos)
     if (bag == INVENTORY_SLOT_BAG_0 && (slot < BANK_SLOT_BAG_END || (slot >= KEYRING_SLOT_START && slot < CURRENCYTOKEN_SLOT_END)
-        || (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END)))
+        || (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END) || slot == LIGHT_SOURCE_SLOT))
         return m_items[slot];
     else if (Bag* pBag = GetBagByPos(bag))
         return pBag->GetItemByPos(slot);
@@ -469,7 +471,7 @@ Bag* Player::GetBagByPos(uint8 bag) const
     // MergedWorlds account bank: account bank bags and the vaults, a world tab's too (m_items directly, GetItemByPos hides the vaults)
     if ((bag >= INVENTORY_SLOT_BAG_START && bag < INVENTORY_SLOT_BAG_END)
         || (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END)
-        || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END))
+        || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END && bag != LIGHT_SOURCE_SLOT)) // MergedWorlds: not the light source slot between
         if (Item* item = m_items[bag])
             return item->ToBag();
     return nullptr;
@@ -576,6 +578,8 @@ bool Player::IsInventoryPos(uint8 bag, uint8 slot)
         return true;
     if (bag == INVENTORY_SLOT_BAG_0 && (slot >= KEYRING_SLOT_START && slot < CURRENCYTOKEN_SLOT_END))
         return true;
+    if (bag == INVENTORY_SLOT_BAG_0 && slot == LIGHT_SOURCE_SLOT)
+        return true;
     return false;
 }
 
@@ -606,7 +610,7 @@ bool Player::IsAccountBankPos(uint8 bag, uint8 slot)
 {
     if (bag == INVENTORY_SLOT_BAG_0 && (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END))
         return true;
-    if (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END)
+    if (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END && bag != LIGHT_SOURCE_SLOT) // MergedWorlds: not the light source slot between
         return true;
     return false;
 }
@@ -683,6 +687,10 @@ bool Player::IsValidPos(uint8 bag, uint8 slot, bool explicit_pos)
         if (slot >= KEYRING_SLOT_START && slot < KEYRING_SLOT_END)
             return true;
 
+        // light source slot
+        if (slot == LIGHT_SOURCE_SLOT)
+            return true;
+
         // bank main slots
         if (slot >= BANK_SLOT_ITEM_START && slot < BANK_SLOT_ITEM_END)
             return true;
@@ -726,7 +734,7 @@ bool Player::HasItemCount(uint32 item, uint32 count, bool inBankAlso) const
                 return true;
         }
     }
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
     {
         Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i);
         if (pItem && pItem->GetEntry() == item && !pItem->IsInTrade())
@@ -923,7 +931,7 @@ bool Player::HasItemTotemCategory(uint32 TotemCategory) const
         if (pItem && IsTotemCategoryCompatiableWith(pItem->GetTemplate(), TotemCategory))
             return true;
     }
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
     {
         pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i);
         if (pItem && IsTotemCategoryCompatiableWith(pItem->GetTemplate(), TotemCategory))
@@ -993,6 +1001,10 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
 
             // currencytoken case
             if (slot >= CURRENCYTOKEN_SLOT_START && slot < CURRENCYTOKEN_SLOT_END && !(pProto->IsCurrencyToken()))
+                return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
+
+            // EQWOW light source slot
+            if (slot == LIGHT_SOURCE_SLOT && (!s_lightSourceItemCheck || !s_lightSourceItemCheck(pProto->ItemId)))
                 return EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
 
             // prevent cheating (MergedWorlds account bank: the vault slots never hold anything but the vaults)
@@ -3691,7 +3703,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
         }
     }
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
     {
         if (Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
         {
@@ -3858,7 +3870,7 @@ void Player::DestroyZoneLimitedItem(bool update, uint32 new_zone)
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
@@ -3913,7 +3925,7 @@ Item* Player::GetItemByEntry(uint32 entry) const
             if (pItem->GetEntry() == entry)
                 return pItem;
 
-    for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->GetEntry() == entry)
                 return pItem;
@@ -6578,7 +6590,8 @@ bool Player::_CreateAccountBankVaults()
 {
     for (uint8 vaultSlot = ACCOUNT_BANK_VAULT_SLOT_START; vaultSlot < WORLD_BANK_VAULT_SLOT_END; ++vaultSlot)
     {
-        if (m_items[vaultSlot])
+        // MergedWorlds: the light source slot sits between the account vaults and the world vaults
+        if (!IsAccountBankVaultSlot(vaultSlot) || m_items[vaultSlot])
             continue;
 
         // MergedWorlds world bank: only the tabs of the worlds that are on

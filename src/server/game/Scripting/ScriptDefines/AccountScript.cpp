@@ -64,6 +64,11 @@ bool ScriptMgr::CanAccountCreateCharacter(uint32 accountId, uint8 charRace, uint
     CALL_ENABLED_BOOLEAN_HOOKS(AccountScript, ACCOUNTHOOK_CAN_ACCOUNT_CREATE_CHARACTER, !script->CanAccountCreateCharacter(accountId, charRace, charClass));
 }
 
+bool ScriptMgr::CanAccountLoginWithClientDataVersion(uint32 accountId, AccountTypes security, uint32 clientDataVersion, uint32& expectedClientDataVersion)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(AccountScript, ACCOUNTHOOK_CAN_ACCOUNT_LOGIN_WITH_CLIENT_DATA_VERSION, !script->CanAccountLoginWithClientDataVersion(accountId, security, clientDataVersion, expectedClientDataVersion));
+}
+
 AccountScript::AccountScript(char const* name, std::vector<uint16> enabledHooks) :
     ScriptObject(name, ACCOUNTHOOK_END)
 {
