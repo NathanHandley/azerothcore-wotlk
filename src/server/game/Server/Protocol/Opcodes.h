@@ -1343,7 +1343,8 @@ enum Opcodes : uint16
     CMSG_COH_QUERY_COSTUME                          = 0x521, // MergedWorlds: a hero's costume, as CMSG_GET_MIRRORIMAGE_DATA
     SMSG_COH_COSTUME                                = 0x522,
     CMSG_COH_SET_COSTUME                            = 0x523,
-    NUM_MSG_TYPES                                   = 0x524
+    SMSG_COH_MAP_COMPOSITION                        = 0x524, // MergedWorlds: the pieces a composed map is made of (ComposedMap.h), for the client to place
+    NUM_MSG_TYPES                                   = 0x525
 };
 
 enum OpcodeMisc : uint16

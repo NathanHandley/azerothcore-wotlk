@@ -49,6 +49,9 @@ public:
     [[nodiscard]] virtual float GetOrientation() const = 0;
     [[nodiscard]] virtual float GetScale() const = 0;
     virtual void DebugVisualizeCorner(G3D::Vector3 const& /*corner*/) const = 0;
+
+    // MergedWorlds: a model turned every way, not only about its up axis (world = rotation * model + position).  False uses the orientation
+    virtual bool GetRotation(G3D::Matrix3& /*rotation*/) const { return false; }
 };
 
 class GameObjectModel
@@ -76,6 +79,9 @@ public:
     bool GetLiquidLevel(G3D::Vector3 const& point, VMAP::LocationInfo& info, float& liqHeight) const;
 
     static GameObjectModel* Create(std::unique_ptr<GameObjectModelOwnerBase> modelOwner, std::string const& dataPath);
+
+    // MergedWorlds: the model's collision, for building a nav mesh over it
+    [[nodiscard]] std::shared_ptr<VMAP::WorldModel> const& GetWorldModel() const { return iModel; }
 
     bool UpdatePosition();
 

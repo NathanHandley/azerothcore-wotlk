@@ -1444,6 +1444,7 @@ void OpcodeTable::Initialize()
     /*0x521*/ DEFINE_HANDLER(CMSG_COH_QUERY_COSTUME,                                                STATUS_LOGGEDIN,   PROCESS_THREADSAFE,   &WorldSession::Handle_NULL); // mod-cityofheroes takes it in CanPacketReceive
     /*0x522*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_COH_COSTUME, STATUS_NEVER);
     /*0x523*/ DEFINE_HANDLER(CMSG_COH_SET_COSTUME,                                                  STATUS_LOGGEDIN,   PROCESS_THREADSAFE,   &WorldSession::Handle_NULL); // mod-cityofheroes takes it in CanPacketReceive
+    /*0x524*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_COH_MAP_COMPOSITION, STATUS_NEVER);
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER

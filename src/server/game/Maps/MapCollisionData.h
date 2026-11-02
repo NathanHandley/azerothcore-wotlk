@@ -18,11 +18,13 @@
 #ifndef MAP_COLLISION_DATA_H
 #define MAP_COLLISION_DATA_H
 
+#include "ComposedMap.h"
 #include "DynamicTree.h"
 #include "MapTree.h"
 #include "MMapMgr.h"
 #include "IVMapMgr.h"
 
+class GameObjectModel;
 class Map;
 
 namespace VMAP
@@ -62,6 +64,9 @@ public:
     dtNavMesh const* GetNavMesh() const { return _navMesh.get(); }
     dtNavMeshQuery const* GetNavMeshQuery();
 
+    // MergedWorlds: a composed map's own nav mesh, in place of its parent's
+    void SetNavMesh(std::shared_ptr<dtNavMesh> navMesh) { _navMeshQuery.reset(); _navMesh = std::move(navMesh); }
+
 protected:
     // _navMesh is a shared_ptr as it will point to a parent maps nav mesh (if exists) to save on memory
     std::shared_ptr<dtNavMesh> _navMesh;
@@ -74,7 +79,7 @@ class MapCollisionData
 {
 public:
     MapCollisionData(Map const& map, Map const* parentMap);
-    ~MapCollisionData() = default;
+    ~MapCollisionData();
 
     int LoadVMapTile(uint32 tileX, uint32 tileY);
     int LoadMMapTile(uint32 tileX, uint32 tileY);
@@ -89,12 +94,20 @@ public:
     std::shared_ptr<VMAP::StaticMapTree> const GetStaticTreeSharedPtr() const { return _staticVMapData._staticTree; }
     std::shared_ptr<dtNavMesh> const GetMMapNavMeshSharedPtr() const { return _mmapData._navMesh; }
 
+    // MergedWorlds: composes the map of pieces (ComposedMap.h): they collide as game objects do, and the map's creatures path over a nav mesh built over
+    // them.  Once only, on the map's thread, before its creatures move.  The number of pieces whose model was found
+    uint32 Compose(std::vector<ComposedMapPiece> const& pieces);
+    [[nodiscard]] bool IsComposed() const { return _isComposed; }
+
 private:
     Map const& _map;
 
     DynamicVMapCollisionData _dynamicVMapData;
     StaticVMapCollisionData _staticVMapData;
     MMapData _mmapData;
+
+    bool _isComposed = false;
+    std::vector<std::unique_ptr<GameObjectModel>> _composedModels;
 };
 
 #endif

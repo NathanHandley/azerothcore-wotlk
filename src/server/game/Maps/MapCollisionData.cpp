@@ -18,6 +18,9 @@
 #include "DBCStores.h"
 #include "DetourNavMeshQuery.h"
 #include "DisableMgr.h"
+#include "GameObjectModel.h"
+#include "Log.h"
+#include "Object.h"
 #include "MapCollisionData.h"
 #include "MapTree.h"
 #include "ModelInstance.h"
@@ -47,6 +50,69 @@ MapCollisionData::MapCollisionData(Map const& map, Map const* parentMap) :
 
         _mmapData._navMesh = MMAP::MMapMgr::LoadNavMesh(map.GetId());
     }
+}
+
+MapCollisionData::~MapCollisionData()
+{
+    for (std::unique_ptr<GameObjectModel> const& model : _composedModels)
+        _dynamicVMapData.remove(*model);
+}
+
+namespace
+{
+    // A composed piece as the owner of its game object model: always there, in every phase
+    class ComposedPieceModelOwner : public GameObjectModelOwnerBase
+    {
+    public:
+        explicit ComposedPieceModelOwner(ComposedMapPiece const& piece) : _piece(piece) { }
+
+        bool IsSpawned() const override { return true; }
+        uint32 GetDisplayId() const override { return _piece.DisplayId; }
+        uint32 GetPhaseMask() const override { return PHASEMASK_ANYWHERE; }
+        G3D::Vector3 GetPosition() const override { return _piece.Position; }
+        float GetOrientation() const override { return 0.0f; }
+        float GetScale() const override { return 1.0f; }
+        void DebugVisualizeCorner(G3D::Vector3 const& /*corner*/) const override { }
+        bool GetRotation(G3D::Matrix3& rotation) const override
+        {
+            rotation = _piece.Rotation;
+            return true;
+        }
+
+    private:
+        ComposedMapPiece _piece;
+    };
+}
+
+uint32 MapCollisionData::Compose(std::vector<ComposedMapPiece> const& pieces)
+{
+    if (_isComposed)
+        return 0;
+    _isComposed = true;
+
+    std::vector<GameObjectModel const*> models;
+    models.reserve(pieces.size());
+    uint32 foundCount = 0;
+    for (ComposedMapPiece const& piece : pieces)
+    {
+        GameObjectModel* model = GameObjectModel::Create(std::make_unique<ComposedPieceModelOwner>(piece), sWorld->GetDataPath());
+        models.push_back(model);
+        if (!model)
+        {
+            LOG_ERROR("maps", "Map {} instance {}: composed piece of display {} has no game object model (extract the game object models)", _map.GetId(),
+                _map.GetInstanceId(), piece.DisplayId);
+            continue;
+        }
+        model->enable(PHASEMASK_ANYWHERE);
+        _dynamicVMapData.insert(*model);
+        _composedModels.emplace_back(model);
+        ++foundCount;
+    }
+    _dynamicVMapData.balance();
+
+    if (DisableMgr::IsPathfindingEnabled(&_map))
+        _mmapData.SetNavMesh(ComposedMap::BuildNavMesh(_map.GetId(), pieces, models));
+    return foundCount;
 }
 
 int MapCollisionData::LoadVMapTile(uint32 tileX, uint32 tileY)
