@@ -4016,7 +4016,7 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
-        for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         {
             if (!m_items[i])
                 continue;
@@ -4057,7 +4057,7 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
 
             m_items[i]->DestroyForPlayer(target);
         }
-        for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for (uint8 i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
         {
             if (!m_items[i])
                 continue;

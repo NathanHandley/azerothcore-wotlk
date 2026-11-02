@@ -23,7 +23,11 @@
 #include <G3D/Quat.h>
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <limits>
+#include <map>
+#include <tuple>
+#include <vector>
 
 Model::Model(std::string& filename) : filename(filename), header(), vertices(nullptr), indices(nullptr)
 {
@@ -137,19 +141,7 @@ Vec3D fixCoordSystem(Vec3D const& v)
 
 void Doodad::Extract(ADT::MDDF const& doodadDef, char const* ModelInstName, uint32 mapID, uint32 tileX, uint32 tileY, FILE* pDirfile)
 {
-    char tempname[1036];
-    sprintf(tempname, "%s/%s", szWorkDirWmo, ModelInstName);
-    FILE* input = fopen(tempname, "r+b");
-
-    if (!input)
-        return;
-
-    fseek(input, 8, SEEK_SET); // get the correct no of vertices
-    int nVertices;
-    int count = fread(&nVertices, sizeof (int), 1, input);
-    fclose(input);
-
-    if (count != 1 || nVertices == 0)
+    if (!IsModelPlaceable(ModelInstName))
         return;
 
     // scale factor - divide by 1024. blizzard devs must be on crack, why not just use a float?
@@ -178,10 +170,62 @@ void Doodad::Extract(ADT::MDDF const& doodadDef, char const* ModelInstName, uint
     fwrite(ModelInstName, sizeof(char), nlen, pDirfile);
 }
 
+// MergedWorlds: one placement of a WMO comes up on every tile it touches, and its doodads' records only differ by tile.  A WMO that is a whole zone has tens of thousands
+// of doodads on over a hundred tiles.  They're worked out once for a placement, for as long as no model file has changed, and written with the tile filled in
+struct DoodadSetRecords
+{
+    Vec3D Position;
+    Vec3D Rotation;
+    uint32 ChangeCount = 0;
+    std::vector<char> Bytes;
+    std::vector<std::size_t> RecordOffsets;
+};
+
+static uint32 DoodadSetRecordsMapID = 0;
+static std::map<std::tuple<WMODoodadData const*, uint32, uint16, bool>, DoodadSetRecords> DoodadSetRecordsByPlacement;
+
+template <typename T>
+static void AddRecordBytes(std::vector<char>& bytes, T const* value, std::size_t count = 1)
+{
+    char const* start = reinterpret_cast<char const*>(value);
+    bytes.insert(bytes.end(), start, start + sizeof(T) * count);
+}
+
+static void WriteDoodadSetRecords(DoodadSetRecords& records, uint32 tileX, uint32 tileY, FILE* pDirfile)
+{
+    if (records.Bytes.empty())
+        return;
+    for (std::size_t recordOffset : records.RecordOffsets)
+    {
+        memcpy(&records.Bytes[recordOffset + sizeof(uint32)], &tileX, sizeof(uint32));
+        memcpy(&records.Bytes[recordOffset + sizeof(uint32) * 2], &tileY, sizeof(uint32));
+    }
+    fwrite(records.Bytes.data(), 1, records.Bytes.size(), pDirfile);
+}
+
 void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, uint32 mapID, uint32 tileX, uint32 tileY, FILE* pDirfile)
 {
     if (wmo.DoodadSet >= doodadData.Sets.size())
         return;
+
+    if (DoodadSetRecordsMapID != mapID)
+    {
+        DoodadSetRecordsMapID = mapID;
+        DoodadSetRecordsByPlacement.clear();
+    }
+    bool isWorldSpawn = tileX == 65 && tileY == 65;
+    DoodadSetRecords& records = DoodadSetRecordsByPlacement[std::make_tuple(&doodadData, wmo.UniqueId, uint16(wmo.DoodadSet), isWorldSpawn)];
+    if (!records.RecordOffsets.empty() && records.ChangeCount == ModelFileChangeCount && memcmp(&records.Position, &wmo.Position, sizeof(Vec3D)) == 0
+        && memcmp(&records.Rotation, &wmo.Rotation, sizeof(Vec3D)) == 0)
+    {
+        WriteDoodadSetRecords(records, tileX, tileY, pDirfile);
+        return;
+    }
+    records.Position = wmo.Position;
+    records.Rotation = wmo.Rotation;
+    records.ChangeCount = ModelFileChangeCount;
+    records.Bytes.clear();
+    records.RecordOffsets.clear();
 
     G3D::Vector3 wmoPosition(wmo.Position.z, wmo.Position.x, wmo.Position.y);
     G3D::Matrix3 wmoRotation = G3D::Matrix3::fromEulerAnglesZYX(G3D::toRadians(wmo.Rotation.y), G3D::toRadians(wmo.Rotation.x), G3D::toRadians(wmo.Rotation.z));
@@ -211,18 +255,7 @@ void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, u
             }
         }
 
-        char tempname[1036];
-        sprintf(tempname, "%s/%s", szWorkDirWmo, ModelInstName);
-        FILE* input = fopen(tempname, "r+b");
-        if (!input)
-            continue;
-
-        fseek(input, 8, SEEK_SET); // get the correct no of vertices
-        int nVertices;
-        int count = fread(&nVertices, sizeof(int), 1, input);
-        fclose(input);
-
-        if (count != 1 || nVertices == 0)
+        if (!IsModelPlaceable(ModelInstName))
             continue;
 
         assert(doodadId < std::numeric_limits<uint16>::max());
@@ -242,20 +275,22 @@ void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, u
         uint16 nameSet = 0;     // not used for models
         uint32 uniqueId = GenerateUniqueObjectId(wmo.UniqueId, doodadId);
         uint32 tcflags = MOD_M2;
-        if (tileX == 65 && tileY == 65)
+        if (isWorldSpawn)
             tcflags |= MOD_WORLDSPAWN;
 
         //write mapID, tileX, tileY, Flags, NameSet, UniqueId, Pos, Rot, Scale, name
-        fwrite(&mapID, sizeof(uint32), 1, pDirfile);
-        fwrite(&tileX, sizeof(uint32), 1, pDirfile);
-        fwrite(&tileY, sizeof(uint32), 1, pDirfile);
-        fwrite(&tcflags, sizeof(uint32), 1, pDirfile);
-        fwrite(&nameSet, sizeof(uint16), 1, pDirfile);
-        fwrite(&uniqueId, sizeof(uint32), 1, pDirfile);
-        fwrite(&position, sizeof(Vec3D), 1, pDirfile);
-        fwrite(&rotation, sizeof(Vec3D), 1, pDirfile);
-        fwrite(&doodad.Scale, sizeof(float), 1, pDirfile);
-        fwrite(&nlen, sizeof(uint32), 1, pDirfile);
-        fwrite(ModelInstName, sizeof(char), nlen, pDirfile);
+        records.RecordOffsets.push_back(records.Bytes.size());
+        AddRecordBytes(records.Bytes, &mapID);
+        AddRecordBytes(records.Bytes, &tileX);
+        AddRecordBytes(records.Bytes, &tileY);
+        AddRecordBytes(records.Bytes, &tcflags);
+        AddRecordBytes(records.Bytes, &nameSet);
+        AddRecordBytes(records.Bytes, &uniqueId);
+        AddRecordBytes(records.Bytes, &position);
+        AddRecordBytes(records.Bytes, &rotation);
+        AddRecordBytes(records.Bytes, &doodad.Scale);
+        AddRecordBytes(records.Bytes, &nlen);
+        AddRecordBytes(records.Bytes, ModelInstName, nlen);
     }
+    WriteDoodadSetRecords(records, tileX, tileY, pDirfile);
 }

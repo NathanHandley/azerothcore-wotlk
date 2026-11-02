@@ -77,6 +77,9 @@ public:
     // True when nothing in the zone is between the two points
     bool IsInLineOfSight(float x1, float y1, float z1, float x2, float y2, float z2) const;
 
+    // How far along the line from the first point to the second the first thing in the zone is.  False when nothing is between them
+    bool GetFirstHitDistance(float x1, float y1, float z1, float x2, float y2, float z2, float& hitDistance) const;
+
     // The region flags at a point
     uint32 GetRegionFlags(float x, float y, float z) const;
 
