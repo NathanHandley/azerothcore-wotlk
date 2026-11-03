@@ -3639,6 +3639,10 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
 
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
 
+    // MergedWorlds: modules can change the power cost (mod-cityofheroes's Endurance Reduction enhancements)
+    if (!m_CastItem)
+        sScriptMgr->OnSpellCalcPowerCost(this, m_powerCost);
+
     // Set combo point requirement
     if (HasTriggeredCastFlag(TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem)
         m_needComboPoints = false;

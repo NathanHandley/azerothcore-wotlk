@@ -44,6 +44,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, // MergedWorlds
     ALLSPELLHOOK_ON_DISPEL_SELECTION, // MergedWorlds
     ALLSPELLHOOK_ON_CALC_CAST_TIME, // MergedWorlds
+    ALLSPELLHOOK_ON_CALC_POWER_COST, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -82,6 +83,10 @@ public:
     // MergedWorlds: a spell's cast time was just worked out (Spell::prepare, after the first CheckCast), and can be replaced (mod-rowow's RO
     // skills use RO's cast time rules)
     virtual void OnSpellCalcCastTime(Spell* /*spell*/, int32& /*castTime*/) { }
+
+    // MergedWorlds: a spell's power cost was just worked out (Spell::prepare, before the first CheckCast), and can be replaced (mod-cityofheroes's
+    // enhancements: Endurance Reduction divides a power's cost)
+    virtual void OnSpellCalcPowerCost(Spell* /*spell*/, int32& /*powerCost*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 
