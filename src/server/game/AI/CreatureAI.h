@@ -245,6 +245,8 @@ public:
     virtual bool CanSeeAlways(WorldObject const* /*obj*/) { return false; }
 
     virtual bool CanBeSeen(Player const* /*seer*/) { return true; }
+    // With UNIT_DYNFLAG_TRACK_UNIT, whether it's on this player's minimap without a stalking aura of theirs on it (a module's markers, such as CoH's Zowies)
+    virtual bool IsTrackedBy(Player const* /*seer*/) { return false; }
     virtual bool CanAlwaysBeDetectable(WorldObject const* /*seer*/) { return false; }
 
     virtual void PetStopAttack() { }

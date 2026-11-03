@@ -16631,9 +16631,9 @@ void Unit::PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPoi
                 dynamicFlags &= ~UNIT_DYNFLAG_LOOTABLE;
         }
 
-        // unit UNIT_DYNFLAG_TRACK_UNIT should only be sent to caster of SPELL_AURA_MOD_STALKED auras
+        // unit UNIT_DYNFLAG_TRACK_UNIT should only be sent to caster of SPELL_AURA_MOD_STALKED auras, or to whom its AI says tracks it (a module's markers)
         if (dynamicFlags & UNIT_DYNFLAG_TRACK_UNIT)
-            if (!HasAuraTypeWithCaster(SPELL_AURA_MOD_STALKED, target->GetGUID()))
+            if (!HasAuraTypeWithCaster(SPELL_AURA_MOD_STALKED, target->GetGUID()) && !(creature && creature->AI() && creature->AI()->IsTrackedBy(target)))
                 dynamicFlags &= ~UNIT_DYNFLAG_TRACK_UNIT;
 
         valuesUpdateBuf.put(posPointers.UnitDynamicFlagsPos, dynamicFlags);
