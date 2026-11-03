@@ -381,6 +381,7 @@ protected:
     uint8 HairColor = 0;
     uint8 FacialHair = 0;
     uint8 OutfitId = 0;
+    std::vector<uint8> ModData; // Anything the client sent after the standard fields, for modules
 
     /// Server side data
     uint8 CharCount = 0;
@@ -417,6 +418,7 @@ struct CharacterFactionChangeInfo : public CharacterCustomizeInfo
 protected:
     uint8 Race = 0;
     bool FactionChange = false;
+    std::vector<uint8> ModData; // Anything the client sent after the standard fields, for modules
 };
 
 struct PacketCounter

@@ -16,6 +16,8 @@
  */
 
 #include "Spell.h"
+#include "EQMount.h"
+#include "EQMovementHooks.h"
 #include "ArenaSpectator.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
@@ -3638,6 +3640,8 @@ SpellCastResult Spell::prepare(SpellCastTargets const* targets, AuraEffect const
     OnSpellLaunch();
 
     m_powerCost = m_CastItem ? 0 : m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
+    if (EverQuestMovementHooks::SpellPowerCostModifier != nullptr)
+        m_powerCost = EverQuestMovementHooks::SpellPowerCostModifier(this, m_powerCost);
 
     // Set combo point requirement
     if (HasTriggeredCastFlag(TRIGGERED_IGNORE_COMBO_POINTS) || m_CastItem)
@@ -5748,6 +5752,9 @@ void Spell::TakeReagents()
     if (p_caster->CanNoReagentCast(m_spellInfo))
         return;
 
+    if (EverQuestMovementHooks::SpellReagentSaver != nullptr && EverQuestMovementHooks::SpellReagentSaver(this) == true)
+        return;
+
     for (uint32 x = 0; x < MAX_SPELL_REAGENTS; ++x)
     {
         if (m_spellInfo->Reagent[x] <= 0)
@@ -6213,7 +6220,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
 
     // not let players cast spells at mount (and let do it to creatures)
     if (unitCaster && unitCaster->IsMounted() && unitCaster->IsPlayer() && !HasTriggeredCastFlag(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE) &&
-            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED))
+            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) && EQMount::IsRidingEQHorse(unitCaster) == false)
     {
         if (unitCaster->IsInFlight())
             return SPELL_FAILED_NOT_ON_TAXI;
@@ -7110,6 +7117,8 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
 
     // xinef: Calculate power cost here, so funciton checking power can work properly and dont return bad results
     m_powerCost = m_spellInfo->CalcPowerCost(m_caster, m_spellSchoolMask, this);
+    if (EverQuestMovementHooks::SpellPowerCostModifier != nullptr)
+        m_powerCost = EverQuestMovementHooks::SpellPowerCostModifier(this, m_powerCost);
 
     // cooldown
     if (Creature const* creatureCaster = unitCaster->ToCreature())
@@ -7362,6 +7371,9 @@ SpellCastResult Spell::CheckRange(bool strict)
 
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, max_range, this);
+
+    if (EverQuestMovementHooks::SpellRangeModifier != nullptr && unitCaster != nullptr)
+        max_range = EverQuestMovementHooks::SpellRangeModifier(unitCaster, m_spellInfo, max_range);
 
     // xinef: dont check max_range to strictly after cast
     if (range_type != SPELL_RANGE_MELEE && !strict)

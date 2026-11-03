@@ -99,6 +99,7 @@ void WorldSession::HandleMoveWorldportAck()
 
     float z = loc.GetPositionZ() + GetPlayer()->GetHoverHeight();
     GetPlayer()->Relocate(loc.GetPositionX(), loc.GetPositionY(), z, loc.GetOrientation());
+    GetPlayer()->SetArrivedOnMap(); // MergedWorlds EQ levitation
 
     GetPlayer()->ResetMap();
     GetPlayer()->SetMap(newMap);

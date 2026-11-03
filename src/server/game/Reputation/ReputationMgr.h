@@ -128,6 +128,9 @@ public:                                                 // modifiers
 
     //! Public for chat command needs
     bool SetOneFactionReputation(FactionEntry const* factionEntry, float standing, bool incremental, Optional<ReputationRank> repMaxCap = { });
+    // Moves where a faction's standing starts from.  It isn't reputation earned, so nothing shows the faction, counts it or tells scripts.  Send the
+    // client SendInitialReputations after: per faction standing packets would make the client show each faction
+    void OffsetStartingStanding(FactionEntry const* factionEntry, int32 offset);
 
 public:                                                 // senders
     void SendInitialReputations();

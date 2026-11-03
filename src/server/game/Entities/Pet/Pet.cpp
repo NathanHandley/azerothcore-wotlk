@@ -338,10 +338,17 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     float px, py, pz;
     owner->GetClosePoint(px, py, pz, GetCombatReach(), PET_FOLLOW_DIST, GetFollowAngle());
     Relocate(px, py, pz, owner->GetOrientation());
+
+    // A hovering owner over a spot with no ground reads a far-off height, so the pet comes in at the owner rather than being lost
+    if (!IsPositionValid())
+        Relocate(owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
+
     if (!IsPositionValid())
     {
-        LOG_ERROR("entities.pet", "Pet {} not loaded. Suggested coordinates isn't valid (X: {} Y: {})",
-            GetGUID().ToString(), GetPositionX(), GetPositionY());
+        LOG_ERROR("entities.pet", "Pet {} not loaded. Suggested coordinates isn't valid (X: {} Y: {} Z: {})",
+            GetGUID().ToString(), GetPositionX(), GetPositionY(), GetPositionZ());
+        // InitStatsForLevel can land auras through script hooks, and a unit can't be deleted holding any
+        RemoveAllAuras();
         return false;
     }
 

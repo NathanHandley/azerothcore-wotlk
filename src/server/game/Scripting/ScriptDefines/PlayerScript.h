@@ -80,6 +80,8 @@ enum PlayerHook
     PLAYERHOOK_ON_LOGOUT,
     PLAYERHOOK_CAN_MARK_ACCOUNT_OFFLINE,
     PLAYERHOOK_ON_CREATE,
+    PLAYERHOOK_ON_CHAR_FACTION_OR_RACE_CHANGE,
+    PLAYERHOOK_ON_CHAR_ENUM,
     PLAYERHOOK_ON_DELETE,
     PLAYERHOOK_ON_FAILED_DELETE,
     PLAYERHOOK_ON_SAVE,
@@ -235,6 +237,9 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_BEFORE_GET_CONTENT_LEVELS_FOR_XP_GAIN,
+    PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, // MergedWorlds vendor prices
+    PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE,
     PLAYERHOOK_END
 };
 
@@ -366,6 +371,12 @@ public:
 
     // Called when a player is created.
     virtual void OnPlayerCreate(Player* /*player*/) { }
+
+    // Called once a character's faction or race change has been written, with whatever the client added to the end of the packet.  The character isn't in the world.
+    virtual void OnPlayerCharFactionOrRaceChange(ObjectGuid /*guid*/, bool /*factionChange*/, std::vector<uint8> const& /*modData*/) { }
+
+    // Called with a finished character list packet and the characters in it, so a module can add to the end of the packet
+    virtual void OnPlayerCharEnum(std::vector<ObjectGuid> const& /*guids*/, WorldPacket& /*data*/) { }
 
     // Called when a player is deleted.
     virtual void OnPlayerDelete(ObjectGuid /*guid*/, uint32 /*accountId*/) { }
@@ -875,6 +886,28 @@ public:
     virtual void OnPlayerGetReputationPriceDiscount(Player const* /*player*/, FactionTemplateEntry const* /*factionTemplate*/, float& /*discount*/) {}
 
     /**
+     * @brief MergedWorlds vendor prices: called for the gold price of a vendor item, both for the vendor's list and when buying it
+     *
+     * @param player Contains information about the Player
+     * @param vendor The vendor selling the item
+     * @param itemTemplate The item
+     * @param count How many of the item's buy stacks (itemTemplate->BuyCount each) the price is for
+     * @param price The price, after the reputation discount, which the hook can change
+     */
+    virtual void OnPlayerGetVendorItemBuyPrice(Player const* /*player*/, Creature const* /*vendor*/, ItemTemplate const* /*itemTemplate*/, uint32 /*count*/, uint32& /*price*/) {}
+
+    /**
+     * @brief MergedWorlds vendor prices: called for what a vendor pays for one of an item the player sells it (before a damaged item's repair cost
+     * comes off).  Only for an item with a sell price
+     *
+     * @param player Contains information about the Player
+     * @param vendor The vendor buying the item
+     * @param item The item
+     * @param unitPrice What the vendor pays for one, which the hook can change
+     */
+    virtual void OnPlayerGetVendorItemSellPrice(Player const* /*player*/, Creature const* /*vendor*/, Item const* /*item*/, uint32& /*unitPrice*/) {}
+
+    /**
      * @brief This hook is called when a player learns a new flight path node.
      *
      * @param player Contains information about the Player
@@ -889,6 +922,9 @@ public:
      * @param level The level that should be used for XP gain calculations
      */
     virtual void OnPlayerBeforeGetLevelForXPGain(Player const* /*player*/, uint8& /*level*/) {}
+
+    // Called when a kill's experience picks its base amount.  contentLevels is a ContentLevels value
+    virtual void OnPlayerBeforeGetContentLevelsForXPGain(Unit const* /*victim*/, uint8& /*contentLevels*/) {}
 
     /**
      * @brief This hook is called after a player takes an item out of a mailbox.

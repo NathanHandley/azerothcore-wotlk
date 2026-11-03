@@ -40,6 +40,9 @@ namespace
     constexpr float EQ_PATH_STEP_REACH_MIN_CLIMB = 0.5f;     // Climbs smaller than this aren't checked
     constexpr float EQ_PATH_STEP_REACH_UNDER_OFFSET = 0.01f; // The floor under an unreachable surface is looked for from just under it
     constexpr float EQ_PATH_STEP_GAP_DROP = 4.0f;            // A drop bigger than this with the floor back at the old height a step later is a gap
+    constexpr float EQ_PATH_WALL_CLEARANCE = 0.75f;          // A move stopped by a wall ends this far short of it
+    constexpr float EQ_PATH_ON_FLOOR_TOLERANCE = 0.1f;       // A height this close over or under a surface is on that surface
+    constexpr uint32 EQ_PATH_COLLISION_MAX_GAP_STEPS = 1;    // Steps with no floor a straight move can cross (a crack); any more is the edge of the zone's mesh
     constexpr float EQ_PATH_BEND_TOLERANCE = 0.25f;          // A step is split where the floor halfway along it is further than this off its line
     constexpr uint32 EQ_PATH_BEND_MAX_DEPTH = 3;             // A step is split at most this many times over (into eighths)
     constexpr float EQ_PATH_CORNER_SEARCH_START = 0.5f;      // A route corner's floor is looked for from this far above it
@@ -49,9 +52,15 @@ namespace
     constexpr float EQ_PATH_GROUND_SEARCH_UP = 3.0f;
     constexpr float EQ_PATH_GROUND_SEARCH_DOWN = 20.0f;
     constexpr uint32 EQ_PATH_MAX_POINTS = 400;
+    constexpr float EQ_PATH_PACKET_MAX_ACROSS = 250.0f;      // A move packet's points can be 256 yd across from the path's middle (see FitPathToMovePacket)
+    constexpr float EQ_PATH_PACKET_MAX_UP = 120.0f;          // And 128 yd up or down
 }
 
 EverQuestMovementHooks::IdleMovementSelectorFunction EverQuestMovementHooks::IdleMovementSelector = nullptr;
+EverQuestMovementHooks::SpellPowerCostModifierFunction EverQuestMovementHooks::SpellPowerCostModifier = nullptr;
+EverQuestMovementHooks::SpellReagentSaverFunction EverQuestMovementHooks::SpellReagentSaver = nullptr;
+EverQuestMovementHooks::SpellRangeModifierFunction EverQuestMovementHooks::SpellRangeModifier = nullptr;
+EverQuestMovementHooks::SpellThreatModifierFunction EverQuestMovementHooks::SpellThreatModifier = nullptr;
 
 bool EQPathBuilder::CanFly(WorldObject const* source)
 {
@@ -169,6 +178,17 @@ float EQPathBuilder::GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject cons
     return z;
 }
 
+// A swimmer's height at a route corner under water: its swimming height there, kept off the bottom and under the surface.  The bottom is
+// looked for from the higher of that height and the corner's own (the mesh's, which is just over the bottom), so a swimming height that
+// would be under a rise in the bottom is still caught
+float EQPathBuilder::GetSwimCornerZ(EQZoneMap const* zoneMap, G3D::Vector3 const& meshCorner, float swimZ, float surfaceZ)
+{
+    float floorZ = zoneMap->GetFloorZ(meshCorner.x, meshCorner.y, std::max(swimZ, meshCorner.z) + EQ_PATH_SWIM_FLOOR_CLEARANCE, EQ_PATH_STEP_SEARCH_DOWN);
+    if (floorZ > EQ_ZONE_MAP_INVALID_HEIGHT)
+        swimZ = std::max(swimZ, floorZ + EQ_PATH_SWIM_FLOOR_CLEARANCE);
+    return std::min(swimZ, surfaceZ - EQ_PATH_SWIM_SURFACE_CLEARANCE);
+}
+
 // Adds the step from one floor point to the next, split where the floor bends away from the straight line between them (a dune's crest,
 // the bottom of a dip, the edge of a stair) so the mover neither cuts through the ground nor hangs over it between the two
 void EQPathBuilder::AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints)
@@ -224,6 +244,74 @@ bool EQPathBuilder::CanGoDirectly(EQZoneMap const* zoneMap, WorldObject const* s
         previousStep = G3D::Vector3(x, y, stepZ);
     }
     return true;
+}
+
+bool EQPathBuilder::IsOnFloor(EQZoneMap const* zoneMap, float x, float y, float z)
+{
+    return zoneMap->GetFloorZ(x, y, z + EQ_PATH_ON_FLOOR_TOLERANCE, EQ_PATH_ON_FLOOR_TOLERANCE * 2.0f) > EQ_ZONE_MAP_INVALID_HEIGHT;
+}
+
+// How far along the line a mover stops for a wall hitDistance along it
+float EQPathBuilder::GetStopFraction(G3D::Vector3 const& from, G3D::Vector3 const& to, float hitDistance)
+{
+    return std::max(0.0f, hitDistance - EQ_PATH_WALL_CLEARANCE) / std::max(0.001f, (to - from).length());
+}
+
+// Walks the line in the steps a direct path's hazard check uses.  Between two steps a wall is whatever is on the line from a body's height
+// over one floor to the same height over the next
+G3D::Vector3 EQPathBuilder::GetFirstCollisionPoint(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end)
+{
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+    float distance2D = std::sqrt(dx * dx + dy * dy);
+    if (distance2D < 0.001f)
+        return end;
+
+    // Flyers and swimmers have no floor to stay on
+    float surfaceZ = 0.0f;
+    float hitDistance = 0.0f;
+    float bodyHeight = EQ_PATH_STEP_REACH_HEIGHT;
+    if (CanFly(source) || IsInLiquid(zoneMap, start.x, start.y, start.z, surfaceZ))
+    {
+        if (!zoneMap->GetFirstHitDistance(start.x, start.y, start.z + bodyHeight, end.x, end.y, end.z + bodyHeight, hitDistance))
+            return end;
+        return start + (end - start) * GetStopFraction(start, end, hitDistance);
+    }
+
+    float scale = zoneMap->GetWorldScale();
+    float maxJump = EQ_PATH_HAZARD_MAX_JUMP_EQ * scale;
+    uint32 stepCount = std::max(1u, uint32(std::ceil(distance2D / (EQ_PATH_HAZARD_STEP_EQ * scale))));
+    G3D::Vector3 previousStep = start;
+    G3D::Vector3 lastFloorStep = start;
+    uint32 gapSteps = 0;
+    for (uint32 step = 1; step <= stepCount; ++step)
+    {
+        float t = float(step) / float(stepCount);
+        float nextT = float(step + 1) / float(stepCount);
+        G3D::Vector3 stepPoint(start.x + dx * t, start.y + dy * t, 0.0f);
+        stepPoint.z = SnapStepZOverGaps(zoneMap, previousStep, stepPoint.x, stepPoint.y, start.x + dx * nextT, start.y + dy * nextT);
+
+        if (zoneMap->GetFirstHitDistance(previousStep.x, previousStep.y, previousStep.z + bodyHeight, stepPoint.x, stepPoint.y, stepPoint.z + bodyHeight, hitDistance))
+        {
+            G3D::Vector3 stopPoint = previousStep + (stepPoint - previousStep) * GetStopFraction(previousStep, stepPoint, hitDistance);
+            stopPoint.z = SnapStepZ(zoneMap, stopPoint.x, stopPoint.y, previousStep.z, &previousStep);
+            return IsOnFloor(zoneMap, stopPoint.x, stopPoint.y, stopPoint.z) ? stopPoint : lastFloorStep;
+        }
+
+        // A drop into liquid is a way in, as it is for a direct path
+        if (std::fabs(stepPoint.z - previousStep.z) > maxJump && !IsInLiquid(zoneMap, stepPoint.x, stepPoint.y, stepPoint.z + EQ_PATH_ON_FLOOR_TOLERANCE, surfaceZ))
+            return lastFloorStep;
+
+        if (IsOnFloor(zoneMap, stepPoint.x, stepPoint.y, stepPoint.z))
+        {
+            lastFloorStep = stepPoint;
+            gapSteps = 0;
+        }
+        else if (++gapSteps > EQ_PATH_COLLISION_MAX_GAP_STEPS)
+            return lastFloorStep;
+        previousStep = stepPoint;
+    }
+    return lastFloorStep;
 }
 
 // Douglas-Peucker on the step heights of one leg (the steps of a leg are on one line seen from above, so only the heights matter)
@@ -314,6 +402,44 @@ void EQPathBuilder::AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G
             pathPoints.push_back(legPoints[i]);
 }
 
+// A monster move packet sends every point of a path but the last as its offset from the middle of the path (halfway between its two ends),
+// packed into quarter yards in 11 bits across and 10 bits up.  So a point more than 256 yd across or 128 yd up or down from there wraps
+// around, and the client walks the mover toward somewhere else entirely until the path catches up with it (a long roam floating off the
+// ground or dropping through it at the start of the trip).  A path that long ends at its last point that still fits, and the mover asks for
+// the rest when it gets there
+bool EQPathBuilder::FitPathToMovePacket(Movement::PointsArray& pathPoints)
+{
+    if (pathPoints.size() < 3)
+        return false;
+
+    // Every point is within the path's bounds of its middle, so a path that small always fits
+    G3D::Vector3 low = pathPoints[0];
+    G3D::Vector3 high = pathPoints[0];
+    for (G3D::Vector3 const& point : pathPoints)
+    {
+        low = low.min(point);
+        high = high.max(point);
+    }
+    G3D::Vector3 extent = high - low;
+    if (extent.x <= EQ_PATH_PACKET_MAX_ACROSS && extent.y <= EQ_PATH_PACKET_MAX_ACROSS && extent.z <= EQ_PATH_PACKET_MAX_UP)
+        return false;
+
+    for (uint32 lastIndex = 2; lastIndex < pathPoints.size(); ++lastIndex)
+    {
+        G3D::Vector3 middle = (pathPoints[0] + pathPoints[lastIndex]) * 0.5f;
+        for (uint32 i = 1; i < lastIndex; ++i)
+        {
+            G3D::Vector3 offset = middle - pathPoints[i];
+            if (std::fabs(offset.x) > EQ_PATH_PACKET_MAX_ACROSS || std::fabs(offset.y) > EQ_PATH_PACKET_MAX_ACROSS || std::fabs(offset.z) > EQ_PATH_PACKET_MAX_UP)
+            {
+                pathPoints.resize(lastIndex);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end,
     Movement::PointsArray const& routeCorners, Movement::PointsArray& pathPoints)
 {
@@ -331,15 +457,26 @@ bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* sourc
     bool swims = unit ? unit->CanSwim() : false;
 
     // The corners to walk between: the route, or a straight line.  The route's own corner heights come from the navigation mesh, so
-    // they go back on the floor too
+    // they go back on the floor too.  Under water the mesh is the bottom, so a swimmer's corner keeps its depth instead, on the line between
+    // the trip's ends as it is between corners (otherwise it would dive to the bottom at the start of every long swim and come back up at
+    // the end)
     Movement::PointsArray corners;
     corners.push_back(start);
     if (routeCorners.size() > 2)
     {
+        float routeLength = 0.0f;
+        for (uint32 i = 1; i < routeCorners.size(); ++i)
+            routeLength += (routeCorners[i] - routeCorners[i - 1]).xy().length();
+        float lengthSoFar = 0.0f;
         for (uint32 i = 1; i + 1 < routeCorners.size(); ++i)
         {
             G3D::Vector3 corner = routeCorners[i];
-            corner.z = GetCornerGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
+            lengthSoFar += (routeCorners[i] - routeCorners[i - 1]).xy().length();
+            float surfaceZ = 0.0f;
+            if (swims && IsInLiquid(zoneMap, corner.x, corner.y, corner.z, surfaceZ))
+                corner.z = GetSwimCornerZ(zoneMap, corner, start.z + (end.z - start.z) * (routeLength > 0.001f ? lengthSoFar / routeLength : 0.0f), surfaceZ);
+            else
+                corner.z = GetCornerGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
             corners.push_back(corner);
         }
     }
@@ -356,5 +493,7 @@ bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* sourc
             break;
         }
     }
+    if (FitPathToMovePacket(pathPoints))
+        cutShort = true;
     return cutShort;
 }

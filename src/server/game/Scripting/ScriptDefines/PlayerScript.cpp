@@ -252,6 +252,16 @@ void ScriptMgr::OnPlayerCreate(Player* player)
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CREATE, script->OnPlayerCreate(player));
 }
 
+void ScriptMgr::OnPlayerCharFactionOrRaceChange(ObjectGuid guid, bool factionChange, std::vector<uint8> const& modData)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_FACTION_OR_RACE_CHANGE, script->OnPlayerCharFactionOrRaceChange(guid, factionChange, modData));
+}
+
+void ScriptMgr::OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPacket& data)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_ENUM, script->OnPlayerCharEnum(guids, data));
+}
+
 void ScriptMgr::OnPlayerSave(Player* player)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_SAVE, script->OnPlayerSave(player));
@@ -968,9 +978,25 @@ void ScriptMgr::OnPlayerGetReputationPriceDiscount(Player const* player, Faction
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_REPUTATION_PRICE_DISCOUNT, script->OnPlayerGetReputationPriceDiscount(player, factionTemplate, discount));
 }
 
+// MergedWorlds vendor prices
+void ScriptMgr::OnPlayerGetVendorItemBuyPrice(Player const* player, Creature const* vendor, ItemTemplate const* itemTemplate, uint32 count, uint32& price)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, script->OnPlayerGetVendorItemBuyPrice(player, vendor, itemTemplate, count, price));
+}
+
+void ScriptMgr::OnPlayerGetVendorItemSellPrice(Player const* player, Creature const* vendor, Item const* item, uint32& unitPrice)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE, script->OnPlayerGetVendorItemSellPrice(player, vendor, item, unitPrice));
+}
+
 void ScriptMgr::OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_LEARN_TAXI_NODE, script->OnPlayerLearnTaxiNode(player, nodeId));
+}
+
+void ScriptMgr::OnPlayerBeforeGetContentLevelsForXPGain(Unit const* victim, uint8& contentLevels)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_GET_CONTENT_LEVELS_FOR_XP_GAIN, script->OnPlayerBeforeGetContentLevelsForXPGain(victim, contentLevels));
 }
 
 void ScriptMgr::OnPlayerBeforeGetLevelForXPGain(Player const* player, uint8& level)

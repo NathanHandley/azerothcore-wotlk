@@ -338,6 +338,8 @@ public: /* PlayerScript */
     void OnPlayerLogout(Player* player);
     bool OnPlayerCanMarkAccountOffline(ObjectGuid guid, uint32 accountId);
     void OnPlayerCreate(Player* player);
+    void OnPlayerCharFactionOrRaceChange(ObjectGuid guid, bool factionChange, std::vector<uint8> const& modData);
+    void OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPacket& data);
     void OnPlayerSave(Player* player);
     void OnPlayerDelete(ObjectGuid guid, uint32 accountId);
     void OnPlayerFailedDelete(ObjectGuid guid, uint32 accountId);
@@ -478,8 +480,11 @@ public: /* PlayerScript */
     void OnPlayerSendListInventory(Player* player, ObjectGuid vendorGuid, uint32& vendorEntry);
     void OnPlayerGetReputationPriceDiscount(Player const* player, Creature const* creature, float& discount);
     void OnPlayerGetReputationPriceDiscount(Player const* player, FactionTemplateEntry const* factionTemplate, float& discount);
+    void OnPlayerGetVendorItemBuyPrice(Player const* player, Creature const* vendor, ItemTemplate const* itemTemplate, uint32 count, uint32& price); // MergedWorlds vendor prices
+    void OnPlayerGetVendorItemSellPrice(Player const* player, Creature const* vendor, Item const* item, uint32& unitPrice);
     void OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId);
     void OnPlayerBeforeGetLevelForXPGain(Player const* player, uint8& level);
+    void OnPlayerBeforeGetContentLevelsForXPGain(Unit const* victim, uint8& contentLevels);
     void OnPlayerAfterTakeItemFromMail(Player* player, Item* item, uint32 count);
     bool OnPlayerCanLearnSpell(Player* player, uint32 spellId);
     void OnPlayerBeforeReceiveSpellListFromTrainer(Player* player, Creature* trainer, WorldPackets::NPC::TrainerList& trainerList);
@@ -505,6 +510,7 @@ public: /* AccountScript */
     void OnPasswordChange(uint32 accountId);
     void OnFailedPasswordChange(uint32 accountId);
     bool CanAccountCreateCharacter(uint32 accountId, uint8 charRace, uint8 charClass);
+    bool CanAccountLoginWithClientDataVersion(uint32 accountId, AccountTypes security, uint32 clientDataVersion, uint32& expectedClientDataVersion);
 
 public: /* GuildScript */
     void OnGuildAddMember(Guild* guild, Player* player, uint8& plRank);

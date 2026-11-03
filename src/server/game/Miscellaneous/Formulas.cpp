@@ -70,6 +70,13 @@ uint32 Acore::XP::BaseGain(uint8 pl_level, uint8 mob_level, ContentLevels conten
     return baseGain;
 }
 
+ContentLevels Acore::XP::GetContentLevelsForKill(Unit const* victim)
+{
+    uint8 contentLevels = GetContentLevelsForMapAndZone(victim->GetMapId(), victim->GetZoneId());
+    sScriptMgr->OnPlayerBeforeGetContentLevelsForXPGain(victim, contentLevels);
+    return ContentLevels(contentLevels);
+}
+
 uint32 Acore::XP::Gain(Player* player, Unit* unit, bool isBattleGround /*= false*/)
 {
     Creature* creature = unit->ToCreature();
@@ -82,7 +89,7 @@ uint32 Acore::XP::Gain(Player* player, Unit* unit, bool isBattleGround /*= false
 
         uint8 playerLevel = player->GetLevel();
         sScriptMgr->OnPlayerBeforeGetLevelForXPGain(player, playerLevel);
-        gain = BaseGain(playerLevel, unit->GetLevel(), GetContentLevelsForMapAndZone(unit->GetMapId(), unit->GetZoneId()));
+        gain = BaseGain(playerLevel, unit->GetLevel(), GetContentLevelsForKill(unit));
 
         if (gain && creature)
         {

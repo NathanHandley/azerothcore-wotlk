@@ -32,6 +32,7 @@ enum AccountHook
     ACCOUNTHOOK_ON_PASSWORD_CHANGE,
     ACCOUNTHOOK_ON_FAILED_PASSWORD_CHANGE,
     ACCOUNTHOOK_CAN_ACCOUNT_CREATE_CHARACTER,
+    ACCOUNTHOOK_CAN_ACCOUNT_LOGIN_WITH_CLIENT_DATA_VERSION,
     ACCOUNTHOOK_END
 };
 
@@ -67,6 +68,10 @@ public:
 
     // Called when creating a character on the Account
     [[nodiscard]] virtual bool CanAccountCreateCharacter(uint32 /*accountId*/, uint8 /*charRace*/, uint8 /*charClass*/) { return true;}
+
+    // MergedWorlds: called while an account authenticates, before it has a session.  Return false to turn the client away, with the version it
+    // needed in expectedClientDataVersion.  This runs on a network thread, not the world thread
+    [[nodiscard]] virtual bool CanAccountLoginWithClientDataVersion(uint32 /*accountId*/, AccountTypes /*security*/, uint32 /*clientDataVersion*/, uint32& /*expectedClientDataVersion*/) { return true; }
 };
 
 #endif

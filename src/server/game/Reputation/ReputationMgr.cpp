@@ -458,6 +458,26 @@ bool ReputationMgr::SetOneFactionReputation(FactionEntry const* factionEntry, fl
     return false;
 }
 
+void ReputationMgr::OffsetStartingStanding(FactionEntry const* factionEntry, int32 offset)
+{
+    FactionStateList::iterator itr = _factions.find(factionEntry->reputationListID);
+    if (itr == _factions.end())
+        return;
+
+    int32 baseReputation = GetBaseReputation(factionEntry);
+    int32 standing = std::clamp(itr->second.Standing + baseReputation + offset, int32(Reputation_Bottom), int32(Reputation_Cap));
+    ReputationRank oldRank = ReputationToRank(itr->second.Standing + baseReputation);
+    ReputationRank newRank = ReputationToRank(standing);
+    itr->second.Standing = standing - baseReputation;
+    itr->second.needSend = true;
+    itr->second.needSave = true;
+    if (newRank <= REP_HOSTILE)
+        SetAtWar(&itr->second, true);
+    else if (oldRank <= REP_HOSTILE && factionEntry->CanBeSetAtWar())
+        SetAtWar(&itr->second, false);
+    UpdateRankCounters(oldRank, newRank);
+}
+
 void ReputationMgr::SetVisible(FactionTemplateEntry const* factionTemplateEntry)
 {
     if (!factionTemplateEntry->faction)
