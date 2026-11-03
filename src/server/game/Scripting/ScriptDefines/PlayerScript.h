@@ -250,6 +250,7 @@ enum PlayerHook
     PLAYERHOOK_CAN_LOSE_DURABILITY, // MergedWorlds
     PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
+    PLAYERHOOK_ON_GET_VENDOR_ITEM_PRICE, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1021,6 +1022,17 @@ public:
      * @return False to hold the swing (the script stops the attack itself, as an RO bow with no ammo does)
      */
     [[nodiscard]] virtual bool OnPlayerBeforeAutoAttack(Player* /*player*/, Unit* /*victim*/, float& /*extraRange*/, bool& /*hasOffhandAttack*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called as an item's price at a vendor is worked out, for the vendor's list and for buying it, after the reputation discount.
+     *
+     * @param player Contains information about the Player buying
+     * @param vendor Contains information about the vendor
+     * @param vendorEntry The vendor list being sold from (the session's current vendor list, else the vendor's own entry)
+     * @param itemID The item's entry
+     * @param price The price of one, to be read and changed (mod-cityofheroes's store markups)
+     */
+    virtual void OnPlayerGetVendorItemPrice(Player const* /*player*/, Creature const* /*vendor*/, uint32 /*vendorEntry*/, uint32 /*itemID*/, uint32& /*price*/) { }
 };
 
 #endif

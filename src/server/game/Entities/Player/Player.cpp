@@ -11062,6 +11062,11 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
         // reputation discount
         price = uint32(std::floor(price * GetReputationPriceDiscount(creature)));
 
+        // MergedWorlds: modules can change the price (mod-cityofheroes's store markups), for each one bought
+        uint32 unitPrice = price / count;
+        sScriptMgr->OnPlayerGetVendorItemPrice(this, creature, GetSession()->GetCurrentVendor() ? GetSession()->GetCurrentVendor() : creature->GetEntry(), pProto->ItemId, unitPrice);
+        price = unitPrice * count;
+
         if (!HasEnoughMoney(price))
         {
             SendBuyError(BUY_ERR_NOT_ENOUGHT_MONEY, creature, item, 0);

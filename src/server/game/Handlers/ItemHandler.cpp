@@ -963,6 +963,14 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
                 // reputation discount
                 int32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
 
+                // MergedWorlds: modules can change the price (mod-cityofheroes's store markups)
+                if (price > 0)
+                {
+                    uint32 modifiedPrice = uint32(price);
+                    sScriptMgr->OnPlayerGetVendorItemPrice(_player, vendor, vendorEntry ? vendorEntry : vendor->GetEntry(), item->item, modifiedPrice);
+                    price = int32(modifiedPrice);
+                }
+
                 data << uint32(slot + 1);       // client expects counting to start at 1
                 data << uint32(item->item);
                 data << uint32(itemTemplate->DisplayInfoID);

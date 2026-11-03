@@ -1024,6 +1024,11 @@ bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& ex
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));
 }
 
+void ScriptMgr::OnPlayerGetVendorItemPrice(Player const* player, Creature const* vendor, uint32 vendorEntry, uint32 itemID, uint32& price)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_PRICE, script->OnPlayerGetVendorItemPrice(player, vendor, vendorEntry, itemID, price));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {
