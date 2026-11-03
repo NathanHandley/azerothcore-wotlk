@@ -2647,7 +2647,17 @@ InventoryResult Player::CanUseItem(Item* pItem, bool not_loading) const
         LOG_DEBUG("entities.player.items", "STORAGE: CanUseItem item = {}", pItem->GetEntry());
 
         if (!IsAlive() && not_loading)
-            return EQUIP_ERR_YOU_ARE_DEAD;
+        {
+            // An item whose use spell may be cast dead is usable dead (MergedWorlds: City of Heroes' resurrection inspirations)
+            bool isUsableWhileDead = false;
+            if (ItemTemplate const* deadProto = pItem->GetTemplate())
+                for (uint8 spellIndex = 0; spellIndex < MAX_ITEM_PROTO_SPELLS; ++spellIndex)
+                    if (deadProto->Spells[spellIndex].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE && deadProto->Spells[spellIndex].SpellId > 0)
+                        if (SpellInfo const* deadSpellInfo = sSpellMgr->GetSpellInfo(deadProto->Spells[spellIndex].SpellId))
+                            isUsableWhileDead |= deadSpellInfo->HasAttribute(SPELL_ATTR0_ALLOW_CAST_WHILE_DEAD);
+            if (isUsableWhileDead == false)
+                return EQUIP_ERR_YOU_ARE_DEAD;
+        }
 
         //if (isStunned())
         //    return EQUIP_ERR_YOU_ARE_STUNNED;
