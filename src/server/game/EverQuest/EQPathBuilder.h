@@ -39,8 +39,8 @@ class EQPathBuilder
 {
 public:
     // The path from start to end, starting with start.  routeCorners is the route found by the navigation mesh between them (empty when
-    // there is none, or when a direct path should be tried first).  Returns true when the path got cut short (too many points), so the
-    // mover has to ask for the rest when it gets there
+    // there is none, or when a direct path should be tried first).  Returns true when the path got cut short (too many points, or too
+    // long to send, see FitPathToMovePacket), so the mover has to ask for the rest when it gets there
     static bool BuildPath(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end,
         Movement::PointsArray const& routeCorners, Movement::PointsArray& pathPoints);
 
@@ -62,11 +62,13 @@ private:
     static float SnapStepZ(EQZoneMap const* zoneMap, float x, float y, float previousZ, G3D::Vector3 const* reachFrom);
     static float SnapStepZOverGaps(EQZoneMap const* zoneMap, G3D::Vector3 const& previousStep, float x, float y, float nextX, float nextY);
     static float GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject const* source, float x, float y, float z);
+    static float GetSwimCornerZ(EQZoneMap const* zoneMap, G3D::Vector3 const& meshCorner, float swimZ, float surfaceZ);
     static bool IsOnFloor(EQZoneMap const* zoneMap, float x, float y, float z);
     static float GetStopFraction(G3D::Vector3 const& from, G3D::Vector3 const& to, float hitDistance);
     static void AddStepWithBends(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, uint32 depth, Movement::PointsArray& legPoints);
     static void AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G3D::Vector3 const& to, bool swims, Movement::PointsArray& pathPoints);
     static void SimplifyLeg(Movement::PointsArray const& legPoints, uint32 firstIndex, uint32 lastIndex, std::vector<bool>& keep);
+    static bool FitPathToMovePacket(Movement::PointsArray& pathPoints);
 };
 
 #endif

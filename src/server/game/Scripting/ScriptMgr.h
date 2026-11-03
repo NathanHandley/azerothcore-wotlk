@@ -478,6 +478,8 @@ public: /* PlayerScript */
     void OnPlayerSendListInventory(Player* player, ObjectGuid vendorGuid, uint32& vendorEntry);
     void OnPlayerGetReputationPriceDiscount(Player const* player, Creature const* creature, float& discount);
     void OnPlayerGetReputationPriceDiscount(Player const* player, FactionTemplateEntry const* factionTemplate, float& discount);
+    void OnPlayerGetVendorItemBuyPrice(Player const* player, Creature const* vendor, ItemTemplate const* itemTemplate, uint32 count, uint32& price); // MergedWorlds vendor prices
+    void OnPlayerGetVendorItemSellPrice(Player const* player, Creature const* vendor, Item const* item, uint32& unitPrice);
     void OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId);
     void OnPlayerBeforeGetLevelForXPGain(Player const* player, uint8& level);
     void OnPlayerAfterTakeItemFromMail(Player* player, Item* item, uint32 count);

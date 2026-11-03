@@ -11062,6 +11062,7 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorguid, uint32 vendorslot, uin
 
         // reputation discount
         price = uint32(std::floor(price * GetReputationPriceDiscount(creature)));
+        sScriptMgr->OnPlayerGetVendorItemBuyPrice(this, creature, pProto, count, price); // MergedWorlds vendor prices
 
         if (!HasEnoughMoney(price))
         {
