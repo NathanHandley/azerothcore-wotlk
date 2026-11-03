@@ -235,6 +235,8 @@ enum PlayerHook
     PLAYERHOOK_ON_BEFORE_RECEIVE_SPELL_LIST_FROM_TRAINER,
     PLAYERHOOK_ON_GET_TRAINER_SPELL_STATE,
     PLAYERHOOK_ON_AFTER_TRAIN_SPELL,
+    PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, // MergedWorlds vendor prices
+    PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE,
     PLAYERHOOK_END
 };
 
@@ -873,6 +875,28 @@ public:
      * @param discount Float value of the discount, as a multiplier of the base price
      */
     virtual void OnPlayerGetReputationPriceDiscount(Player const* /*player*/, FactionTemplateEntry const* /*factionTemplate*/, float& /*discount*/) {}
+
+    /**
+     * @brief MergedWorlds vendor prices: called for the gold price of a vendor item, both for the vendor's list and when buying it
+     *
+     * @param player Contains information about the Player
+     * @param vendor The vendor selling the item
+     * @param itemTemplate The item
+     * @param count How many of the item's buy stacks (itemTemplate->BuyCount each) the price is for
+     * @param price The price, after the reputation discount, which the hook can change
+     */
+    virtual void OnPlayerGetVendorItemBuyPrice(Player const* /*player*/, Creature const* /*vendor*/, ItemTemplate const* /*itemTemplate*/, uint32 /*count*/, uint32& /*price*/) {}
+
+    /**
+     * @brief MergedWorlds vendor prices: called for what a vendor pays for one of an item the player sells it (before a damaged item's repair cost
+     * comes off).  Only for an item with a sell price
+     *
+     * @param player Contains information about the Player
+     * @param vendor The vendor buying the item
+     * @param item The item
+     * @param unitPrice What the vendor pays for one, which the hook can change
+     */
+    virtual void OnPlayerGetVendorItemSellPrice(Player const* /*player*/, Creature const* /*vendor*/, Item const* /*item*/, uint32& /*unitPrice*/) {}
 
     /**
      * @brief This hook is called when a player learns a new flight path node.

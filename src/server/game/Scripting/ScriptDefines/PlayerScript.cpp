@@ -968,6 +968,17 @@ void ScriptMgr::OnPlayerGetReputationPriceDiscount(Player const* player, Faction
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_REPUTATION_PRICE_DISCOUNT, script->OnPlayerGetReputationPriceDiscount(player, factionTemplate, discount));
 }
 
+// MergedWorlds vendor prices
+void ScriptMgr::OnPlayerGetVendorItemBuyPrice(Player const* player, Creature const* vendor, ItemTemplate const* itemTemplate, uint32 count, uint32& price)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, script->OnPlayerGetVendorItemBuyPrice(player, vendor, itemTemplate, count, price));
+}
+
+void ScriptMgr::OnPlayerGetVendorItemSellPrice(Player const* player, Creature const* vendor, Item const* item, uint32& unitPrice)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE, script->OnPlayerGetVendorItemSellPrice(player, vendor, item, unitPrice));
+}
+
 void ScriptMgr::OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_LEARN_TAXI_NODE, script->OnPlayerLearnTaxiNode(player, nodeId));
