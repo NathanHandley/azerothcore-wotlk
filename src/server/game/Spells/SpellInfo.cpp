@@ -20,6 +20,7 @@
 #include "ConditionMgr.h"
 #include "Corpse.h"
 #include "DBCStores.h"
+#include "EQMovementHooks.h"
 #include "LootMgr.h"
 #include "Player.h"
 #include "ScriptMgr.h"
@@ -2838,6 +2839,10 @@ float SpellInfo::GetMaxRange(bool positive, WorldObject* caster, Spell* spell) c
         range = RangeEntry->RangeMax[0];
     if (Player* modOwner = caster ? caster->GetSpellModOwner() : nullptr)
         modOwner->ApplySpellMod(Id, SPELLMOD_RANGE, range, spell);
+    // MergedWorlds: mod-everquest's worn range focus corrects the range spell mod wherever it is applied, so target selection agrees with the cast's range check
+    if (EverQuestMovementHooks::SpellRangeModifier != nullptr && caster != nullptr)
+        if (Unit const* unitCaster = caster->ToUnit())
+            range = EverQuestMovementHooks::SpellRangeModifier(unitCaster, this, range);
     return range;
 }
 

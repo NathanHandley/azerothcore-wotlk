@@ -82,6 +82,7 @@ enum PlayerHook
     PLAYERHOOK_ON_CREATE,
     PLAYERHOOK_ON_CHAR_FACTION_OR_RACE_CHANGE,
     PLAYERHOOK_ON_CHAR_ENUM,
+    PLAYERHOOK_ON_CHAR_CUSTOMIZE,
     PLAYERHOOK_ON_DELETE,
     PLAYERHOOK_ON_FAILED_DELETE,
     PLAYERHOOK_ON_SAVE,
@@ -377,6 +378,9 @@ public:
 
     // Called with a finished character list packet and the characters in it, so a module can add to the end of the packet
     virtual void OnPlayerCharEnum(std::vector<ObjectGuid> const& /*guids*/, WorldPacket& /*data*/) { }
+
+    // Called once a paid appearance change has been committed, before the client hears of it, with the gender before and after.  The character isn't in the world.
+    virtual void OnPlayerCharCustomize(ObjectGuid /*guid*/, uint8 /*oldGender*/, uint8 /*newGender*/) { }
 
     // Called when a player is deleted.
     virtual void OnPlayerDelete(ObjectGuid /*guid*/, uint32 /*accountId*/) { }

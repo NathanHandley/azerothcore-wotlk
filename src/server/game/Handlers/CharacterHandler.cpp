@@ -1783,7 +1783,7 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<CharacterCustomiz
     std::string oldName = fields[0].Get<std::string>();
     //uint8 plrRace = fields[1].Get<uint8>();
     //uint8 plrClass = fields[2].Get<uint8>();
-    //uint8 plrGender = fields[3].Get<uint8>();
+    uint8 plrGender = fields[3].Get<uint8>();
     uint32 atLoginFlags = fields[4].Get<uint16>();
 
     if (!(atLoginFlags & AT_LOGIN_CUSTOMIZE))
@@ -1850,6 +1850,9 @@ void WorldSession::HandleCharCustomizeCallback(std::shared_ptr<CharacterCustomiz
     CharacterDatabase.CommitTransaction(trans);
 
     sCharacterCache->UpdateCharacterData(customizeInfo->Guid, customizeInfo->Name, customizeInfo->Gender);
+
+    // MergedWorlds: modules keep looks of their own that depend on the gender
+    sScriptMgr->OnPlayerCharCustomize(customizeInfo->Guid, plrGender, customizeInfo->Gender);
 
     SendCharCustomize(RESPONSE_SUCCESS, customizeInfo.get());
 

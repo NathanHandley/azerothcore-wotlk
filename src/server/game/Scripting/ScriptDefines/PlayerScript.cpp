@@ -262,6 +262,11 @@ void ScriptMgr::OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPack
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_ENUM, script->OnPlayerCharEnum(guids, data));
 }
 
+void ScriptMgr::OnPlayerCharCustomize(ObjectGuid guid, uint8 oldGender, uint8 newGender)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CHAR_CUSTOMIZE, script->OnPlayerCharCustomize(guid, oldGender, newGender));
+}
+
 void ScriptMgr::OnPlayerSave(Player* player)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_SAVE, script->OnPlayerSave(player));

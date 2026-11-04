@@ -3507,6 +3507,10 @@ bool Spell::UpdateChanneledTargetList()
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, range, this);
 
+        // MergedWorlds: the worn range focus correction, as in CheckRange and SpellInfo::GetMaxRange
+        if (EverQuestMovementHooks::SpellRangeModifier != nullptr && m_caster->ToUnit() != nullptr)
+            range = EverQuestMovementHooks::SpellRangeModifier(m_caster->ToUnit(), m_spellInfo, range);
+
         // xinef: add little tolerance level
         range += std::min(3.0f, range * 0.1f); // 10% but no more than 3yd
     }
@@ -5752,9 +5756,6 @@ void Spell::TakeReagents()
     if (p_caster->CanNoReagentCast(m_spellInfo))
         return;
 
-    if (EverQuestMovementHooks::SpellReagentSaver != nullptr && EverQuestMovementHooks::SpellReagentSaver(this) == true)
-        return;
-
     for (uint32 x = 0; x < MAX_SPELL_REAGENTS; ++x)
     {
         if (m_spellInfo->Reagent[x] <= 0)
@@ -5762,6 +5763,15 @@ void Spell::TakeReagents()
 
         uint32 itemid = m_spellInfo->Reagent[x];
         uint32 itemcount = m_spellInfo->ReagentCount[x];
+
+        // MergedWorlds: a worn reagent focus rolls for each unit of a reagent.  A reagent that is also the cast item is always taken, so the cast item's own
+        // handling below is unchanged
+        if (EverQuestMovementHooks::SpellReagentSaver != nullptr && (!castItemTemplate || castItemTemplate->ItemId != itemid))
+        {
+            itemcount -= std::min(itemcount, EverQuestMovementHooks::SpellReagentSaver(this, itemid, itemcount));
+            if (itemcount == 0)
+                continue;
+        }
 
         // if CastItem is also spell reagent
         if (castItemTemplate && castItemTemplate->ItemId == itemid)
@@ -6219,8 +6229,10 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* /*param1*/, uint32* /*para
     }
 
     // not let players cast spells at mount (and let do it to creatures)
+    // MergedWorlds: an EQ horse's rider can cast, but not another mount on top of the horse
     if (unitCaster && unitCaster->IsMounted() && unitCaster->IsPlayer() && !HasTriggeredCastFlag(TRIGGERED_IGNORE_CASTER_MOUNTED_OR_ON_VEHICLE) &&
-            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) && EQMount::IsRidingEQHorse(unitCaster) == false)
+            !m_spellInfo->IsPassive() && !m_spellInfo->HasAttribute(SPELL_ATTR0_ALLOW_WHILE_MOUNTED) &&
+            (EQMount::IsRidingEQHorse(unitCaster) == false || m_spellInfo->HasAura(SPELL_AURA_MOUNTED)))
     {
         if (unitCaster->IsInFlight())
             return SPELL_FAILED_NOT_ON_TAXI;

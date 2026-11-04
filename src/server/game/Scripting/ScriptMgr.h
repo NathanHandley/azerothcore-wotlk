@@ -340,6 +340,7 @@ public: /* PlayerScript */
     void OnPlayerCreate(Player* player);
     void OnPlayerCharFactionOrRaceChange(ObjectGuid guid, bool factionChange, std::vector<uint8> const& modData);
     void OnPlayerCharEnum(std::vector<ObjectGuid> const& guids, WorldPacket& data);
+    void OnPlayerCharCustomize(ObjectGuid guid, uint8 oldGender, uint8 newGender);
     void OnPlayerSave(Player* player);
     void OnPlayerDelete(ObjectGuid guid, uint32 accountId);
     void OnPlayerFailedDelete(ObjectGuid guid, uint32 accountId);

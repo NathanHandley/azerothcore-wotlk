@@ -19,14 +19,16 @@
 #include "EQMount.h"
 #include "EQZoneMap.h"
 #include "SpellAuraEffects.h"
+#include "SpellInfo.h"
 #include "Unit.h"
 
 bool EQMount::IsRidingEQHorse(Unit const* unit)
 {
     if (unit == nullptr || unit->HasAuraType(SPELL_AURA_MOUNTED) == false || sEQZoneMapMgr->IsEverQuestMap(unit->GetMapId()) == false)
         return false;
+    // The marker has to be on the horse's own spell, so that some other dummy aura with the same misc value can't make a WoW mount count
     for (AuraEffect const* dummyEffect : unit->GetAuraEffectsByType(SPELL_AURA_DUMMY))
-        if (dummyEffect->GetMiscValue() == DUMMY_MISC_VALUE)
+        if (dummyEffect->GetMiscValue() == DUMMY_MISC_VALUE && dummyEffect->GetSpellInfo()->HasAura(SPELL_AURA_MOUNTED))
             return true;
     return false;
 }

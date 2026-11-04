@@ -23,12 +23,15 @@
 
 class Creature;
 class MovementGenerator;
+class Pet;
 class Spell;
 class SpellInfo;
 class Unit;
 
 // MergedWorlds: lets mod-everquest give creatures on EverQuest maps their EverQuest idle movement (grids and roam boxes), which it keeps the
-// data for.  Only consulted for creatures on EverQuest maps (maps with an EQ zone map)
+// data for.  Only consulted for creatures on EverQuest maps (maps with an EQ zone map).
+// The spell and pet hooks below aren't movement, but they're the same kind of function pointer the module fills in at load, and a header of
+// their own would move every core call site for no change in what they do
 namespace EverQuestMovementHooks
 {
     // Returns a new idle movement generator for the creature, or nullptr to use the creature's normal one
@@ -41,12 +44,14 @@ namespace EverQuestMovementHooks
 
     AC_GAME_API extern SpellPowerCostModifierFunction SpellPowerCostModifier;
 
-    // Lets mod-everquest save a spell's reagents, for worn focus effects.  True keeps them
-    typedef bool (*SpellReagentSaverFunction)(Spell const* spell);
+    // Lets mod-everquest save some of a spell's reagents, for worn focus effects.  Asked once for each reagent the spell names, with that reagent's item and
+    // the count the spell takes of it.  Returns how many of them to keep (more than the count keeps them all)
+    typedef uint32 (*SpellReagentSaverFunction)(Spell const* spell, uint32 itemID, uint32 itemCount);
 
     AC_GAME_API extern SpellReagentSaverFunction SpellReagentSaver;
 
-    // Lets mod-everquest change a spell's range after spell mods, for worn focus effects.  Returns the new range
+    // Lets mod-everquest change a spell's range after spell mods, for worn focus effects.  Returns the new range.  Asked wherever the core applies the
+    // range spell mod for a caster (Spell::CheckRange, the channel range, SpellInfo::GetMaxRange)
     typedef float (*SpellRangeModifierFunction)(Unit const* caster, SpellInfo const* spellInfo, float range);
 
     AC_GAME_API extern SpellRangeModifierFunction SpellRangeModifier;
@@ -55,6 +60,12 @@ namespace EverQuestMovementHooks
     typedef float (*SpellThreatModifierFunction)(Unit const* caster, SpellInfo const* spellInfo, float threat);
 
     AC_GAME_API extern SpellThreatModifierFunction SpellThreatModifier;
+
+    // Asked when a pet being loaded has no valid spot beside its owner.  True has the pet come in at the owner.  Unset, or false, leaves the core's
+    // own handling (the pet isn't loaded)
+    typedef bool (*PetLoadAtOwnerSelectorFunction)(Pet const* pet);
+
+    AC_GAME_API extern PetLoadAtOwnerSelectorFunction PetLoadAtOwnerSelector;
 }
 
 #endif

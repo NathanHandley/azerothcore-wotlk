@@ -16,6 +16,7 @@
  */
 
 #include "Pet.h"
+#include "EQMovementHooks.h"
 #include "AreaDefines.h"
 #include "ArenaSpectator.h"
 #include "CharmInfo.h"
@@ -339,16 +340,16 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     owner->GetClosePoint(px, py, pz, GetCombatReach(), PET_FOLLOW_DIST, GetFollowAngle());
     Relocate(px, py, pz, owner->GetOrientation());
 
-    // A hovering owner over a spot with no ground reads a far-off height, so the pet comes in at the owner rather than being lost
-    if (!IsPositionValid())
+    // MergedWorlds: a hovering owner over a spot with no ground reads a far-off height.  mod-everquest can have the pet come in at the owner rather
+    // than being lost, for its own pets on a Luclin server.  The owner's own position is in the world, so such a pet always passes the check below.
+    // Every other pet is left to the stock handling
+    if (!IsPositionValid() && EverQuestMovementHooks::PetLoadAtOwnerSelector != nullptr && EverQuestMovementHooks::PetLoadAtOwnerSelector(this))
         Relocate(owner->GetPositionX(), owner->GetPositionY(), owner->GetPositionZ(), owner->GetOrientation());
 
     if (!IsPositionValid())
     {
-        LOG_ERROR("entities.pet", "Pet {} not loaded. Suggested coordinates isn't valid (X: {} Y: {} Z: {})",
-            GetGUID().ToString(), GetPositionX(), GetPositionY(), GetPositionZ());
-        // InitStatsForLevel can land auras through script hooks, and a unit can't be deleted holding any
-        RemoveAllAuras();
+        LOG_ERROR("entities.pet", "Pet {} not loaded. Suggested coordinates isn't valid (X: {} Y: {})",
+            GetGUID().ToString(), GetPositionX(), GetPositionY());
         return false;
     }
 
