@@ -73,6 +73,12 @@ void ScriptMgr::OnSpellCalcPowerCost(Spell* spell, int32& powerCost)
 }
 
 // MergedWorlds
+void ScriptMgr::OnSpellModifyRange(WorldObject const* caster, SpellInfo const* spellInfo, float& range)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_MODIFY_RANGE, script->OnSpellModifyRange(caster, spellInfo, range));
+}
+
+// MergedWorlds
 void ScriptMgr::OnSpellCalcCastTime(Spell* spell, int32& castTime)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_CALC_CAST_TIME, script->OnSpellCalcCastTime(spell, castTime));

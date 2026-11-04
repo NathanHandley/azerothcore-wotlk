@@ -2838,6 +2838,8 @@ float SpellInfo::GetMaxRange(bool positive, WorldObject* caster, Spell* spell) c
         range = RangeEntry->RangeMax[0];
     if (Player* modOwner = caster ? caster->GetSpellModOwner() : nullptr)
         modOwner->ApplySpellMod(Id, SPELLMOD_RANGE, range, spell);
+    if (caster)
+        sScriptMgr->OnSpellModifyRange(caster, this, range); // MergedWorlds
     return range;
 }
 

@@ -45,6 +45,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_DISPEL_SELECTION, // MergedWorlds
     ALLSPELLHOOK_ON_CALC_CAST_TIME, // MergedWorlds
     ALLSPELLHOOK_ON_CALC_POWER_COST, // MergedWorlds
+    ALLSPELLHOOK_ON_MODIFY_RANGE, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -87,6 +88,10 @@ public:
     // MergedWorlds: a spell's power cost was just worked out (Spell::prepare, before the first CheckCast), and can be replaced (mod-cityofheroes's
     // enhancements: Endurance Reduction divides a power's cost)
     virtual void OnSpellCalcPowerCost(Spell* /*spell*/, int32& /*powerCost*/) { }
+
+    // MergedWorlds: a spell's most range was just worked out for a caster, after its spell mods (the cast's range checks and SpellInfo::GetMaxRange with a
+    // caster), and can be changed (mod-cityofheroes's Range enhancements and set bonuses)
+    virtual void OnSpellModifyRange(WorldObject const* /*caster*/, SpellInfo const* /*spellInfo*/, float& /*range*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 

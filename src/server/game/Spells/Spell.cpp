@@ -3504,6 +3504,7 @@ bool Spell::UpdateChanneledTargetList()
 
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, range, this);
+        sScriptMgr->OnSpellModifyRange(m_caster, m_spellInfo, range); // MergedWorlds
 
         // xinef: add little tolerance level
         range += std::min(3.0f, range * 0.1f); // 10% but no more than 3yd
@@ -7370,6 +7371,7 @@ SpellCastResult Spell::CheckRange(bool strict)
 
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, max_range, this);
+    sScriptMgr->OnSpellModifyRange(m_caster, m_spellInfo, max_range); // MergedWorlds
 
     // xinef: dont check max_range to strictly after cast
     if (range_type != SPELL_RANGE_MELEE && !strict)
