@@ -41,6 +41,13 @@
 #include "mpq_libmpq04.h"
 #include "wdtfile.h"
 #include "wmo.h"
+#include "model.h"
+#include <G3D/Matrix3.h>
+#include <G3D/Quat.h>
+#include <G3D/Vector3.h>
+#include <cctype>
+#include <unordered_map>
+#include <unordered_set>
 
 //------------------------------------------------------------------------------
 // Defines
@@ -140,6 +147,124 @@ void strToLower(char* str)
     }
 }
 
+// MergedWorlds: a City of Heroes mission piece is placed as a game object, and a game object's collision is its WMO's groups alone (a WMO's doodads only collide where
+// a map places the WMO).  A mission map's piece has its props as doodads of its WMO, so their collision goes in with its groups: each doodad of its first set, its
+// model's collision moved where the WMO puts it, in groups of at most 65535 vertices.  Only those pieces, so a stock game object's collision stays as it was
+static bool IsCoHMissionPieceWmo(std::string const& name)
+{
+    std::string lowerName = name;
+    for (char& c : lowerName)
+        c = c == '/' ? '\\' : static_cast<char>(tolower(static_cast<unsigned char>(c)));
+    return lowerName.rfind("world\\wmo\\cityofheroes\\coh_p_", 0) == 0;
+}
+
+struct DoodadCollision
+{
+    std::vector<G3D::Vector3> Vertices; // The model's own axes
+    std::vector<uint16> Indices; // Wound as a WMO group's are
+};
+static std::unordered_map<std::string, DoodadCollision> DoodadCollisionsByPath; // The extractor runs on one thread
+
+static DoodadCollision const& GetDoodadCollision(std::string path)
+{
+    std::size_t length = path.length();
+    if (length > 3 && (path.compare(length - 4, 4, ".mdx") == 0 || path.compare(length - 4, 4, ".MDX") == 0 || path.compare(length - 4, 4, ".mdl") == 0
+        || path.compare(length - 4, 4, ".MDL") == 0))
+        path.replace(length - 2, 2, "2");
+    auto collisionIter = DoodadCollisionsByPath.find(path);
+    if (collisionIter != DoodadCollisionsByPath.end())
+        return collisionIter->second;
+    DoodadCollision& collision = DoodadCollisionsByPath[path];
+    Model model(path);
+    if (model.open())
+    {
+        // open() turns the vertices to (x, z, -y), and a model's triangles face the other way from a WMO group's only once ConvertToVMAPModel swaps them
+        collision.Vertices.reserve(model.header.nBoundingVertices);
+        for (uint32 i = 0; i < model.header.nBoundingVertices; ++i)
+            collision.Vertices.emplace_back(model.vertices[i].x, -model.vertices[i].z, model.vertices[i].y);
+        collision.Indices.assign(model.indices, model.indices + model.header.nBoundingTriangles - model.header.nBoundingTriangles % 3);
+    }
+    return collision;
+}
+
+static void WriteDoodadCollisionGroup(std::vector<G3D::Vector3> const& vertices, std::vector<uint16> const& indices, FILE* output)
+{
+    G3D::Vector3 boundsMin = vertices[0];
+    G3D::Vector3 boundsMax = vertices[0];
+    for (G3D::Vector3 const& vertex : vertices)
+    {
+        boundsMin = boundsMin.min(vertex);
+        boundsMax = boundsMax.max(vertex);
+    }
+    uint32 zero = 0;
+    fwrite(&zero, sizeof(uint32), 1, output); // mogpflags
+    fwrite(&zero, sizeof(uint32), 1, output); // group WMO ID
+    fwrite(&boundsMin, sizeof(float), 3, output);
+    fwrite(&boundsMax, sizeof(float), 3, output);
+    fwrite(&zero, sizeof(uint32), 1, output); // liquid flags
+    uint32 indexCount = uint32(indices.size());
+    uint32 vertexCount = uint32(vertices.size());
+    uint32 branchCount = 1;
+    int blockSize = sizeof(uint32) * 2;
+    fwrite("GRP ", 4, 1, output);
+    fwrite(&blockSize, sizeof(int), 1, output);
+    fwrite(&branchCount, sizeof(uint32), 1, output);
+    fwrite(&indexCount, sizeof(uint32), 1, output);
+    blockSize = int(sizeof(uint32) + sizeof(uint16) * indexCount);
+    fwrite("INDX", 4, 1, output);
+    fwrite(&blockSize, sizeof(int), 1, output);
+    fwrite(&indexCount, sizeof(uint32), 1, output);
+    fwrite(indices.data(), sizeof(uint16), indexCount, output);
+    blockSize = int(sizeof(uint32) + sizeof(float) * 3 * vertexCount);
+    fwrite("VERT", 4, 1, output);
+    fwrite(&blockSize, sizeof(int), 1, output);
+    fwrite(&vertexCount, sizeof(uint32), 1, output);
+    for (G3D::Vector3 const& vertex : vertices)
+        fwrite(&vertex, sizeof(float), 3, output);
+}
+
+// Gives back how many groups were written, and adds their triangles to triangleCount
+static uint32 WriteDoodadCollisionGroups(WMODoodadData const& doodads, std::unordered_set<uint32> const& validDoodadNames, FILE* output, int& triangleCount)
+{
+    if (doodads.Sets.empty() || !doodads.Paths)
+        return 0;
+    WMO::MODS const& doodadSet = doodads.Sets[0];
+    std::vector<G3D::Vector3> vertices;
+    std::vector<uint16> indices;
+    uint32 groupCount = 0;
+    for (std::size_t spawnIndex = doodadSet.StartIndex; spawnIndex < std::size_t(doodadSet.StartIndex) + doodadSet.Count && spawnIndex < doodads.Spawns.size(); ++spawnIndex)
+    {
+        WMO::MODD const& spawn = doodads.Spawns[spawnIndex];
+        if (validDoodadNames.find(spawn.NameIndex) == validDoodadNames.end())
+            continue;
+        DoodadCollision const& collision = GetDoodadCollision(&doodads.Paths[spawn.NameIndex]);
+        if (collision.Indices.empty() || collision.Vertices.size() > 65535)
+            continue;
+        if (vertices.size() + collision.Vertices.size() > 65535)
+        {
+            WriteDoodadCollisionGroup(vertices, indices, output);
+            triangleCount += int(indices.size() / 3);
+            ++groupCount;
+            vertices.clear();
+            indices.clear();
+        }
+        G3D::Matrix3 rotation = G3D::Quat(spawn.Rotation.X, spawn.Rotation.Y, spawn.Rotation.Z, spawn.Rotation.W).toRotationMatrix();
+        G3D::Vector3 position(spawn.Position.x, spawn.Position.y, spawn.Position.z);
+        uint16 firstVertex = uint16(vertices.size());
+        for (G3D::Vector3 const& vertex : collision.Vertices)
+            vertices.push_back(position + rotation * (vertex * spawn.Scale));
+        for (uint16 index : collision.Indices)
+            indices.push_back(uint16(firstVertex + index));
+    }
+    if (!indices.empty())
+    {
+        WriteDoodadCollisionGroup(vertices, indices, output);
+        triangleCount += int(indices.size() / 3);
+        ++groupCount;
+    }
+    return groupCount;
+}
+
 static bool ExtractWmoFile(std::string& fname, std::string const& originalName, char* plain_name, char const* szLocalFile)
 {
     if (FileExists(szLocalFile))
@@ -225,6 +350,8 @@ static bool ExtractWmoFile(std::string& fname, std::string const& originalName, 
             }
         }
     }
+    if (file_ok && IsCoHMissionPieceWmo(originalName))
+        groupCount += WriteDoodadCollisionGroups(doodads, froot.ValidDoodadNames, output, Wmo_nVertices);
 
     fseek(output, 8, SEEK_SET); // store the correct no of vertices
     fwrite(&Wmo_nVertices, sizeof(int), 1, output);
