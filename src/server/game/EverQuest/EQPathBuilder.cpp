@@ -62,6 +62,7 @@ EverQuestMovementHooks::SpellReagentSaverFunction EverQuestMovementHooks::SpellR
 EverQuestMovementHooks::SpellRangeModifierFunction EverQuestMovementHooks::SpellRangeModifier = nullptr;
 EverQuestMovementHooks::SpellThreatModifierFunction EverQuestMovementHooks::SpellThreatModifier = nullptr;
 EverQuestMovementHooks::PetLoadAtOwnerSelectorFunction EverQuestMovementHooks::PetLoadAtOwnerSelector = nullptr;
+EverQuestMovementHooks::SpellInstaKillHandlerFunction EverQuestMovementHooks::SpellInstaKillHandler = nullptr;
 
 bool EQPathBuilder::CanFly(WorldObject const* source)
 {

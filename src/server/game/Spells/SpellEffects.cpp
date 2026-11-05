@@ -24,6 +24,7 @@
 #include "Common.h"
 #include "Creature.h"
 #include "DynamicObject.h"
+#include "EQMovementHooks.h"
 #include "Formulas.h"
 #include "GameObject.h"
 #include "GameObjectAI.h"
@@ -282,6 +283,10 @@ void Spell::EffectInstaKill(SpellEffIndex /*effIndex*/)
         return;
 
     if (!unitTarget || !unitTarget->IsAlive() || unitTarget->HasAura(27827)) // Spirit of redemption doesn't make you death, but can cause infinite loops
+        return;
+
+    // MergedWorlds: EverQuest's Destroy removes its target rather than killing it, and the module carries that out
+    if (EverQuestMovementHooks::SpellInstaKillHandler != nullptr && EverQuestMovementHooks::SpellInstaKillHandler(this, unitTarget) == true)
         return;
 
     if (unitTarget->IsPlayer())

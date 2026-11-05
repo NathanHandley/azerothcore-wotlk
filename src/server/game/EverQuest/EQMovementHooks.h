@@ -66,6 +66,12 @@ namespace EverQuestMovementHooks
     typedef bool (*PetLoadAtOwnerSelectorFunction)(Pet const* pet);
 
     AC_GAME_API extern PetLoadAtOwnerSelectorFunction PetLoadAtOwnerSelector;
+
+    // Asked as an instant kill effect hits a living target, so that mod-everquest can carry out EverQuest's Destroy (which removes the target instead).  True
+    // means the module dealt with the hit and the core does nothing more.  Unset, or false, leaves the core's own instant kill
+    typedef bool (*SpellInstaKillHandlerFunction)(Spell* spell, Unit* target);
+
+    AC_GAME_API extern SpellInstaKillHandlerFunction SpellInstaKillHandler;
 }
 
 #endif
