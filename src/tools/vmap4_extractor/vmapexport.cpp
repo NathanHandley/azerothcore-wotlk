@@ -284,7 +284,8 @@ static bool ExtractWmoFile(std::string& fname, std::string const& originalName, 
         }
     }
 
-    if (p == 3)
+    // MergedWorlds: a group file's name ends in "_" and exactly three digits ("_000.wmo"); a root's can have more ("COH_mz_v_winter_2010.wmo")
+    if (p == 3 && rchr[4] == '.')
         return true;
 
     bool file_ok = true;
