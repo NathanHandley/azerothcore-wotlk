@@ -967,6 +967,10 @@ uint32 InstanceSaveMgr::PlayerGetDestinationInstanceId(Player* player, uint32 ma
     InstancePlayerBind* ipb = PlayerGetBoundInstance(player->GetGUID(), mapid, difficulty);
     if (ipb && ipb->perm) // 1. self perm
         return ipb->save->GetInstanceId();
+    // MergedWorlds: a script's choice (an instance that still has its save, else a new one)
+    uint32 scriptInstanceId = 0;
+    if (!sScriptMgr->OnPlayerGetDestinationInstanceId(player, mapid, difficulty, scriptInstanceId))
+        return scriptInstanceId != 0 && GetInstanceSave(scriptInstanceId) ? scriptInstanceId : 0;
     if (Group* g = player->GetGroup())
     {
         if (InstancePlayerBind* ilb = PlayerGetBoundInstance(g->GetLeaderGUID(), mapid, difficulty)) // 2. leader temp/perm

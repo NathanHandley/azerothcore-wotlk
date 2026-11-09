@@ -1039,6 +1039,11 @@ void ScriptMgr::OnPlayerGetVendorItemPrice(Player const* player, Creature const*
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_PRICE, script->OnPlayerGetVendorItemPrice(player, vendor, vendorEntry, itemID, price));
 }
 
+bool ScriptMgr::OnPlayerGetDestinationInstanceId(Player* player, uint32 mapId, Difficulty difficulty, uint32& instanceId)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_DESTINATION_INSTANCE_ID, !script->OnPlayerGetDestinationInstanceId(player, mapId, difficulty, instanceId));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {

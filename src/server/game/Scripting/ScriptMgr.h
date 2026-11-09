@@ -492,6 +492,7 @@ public: /* PlayerScript */
     bool OnPlayerCanAutoRelease(Player* player); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
     void OnPlayerGetVendorItemPrice(Player const* player, Creature const* vendor, uint32 vendorEntry, uint32 itemID, uint32& price); // MergedWorlds
+    bool OnPlayerGetDestinationInstanceId(Player* player, uint32 mapId, Difficulty difficulty, uint32& instanceId); // MergedWorlds
 
     // Anti cheat
     void AnticheatSetCanFlybyServer(Player* player, bool apply);

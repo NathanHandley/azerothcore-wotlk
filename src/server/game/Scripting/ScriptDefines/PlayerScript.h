@@ -253,6 +253,7 @@ enum PlayerHook
     PLAYERHOOK_ON_GET_VENDOR_ITEM_PRICE, // MergedWorlds
     PLAYERHOOK_CAN_USE_CLASS_ABILITIES, // MergedWorlds
     PLAYERHOOK_CAN_AUTO_RELEASE, // MergedWorlds
+    PLAYERHOOK_ON_GET_DESTINATION_INSTANCE_ID, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1051,6 +1052,17 @@ public:
      * @param price The price of one, to be read and changed (mod-cityofheroes's store markups)
      */
     virtual void OnPlayerGetVendorItemPrice(Player const* /*player*/, Creature const* /*vendor*/, uint32 /*vendorEntry*/, uint32 /*itemID*/, uint32& /*price*/) { }
+
+    /**
+     * @brief MergedWorlds: asked which instance of a dungeon map a player going there is put in, after its own permanent bind and before its group leader's bind.
+     *
+     * @param player Contains information about the Player going there
+     * @param mapId The map it goes to
+     * @param difficulty The difficulty it goes at
+     * @param instanceId The instance chosen, to be set (0: a new one)
+     * @return False when the script chose (a City of Heroes mission's instance is its owner's, whoever leads the group)
+     */
+    [[nodiscard]] virtual bool OnPlayerGetDestinationInstanceId(Player* /*player*/, uint32 /*mapId*/, Difficulty /*difficulty*/, uint32& /*instanceId*/) { return true; }
 };
 
 #endif
