@@ -92,13 +92,16 @@ enum SpellFamilyFlag
     SPELLFAMILYFLAG_SHAMAN_TOTEM_EFFECTS    = 0x04000000,  // Seems to be linked to most totems and some totem effects
 };
 
-#define SPELL_LINKED_MAX_SPELLS  200000
+// MergedWorlds: the linked spell map keeps a hit link at the spell's ID plus this and an aura link at twice it, so it must be above every spell ID.
+// It was 200000, and the converted spells go past that (City of Heroes powers from 260000): a CoH power's cast took an EverQuest spell's hit
+// links (the Stamina auto power 295552 cast Insipid Decay's (95552) stun on its user, stopping whatever it was casting)
+#define SPELL_LINKED_MAX_SPELLS  10000000
 
 enum SpellLinkedType
 {
     SPELL_LINK_CAST     = 0,            // +: cast; -: remove
-    SPELL_LINK_HIT      = 1 * 200000,
-    SPELL_LINK_AURA     = 2 * 200000,   // +: aura; -: immune
+    SPELL_LINK_HIT      = 1 * SPELL_LINKED_MAX_SPELLS,
+    SPELL_LINK_AURA     = 2 * SPELL_LINKED_MAX_SPELLS,   // +: aura; -: immune
     SPELL_LINK_REMOVE   = 0,
 };
 
