@@ -3525,6 +3525,10 @@ void Creature::UpdateMovementFlags()
     if (m_movedByPlayer)
         return;
 
+    // MergedWorlds: nor while a script flies it (SetScriptFlight)
+    if (m_isScriptFlight)
+        return;
+
     CreatureTemplate const* info = GetCreatureTemplate();
     if (!info)
         return;

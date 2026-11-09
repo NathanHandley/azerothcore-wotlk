@@ -174,6 +174,10 @@ public:
     [[nodiscard]] bool HasSpell(uint32 spellID) const override;
 
     void UpdateMovementFlags();
+    // MergedWorlds: a script that flies the creature now and then (a City of Heroes villain taking to the air at a flying foe, CoH aiSetFlying) owns its fly
+    // flags while this is on: UpdateMovementFlags leaves them as the script set them, rather than the movement template's (a ground walker's would drop them)
+    void SetScriptFlight(bool enable) { m_isScriptFlight = enable; }
+    [[nodiscard]] bool IsScriptFlight() const { return m_isScriptFlight; }
     uint32 GetRandomId(uint32 id1, uint32 id2, uint32 id3);
     bool UpdateEntry(uint32 entry, CreatureData const* data = nullptr, bool changelevel = true, bool updateAI = false);
     bool UpdateEntry(uint32 entry, bool updateAI) { return UpdateEntry(entry, nullptr, true, updateAI); }
@@ -512,6 +516,7 @@ protected:
     Position m_homePosition;
     Position m_transportHomePosition;
     Position LastMovementFlagsPos; // where UpdateMovementFlags() last ran while wandering (swim/fly flag refresh cadence)
+    bool m_isScriptFlight = false; // MergedWorlds: SetScriptFlight
 
     bool DisableReputationReward;
     bool DisableLootReward;

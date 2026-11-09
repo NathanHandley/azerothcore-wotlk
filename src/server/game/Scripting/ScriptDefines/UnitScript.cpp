@@ -149,6 +149,16 @@ void ScriptMgr::OnUnitUpdateSpeed(Unit* unit, uint8 moveType, float& speed) // M
     CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_UPDATE_SPEED, script->OnUnitUpdateSpeed(unit, moveType, speed));
 }
 
+bool ScriptMgr::IfNormalPlayerReaction(Player const* selfPlayer, Player const* targetPlayer, ReputationRank& repRank) // MergedWorlds
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_IF_NORMAL_PLAYER_REACTION, !script->IfNormalPlayerReaction(selfPlayer, targetPlayer, repRank));
+}
+
+bool ScriptMgr::IfNormalAttackTarget(Unit const* attacker, Unit const* target, SpellInfo const* bySpell, bool& isValid) // MergedWorlds
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_IF_NORMAL_ATTACK_TARGET, !script->IfNormalAttackTarget(attacker, target, bySpell, isValid));
+}
+
 UnitScript::UnitScript(char const* name, bool addToScripts, std::vector<uint16> enabledHooks)
     : ScriptObject(name, UNITHOOK_END)
 {

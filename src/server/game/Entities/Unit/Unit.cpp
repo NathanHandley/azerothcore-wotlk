@@ -6915,6 +6915,11 @@ ReputationRank Unit::GetReactionTo(Unit const* target, bool checkOriginalFaction
                 if (selfPlayerOwner->duel && selfPlayerOwner->duel->Opponent == targetPlayerOwner && selfPlayerOwner->duel->State == DUEL_STATE_IN_PROGRESS)
                     return REP_HOSTILE;
 
+                // MergedWorlds: a script's own rule between two players (City of Heroes: a confused hero's teammates are its foes)
+                ReputationRank playerRank = REP_FRIENDLY;
+                if (!sScriptMgr->IfNormalPlayerReaction(selfPlayerOwner, targetPlayerOwner, playerRank))
+                    return playerRank;
+
                 // same group - checks dependant only on our faction - skip FFA_PVP for example
                 if (selfPlayerOwner->IsInRaidWith(targetPlayerOwner))
                     return REP_FRIENDLY; // return true to allow config option AllowTwoSide.Interaction.Group to work
@@ -10567,6 +10572,11 @@ bool Unit::_IsValidAttackTarget(Unit const* target, SpellInfo const* bySpell, Wo
             // check if this is a world trigger cast - GOs are using world triggers to cast their spells, so we need to ignore their immunity flag here, this is a temp workaround, needs removal when go cast is implemented properly
             || ((GetEntry() != WORLD_TRIGGER && (!obj || !obj->isType(TYPEMASK_GAMEOBJECT | TYPEMASK_DYNAMICOBJECT))) && target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) && IsImmuneToPC()))
         return false;
+
+    // MergedWorlds: a script's own rule (City of Heroes: a confused hero may attack its teammates, who stay friendly to it)
+    bool isValidByScript = false;
+    if (!sScriptMgr->IfNormalAttackTarget(this, target, bySpell, isValidByScript))
+        return isValidByScript;
 
     // CvC case - can attack each other only when one of them is hostile
     if (!HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED) && !target->HasUnitFlag(UNIT_FLAG_PLAYER_CONTROLLED))

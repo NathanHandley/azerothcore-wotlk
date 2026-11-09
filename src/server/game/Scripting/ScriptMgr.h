@@ -595,6 +595,8 @@ public: /* UnitScript */
     void OnUnitSetShapeshiftForm(Unit* unit, uint8 form);
     bool OnCalculateMeleeDamage(Unit* attacker, Unit* victim, CalcDamageInfo* damageInfo); // MergedWorlds
     void OnUnitUpdateSpeed(Unit* unit, uint8 moveType, float& speed); // MergedWorlds
+    bool IfNormalPlayerReaction(Player const* selfPlayer, Player const* targetPlayer, ReputationRank& repRank); // MergedWorlds
+    bool IfNormalAttackTarget(Unit const* attacker, Unit const* target, SpellInfo const* bySpell, bool& isValid); // MergedWorlds
 
 public: /* MovementHandlerScript */
     void OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 opcode);

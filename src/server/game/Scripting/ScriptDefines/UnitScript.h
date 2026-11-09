@@ -46,11 +46,14 @@ enum UnitHook
     UNITHOOK_ON_UNIT_SET_SHAPESHIFT_FORM,
     UNITHOOK_ON_CALCULATE_MELEE_DAMAGE, // MergedWorlds
     UNITHOOK_ON_UNIT_UPDATE_SPEED, // MergedWorlds
+    UNITHOOK_IF_NORMAL_PLAYER_REACTION, // MergedWorlds
+    UNITHOOK_IF_NORMAL_ATTACK_TARGET, // MergedWorlds
     UNITHOOK_END
 };
 
 enum ReputationRank : uint8;
 class ByteBuffer;
+class SpellInfo;
 struct CalcDamageInfo;
 struct BuildValuesCachePosPointers;
 
@@ -134,6 +137,28 @@ public:
      * walk speed rules, like mod-rowow's RO statuses)
      */
     virtual void OnUnitUpdateSpeed(Unit* /*unit*/, uint8 /*moveType*/, float& /*speed*/) { }
+
+    /**
+     * @brief MergedWorlds: asked in Unit::GetReactionTo between two players' units (or their pets) of different players, before the core's own rules
+     * (the group's friendliness, PvP).
+     *
+     * @param selfPlayer The player whose unit reacts
+     * @param targetPlayer The player whose unit it reacts to
+     * @param repRank Set by a script that decides (City of Heroes: a confused hero's teammates are its foes)
+     * @return false when the script decided (repRank is the reaction), true to leave it to the core
+     */
+    [[nodiscard]] virtual bool IfNormalPlayerReaction(Player const* /*selfPlayer*/, Player const* /*targetPlayer*/, ReputationRank& /*repRank*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: asked in Unit::_IsValidAttackTarget once the unit flags allow the attack, before the reactions and PvP rules.
+     *
+     * @param attacker The unit attacking
+     * @param target The unit attacked
+     * @param bySpell The spell attacking, if any
+     * @param isValid Set by a script that decides (City of Heroes: a confused hero may attack its teammates, who stay friendly to it)
+     * @return false when the script decided (isValid is the answer), true to leave it to the core
+     */
+    [[nodiscard]] virtual bool IfNormalAttackTarget(Unit const* /*attacker*/, Unit const* /*target*/, SpellInfo const* /*bySpell*/, bool& /*isValid*/) { return true; }
 };
 
 #endif
