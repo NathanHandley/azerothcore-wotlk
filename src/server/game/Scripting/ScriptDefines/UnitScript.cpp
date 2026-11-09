@@ -159,6 +159,16 @@ bool ScriptMgr::IfNormalAttackTarget(Unit const* attacker, Unit const* target, S
     CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_IF_NORMAL_ATTACK_TARGET, !script->IfNormalAttackTarget(attacker, target, bySpell, isValid));
 }
 
+bool ScriptMgr::IfNormalAssistTarget(Unit const* assister, Unit const* target, SpellInfo const* bySpell, bool& isValid) // MergedWorlds
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(UnitScript, UNITHOOK_IF_NORMAL_ASSIST_TARGET, !script->IfNormalAssistTarget(assister, target, bySpell, isValid));
+}
+
+void ScriptMgr::OnUnitKnockBack(Unit* target, Spell* spell, uint8 effIndex, float& speedXY, float& speedZ) // MergedWorlds
+{
+    CALL_ENABLED_HOOKS(UnitScript, UNITHOOK_ON_UNIT_KNOCK_BACK, script->OnUnitKnockBack(target, spell, effIndex, speedXY, speedZ));
+}
+
 UnitScript::UnitScript(char const* name, bool addToScripts, std::vector<uint16> enabledHooks)
     : ScriptObject(name, UNITHOOK_END)
 {

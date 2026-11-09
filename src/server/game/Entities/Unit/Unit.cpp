@@ -10718,6 +10718,11 @@ bool Unit::_IsValidAssistTarget(Unit const* target, SpellInfo const* bySpell) co
         }
     }
 
+    // MergedWorlds: a script's own rule (City of Heroes: a confused hero's friend powers reach anyone, villains too)
+    bool isValidByScript = false;
+    if (!sScriptMgr->IfNormalAssistTarget(this, target, bySpell, isValidByScript))
+        return isValidByScript;
+
     // can't assist non-friendly targets
     if (GetReactionTo(target) < REP_NEUTRAL
             && target->GetReactionTo(this) < REP_NEUTRAL

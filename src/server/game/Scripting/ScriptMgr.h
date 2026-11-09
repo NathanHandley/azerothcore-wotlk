@@ -597,6 +597,8 @@ public: /* UnitScript */
     void OnUnitUpdateSpeed(Unit* unit, uint8 moveType, float& speed); // MergedWorlds
     bool IfNormalPlayerReaction(Player const* selfPlayer, Player const* targetPlayer, ReputationRank& repRank); // MergedWorlds
     bool IfNormalAttackTarget(Unit const* attacker, Unit const* target, SpellInfo const* bySpell, bool& isValid); // MergedWorlds
+    void OnUnitKnockBack(Unit* target, Spell* spell, uint8 effIndex, float& speedXY, float& speedZ); // MergedWorlds
+    bool IfNormalAssistTarget(Unit const* assister, Unit const* target, SpellInfo const* bySpell, bool& isValid); // MergedWorlds
 
 public: /* MovementHandlerScript */
     void OnPlayerMove(Player* player, MovementInfo movementInfo, uint32 opcode);

@@ -48,11 +48,14 @@ enum UnitHook
     UNITHOOK_ON_UNIT_UPDATE_SPEED, // MergedWorlds
     UNITHOOK_IF_NORMAL_PLAYER_REACTION, // MergedWorlds
     UNITHOOK_IF_NORMAL_ATTACK_TARGET, // MergedWorlds
+    UNITHOOK_ON_UNIT_KNOCK_BACK, // MergedWorlds
+    UNITHOOK_IF_NORMAL_ASSIST_TARGET, // MergedWorlds
     UNITHOOK_END
 };
 
 enum ReputationRank : uint8;
 class ByteBuffer;
+class Spell;
 class SpellInfo;
 struct CalcDamageInfo;
 struct BuildValuesCachePosPointers;
@@ -159,6 +162,29 @@ public:
      * @return false when the script decided (isValid is the answer), true to leave it to the core
      */
     [[nodiscard]] virtual bool IfNormalAttackTarget(Unit const* /*attacker*/, Unit const* /*target*/, SpellInfo const* /*bySpell*/, bool& /*isValid*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called in Spell::EffectKnockBack with the speeds the spell's effect gives, before the unit is knocked.
+     *
+     * @param target The unit knocked
+     * @param spell The spell knocking it
+     * @param effIndex The knockback effect
+     * @param speedXY The horizontal speed (yards a second), which a script may change (City of Heroes: the knock's own magnitude on this target)
+     * @param speedZ The vertical speed (yards a second), likewise
+     */
+    virtual void OnUnitKnockBack(Unit* /*target*/, Spell* /*spell*/, uint8 /*effIndex*/, float& /*speedXY*/, float& /*speedZ*/) { }
+
+    /**
+     * @brief MergedWorlds: asked in Unit::_IsValidAssistTarget once the target's own flags (unattackable, untargetable, immune) allow it, before the
+     * reactions and PvP rules.
+     *
+     * @param assister The unit helping
+     * @param target The unit helped
+     * @param bySpell The spell helping, if any
+     * @param isValid Set by a script that decides (City of Heroes: a confused hero's friend powers reach anyone, villains too)
+     * @return false when the script decided (isValid is the answer), true to leave it to the core
+     */
+    [[nodiscard]] virtual bool IfNormalAssistTarget(Unit const* /*assister*/, Unit const* /*target*/, SpellInfo const* /*bySpell*/, bool& /*isValid*/) { return true; }
 };
 
 #endif

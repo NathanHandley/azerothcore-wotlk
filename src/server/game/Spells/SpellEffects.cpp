@@ -5273,6 +5273,8 @@ void Spell::EffectKnockBack(SpellEffIndex effIndex)
     float ratio = 0.1f;
     float speedxy = float(m_spellInfo->Effects[effIndex].MiscValue) * ratio;
     float speedz = float(damage) * ratio;
+    // MergedWorlds: a script may set the speeds (City of Heroes: CoH's knock height and distance from the knock's magnitude on this target)
+    sScriptMgr->OnUnitKnockBack(unitTarget, this, uint8(effIndex), speedxy, speedz);
     if (speedxy <= 0.1f && speedz <= 0.1f)
         return;
 
