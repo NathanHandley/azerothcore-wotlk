@@ -1260,6 +1260,18 @@ void WorldSession::HandlePlayerLoginToCharInWorld(Player* pCurrChar)
             pCurrChar->m_movementInfo.RemoveMovementFlag(MOVEMENTFLAG_CAN_FLY);
     }
 
+    // MergedWorlds: the movement keys the old client held went with it.  A client that dropped mid-run left FORWARD (or a strafe, turn,
+    // pitch, ascent) in the character's movement, which the new client was given with itself: its unit kept running in place with no key
+    // held (a CoH hero's run cycle) until a move start and stop cleared it.  The others see it stop too
+    uint32 const heldKeyFlags = MOVEMENTFLAG_FORWARD | MOVEMENTFLAG_BACKWARD | MOVEMENTFLAG_STRAFE_LEFT | MOVEMENTFLAG_STRAFE_RIGHT |
+        MOVEMENTFLAG_LEFT | MOVEMENTFLAG_RIGHT | MOVEMENTFLAG_PITCH_UP | MOVEMENTFLAG_PITCH_DOWN | MOVEMENTFLAG_ASCENDING | MOVEMENTFLAG_DESCENDING;
+    if (pCurrChar->m_movementInfo.HasMovementFlag(heldKeyFlags))
+    {
+        pCurrChar->m_movementInfo.RemoveMovementFlag(heldKeyFlags);
+        if (!pCurrChar->IsRooted())
+            pCurrChar->SendMovementFlagUpdate();
+    }
+
     pCurrChar->SendInitialPacketsBeforeAddToMap();
 
     // necessary actions from AddPlayerToMap:
