@@ -448,6 +448,9 @@ public:
     uint8 GetBillingPlanFlags() const;
 
     bool PlayerLoading() const { return m_playerLoading; }
+    // MergedWorlds live profile swap: Player::ReloadProfileFromDB runs the login loaders on a character that is already in the world, and they
+    // only behave as they do at login (nothing they add is marked as needing a save) while this is set.  Nothing else may set it
+    void SetPlayerLoadingForProfileSwap(bool loading) { m_playerLoading = loading; }
     bool PlayerLogout() const { return m_playerLogout; }
     bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
     bool PlayerLogoutWithSave() const { return m_playerLogout && m_playerSave; }

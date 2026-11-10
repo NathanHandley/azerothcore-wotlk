@@ -41,8 +41,10 @@
 #include "TradeData.h"
 #include "Unit.h"
 #include "WorldSession.h"
+#include <memory>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 struct CreatureTemplate;
@@ -1648,6 +1650,17 @@ public:
     bool LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& holder);
     [[nodiscard]] bool isBeingLoaded() const override;
 
+    // MergedWorlds live profile swap: a module that keeps several profiles for one character (level, spells, talents, glyphs, skills, action
+    // bars, auras, quests, worn equipment, pets) swaps them in the database, then has the character in the world take the new one on without a
+    // relog.  The order is: PrepareForProfileSwap, SaveToDB and the module's own statements in one transaction, wait for that to commit, read
+    // the holder from CreateProfileSwapQueryHolder, ReloadProfileFromDB, whatever the module itself does at login, then FinishProfileSwap.
+    // See PlayerStorage.cpp
+    void PrepareForProfileSwap();
+    static std::shared_ptr<CharacterDatabaseQueryHolder> CreateProfileSwapQueryHolder(ObjectGuid guid);
+    bool ReloadProfileFromDB(CharacterDatabaseQueryHolder const& holder, std::unordered_set<uint32> const& keptAuraSpellIds);
+    void FinishProfileSwap();
+    [[nodiscard]] bool IsProfileSwapReloading() const { return _profileSwapReloading; }
+
     void Initialize(ObjectGuid::LowType guid);
     static uint32 GetZoneIdFromDB(ObjectGuid guid);
     static bool   LoadPositionFromDB(uint32& mapid, float& x, float& y, float& z, float& o, bool& in_flight, ObjectGuid::LowType guid);
@@ -2836,9 +2849,14 @@ protected:
     /*********************************************************/
 
     void _LoadActions(PreparedQueryResult result);
-    void _LoadAuras(PreparedQueryResult result, uint32 timediff);
+    void _LoadAuras(PreparedQueryResult result, uint32 timediff, std::unordered_set<uint32> const* skipSpellIds = nullptr);
     void _LoadGlyphAuras();
     void _LoadInventory(PreparedQueryResult result, uint32 timeDiff);
+    // MergedWorlds live profile swap
+    void _UnloadProfileSwapItems();
+    void _UnloadProfileSwapAuras(std::unordered_set<uint32> const& keptAuraSpellIds);
+    void _LoadProfileSwapItems(PreparedQueryResult result);
+    static bool IsProfileSwapItemSlot(uint8 slot) { return slot < EQUIPMENT_SLOT_END || slot == LIGHT_SOURCE_SLOT; }
     void _LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff);
     bool _CreateAccountBankVaults();
     void _LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mailItemsResult);
@@ -3100,6 +3118,8 @@ private:
     float  m_lastFallZ;
 
     int32 m_MirrorTimer[MAX_TIMERS];
+    bool _profileSwapReloading = false;   // MergedWorlds live profile swap: the spellbook is sent whole afterwards, so nothing is sent per spell
+    bool _profileSwapSaveBlocked = false; // MergedWorlds live profile swap: the database is ahead of this object, which must not be written over it
     float _mapArrivalMovementLeft = 0.0f; // MergedWorlds EQ levitation
     uint32 _ignoredArrivalTriggerID = 0;  // MergedWorlds EQ levitation
     uint8 m_MirrorTimerFlags;

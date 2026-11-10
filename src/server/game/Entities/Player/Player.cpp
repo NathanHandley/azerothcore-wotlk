@@ -3143,6 +3143,10 @@ void Player::_addTalentAurasAndSpells(uint32 spellId)
 
 void Player::SendLearnPacket(uint32 spellId, bool learn)
 {
+    // MergedWorlds live profile swap: the whole spellbook follows in one packet
+    if (_profileSwapReloading)
+        return;
+
     if (learn)
     {
         WorldPacket data(SMSG_LEARNED_SPELL, 6);
@@ -3185,7 +3189,7 @@ bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool
                     if (!isBeingLoaded() && IsUnlearnNeededForSpell(spellId))
                         SendUnlearnSpells();
 
-                    if (IsInWorld())
+                    if (IsInWorld() && !_profileSwapReloading) // MergedWorlds live profile swap: the whole spellbook follows in one packet
                     {
                         WorldPacket data(SMSG_SUPERCEDED_SPELL, 4 + 4);
                         data << uint32(nextSpellInfo->Id);
