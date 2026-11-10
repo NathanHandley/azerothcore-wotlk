@@ -679,7 +679,9 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
         {
             if (pProto->SellPrice > 0)
             {
-                uint32 money = pProto->SellPrice * packet.Count;
+                uint32 unitPrice = pProto->SellPrice;
+                sScriptMgr->OnPlayerGetVendorItemSellPrice(_player, creature, pItem, unitPrice); // MergedWorlds vendor prices
+                uint32 money = unitPrice * packet.Count;
                 if (_player->GetMoney() >= MAX_MONEY_AMOUNT - money)               // prevent exceeding gold limit
                 {
                     _player->SendEquipError(EQUIP_ERR_TOO_MUCH_GOLD, nullptr, nullptr);
@@ -969,7 +971,9 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
                 }
 
                 // reputation discount
-                int32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
+                uint32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
+                if (price > 0) // MergedWorlds vendor prices
+                    sScriptMgr->OnPlayerGetVendorItemBuyPrice(_player, vendor, itemTemplate, 1, price);
 
                 data << uint32(slot + 1);       // client expects counting to start at 1
                 data << uint32(item->item);
