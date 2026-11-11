@@ -268,7 +268,9 @@ bool GameObjectModel::UpdatePosition()
     }
 
     iPos = owner->GetPosition();
-    G3D::Matrix3 iRotation = G3D::Matrix3::fromEulerAnglesZYX(owner->GetOrientation(), 0, 0);
+    G3D::Matrix3 iRotation;
+    if (!owner->GetRotation(iRotation))
+        iRotation = G3D::Matrix3::fromEulerAnglesZYX(owner->GetOrientation(), 0, 0);
     iInvRot = iRotation.inverse();
 
     // transform bounding box:

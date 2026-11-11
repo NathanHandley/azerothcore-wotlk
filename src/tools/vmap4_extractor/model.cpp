@@ -263,10 +263,14 @@ void Doodad::ExtractSet(WMODoodadData const& doodadData, ADT::MODF const& wmo, u
 
         G3D::Vector3 position = wmoPosition + (wmoRotation * G3D::Vector3(doodad.Position.x, doodad.Position.y, doodad.Position.z));
 
+        // MergedWorlds: the doodad turned inside the WMO, then the WMO's turn (as its position is), and the angles in the order the readers put
+        // them back together (ModelInstance and TileAssembler: fromEulerAnglesZYX(y, x, z); mmaps_generator's TerrainBuilder the same as a row
+        // vector transform).  The doodad's turn after the WMO's and the angles taken apart as XYZ left a doodad turned about more than one axis
+        // turned another way than the client draws it (a yaw alone is the same either way): City of Heroes' tilted rocks stood across a cave
+        // tunnel the client keeps open
         Vec3D rotation;
-        (G3D::Quat(doodad.Rotation.X, doodad.Rotation.Y, doodad.Rotation.Z, doodad.Rotation.W)
-            .toRotationMatrix() * wmoRotation)
-            .toEulerAnglesXYZ(rotation.z, rotation.x, rotation.y);
+        (wmoRotation * G3D::Quat(doodad.Rotation.X, doodad.Rotation.Y, doodad.Rotation.Z, doodad.Rotation.W).toRotationMatrix())
+            .toEulerAnglesZYX(rotation.y, rotation.x, rotation.z);
 
         rotation.z = G3D::toDegrees(rotation.z);
         rotation.x = G3D::toDegrees(rotation.x);
