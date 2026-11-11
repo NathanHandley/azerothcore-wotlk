@@ -134,8 +134,10 @@ namespace lfg
             player->RemoveAurasDueToSpell(LFG_SPELL_LUCK_OF_THE_DRAW);
 
             // Xinef: Destroy group if only one player is left
+            // MergedWorlds: only a dungeon finder group (one left after its dungeon).  Any group of one went at every map change: a City of Heroes trial's
+            // league of one (a raid of its runner alone) was gone as its runner went into the trial
             if (Group* group = player->GetGroup())
-                if (group->GetMembersCount() <= 1u)
+                if (group->isLFGGroup() && group->GetMembersCount() <= 1u)
                     group->Disband();
         }
     }
