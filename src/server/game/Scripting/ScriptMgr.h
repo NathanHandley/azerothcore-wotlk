@@ -52,6 +52,7 @@ class ChatHandler;
 class Creature;
 class CreatureAI;
 class DynamicObject;
+class Corpse;
 class GameObject;
 class GameObjectAI;
 class GridMap;
@@ -760,6 +761,7 @@ public: /* WorldObjectScript */
     void OnWorldObjectSetMap(WorldObject* object, Map* map);
     void OnWorldObjectResetMap(WorldObject* object);
     void OnWorldObjectUpdate(WorldObject* object, uint32 diff);
+    void OnCorpseBuildValuesUpdateField(Corpse const* corpse, Player const* target, uint16 index, uint32& value); // MergedWorlds
 
 public: /* PetScript */
 

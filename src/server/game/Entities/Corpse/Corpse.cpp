@@ -24,6 +24,7 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "UpdateMask.h"
 #include "World.h"
 
@@ -256,6 +257,14 @@ void Corpse::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* targe
                 {
                     fieldBuffer << m_uint32Values[index];
                 }
+            }
+            // MergedWorlds optional content: what the corpse looks like may differ for the player it's sent to (one without a game's content
+            // isn't sent that game's models: mod-rowow)
+            else if (index == CORPSE_FIELD_DISPLAY_ID || (index >= CORPSE_FIELD_ITEM && index < CORPSE_FIELD_ITEM + EQUIPMENT_SLOT_END))
+            {
+                uint32 value = m_uint32Values[index];
+                sScriptMgr->OnCorpseBuildValuesUpdateField(this, target, index, value);
+                fieldBuffer << value;
             }
             else
             {
