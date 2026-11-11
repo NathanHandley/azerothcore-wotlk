@@ -133,7 +133,7 @@ bool GameObjectModel::initialize(std::unique_ptr<GameObjectModelOwnerBase> model
     iInvScale = 1.f / iScale;
 
     G3D::Matrix3 iRotation;
-    if (!modelOwner->GetRotation(iRotation))
+    if (!modelOwner->GetRotation(iRotation, it->second.isWmo))
         iRotation = G3D::Matrix3::fromEulerAnglesZYX(modelOwner->GetOrientation(), 0, 0);
     iInvRot = iRotation.inverse();
     // transform bounding box:
@@ -269,7 +269,7 @@ bool GameObjectModel::UpdatePosition()
 
     iPos = owner->GetPosition();
     G3D::Matrix3 iRotation;
-    if (!owner->GetRotation(iRotation))
+    if (!owner->GetRotation(iRotation, it->second.isWmo))
         iRotation = G3D::Matrix3::fromEulerAnglesZYX(owner->GetOrientation(), 0, 0);
     iInvRot = iRotation.inverse();
 

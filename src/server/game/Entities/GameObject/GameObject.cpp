@@ -3038,6 +3038,26 @@ public:
     float GetScale() const override { return _owner->GetObjectScale(); }
     void DebugVisualizeCorner(G3D::Vector3 const& corner) const override { const_cast<GameObject*>(_owner)->SummonCreature(1, corner.x, corner.y, corner.z, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 10000); }
 
+    // MergedWorlds: the turn the client draws the model with, which is its rotation, not the orientation column.  A game object's WMO (not a transport's, nor a
+    // trap door's) is drawn turned by the rotation's heading alone, level whatever its tilt (CGGameObject_C::CreateWorldObject: CWorld::ObjectCreate with
+    // GetFacing(), the heading of the quaternion; CMapObjDef::UpdatePos turns it about up only), and an M2 by the whole rotation (UpdateWorldObject: Translate,
+    // Rotate(quaternion), Scale).  The two agree with the orientation in WoW's own data; City of Heroes pieces keep their facing there, a half turn from their
+    // model's heading, and some are tilted (Pocket D's Winter Event snow: the server's floor was a half turn and a tilt off the snow the client stands on)
+    bool GetRotation(G3D::Matrix3& rotation, bool isWmo) const override
+    {
+        if (_owner->IsTransport())
+            return false;
+        G3D::Quat quat = _owner->GetWorldRotation();
+        if (isWmo && _owner->GetGoType() != GAMEOBJECT_TYPE_TRAPDOOR)
+        {
+            float heading = std::atan2(2.0f * (quat.w * quat.z + quat.x * quat.y), 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z));
+            rotation = G3D::Matrix3::fromEulerAnglesZYX(heading, 0.0f, 0.0f);
+        }
+        else
+            rotation = quat.toRotationMatrix();
+        return true;
+    }
+
 private:
     GameObject* _owner;
 };

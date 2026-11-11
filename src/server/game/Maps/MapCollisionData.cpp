@@ -73,7 +73,7 @@ namespace
         float GetOrientation() const override { return 0.0f; }
         float GetScale() const override { return 1.0f; }
         void DebugVisualizeCorner(G3D::Vector3 const& /*corner*/) const override { }
-        bool GetRotation(G3D::Matrix3& rotation) const override
+        bool GetRotation(G3D::Matrix3& rotation, bool /*isWmo*/) const override
         {
             rotation = _piece.Rotation;
             return true;

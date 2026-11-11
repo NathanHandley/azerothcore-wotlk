@@ -50,8 +50,9 @@ public:
     [[nodiscard]] virtual float GetScale() const = 0;
     virtual void DebugVisualizeCorner(G3D::Vector3 const& /*corner*/) const = 0;
 
-    // MergedWorlds: a model turned every way, not only about its up axis (world = rotation * model + position).  False uses the orientation
-    virtual bool GetRotation(G3D::Matrix3& /*rotation*/) const { return false; }
+    // MergedWorlds: a model turned every way, not only about its up axis (world = rotation * model + position).  False uses the orientation.  isWmo: the model is a
+    // WMO (the client draws a game object's WMO and its M2 differently: GameObject.cpp's owner)
+    virtual bool GetRotation(G3D::Matrix3& /*rotation*/, bool /*isWmo*/) const { return false; }
 };
 
 class GameObjectModel
