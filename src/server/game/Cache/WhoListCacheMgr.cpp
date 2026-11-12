@@ -19,6 +19,7 @@
 #include "AreaDefines.h"
 #include "GuildMgr.h"
 #include "ObjectAccessor.h"
+#include "ScriptMgr.h"
 #include "World.h"
 #include "WorldSessionMgr.h"
 
@@ -55,9 +56,17 @@ void WhoListCacheMgr::Update()
 
         wstrToLower(wideGuildName);
 
+        uint32 zoneId = (player->IsSpectator() ? AREA_DALARAN : player->GetZoneId());
+
+        // MergedWorlds: the world the player is in and its classes there, from the game modules
+        WhoListWorldInfo worldInfo;
+        worldInfo.ZoneID = zoneId;
+        if (player->IsSpectator() == false)
+            sScriptMgr->OnPlayerWhoListInfo(player, worldInfo);
+
         _whoListStorage.emplace_back(player->GetGUID(), player->GetTeamId(), player->GetSession()->GetSecurity(), player->GetLevel(),
             player->getClass(), player->getRace(),
-            (player->IsSpectator() ? AREA_DALARAN : player->GetZoneId()), player->getGender(), player->IsVisible(),
-            widePlayerName, wideGuildName, playerName, guildName);
+            zoneId, player->getGender(), player->IsVisible(),
+            widePlayerName, wideGuildName, playerName, guildName, worldInfo);
     }
 }

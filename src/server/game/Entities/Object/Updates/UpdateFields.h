@@ -323,7 +323,9 @@ enum EUnitFields
     PLAYER_VISIBLE_ITEM_19_ENCHANTMENT        = UNIT_END + 0x00AC, // Size: 1, Type: TWO_SHORT, Flags: PUBLIC
     PLAYER_CHOSEN_TITLE                       = UNIT_END + 0x00AD, // Size: 1, Type: INT, Flags: PUBLIC
     PLAYER_FAKE_INEBRIATION                   = UNIT_END + 0x00AE, // Size: 1, Type: INT, Flags: PUBLIC
-    PLAYER_FIELD_PAD_0                        = UNIT_END + 0x00AF, // Size: 1, Type: INT, Flags: NONE
+    PLAYER_FIELD_MW_RO_JOB                    = UNIT_END + 0x00AF, // Size: 1, Type: INT, Flags: PUBLIC.  MergedWorlds: was PLAYER_FIELD_PAD_0 (NONE, unused); a player's
+                                                                   // Ragnarok Online job + 1 while it's in the RO form, 0 otherwise (set by mod-rowow), which every
+                                                                   // client that sees the player gets as it does the class (the client's UnitRagnarokJob)
     PLAYER_FIELD_INV_SLOT_HEAD                = UNIT_END + 0x00B0, // Size: 46, Type: LONG, Flags: PRIVATE
     PLAYER_FIELD_PACK_SLOT_1                  = UNIT_END + 0x00DE, // Size: 32, Type: LONG, Flags: PRIVATE
     PLAYER_FIELD_BANK_SLOT_1                  = UNIT_END + 0x00FE, // Size: 56, Type: LONG, Flags: PRIVATE
