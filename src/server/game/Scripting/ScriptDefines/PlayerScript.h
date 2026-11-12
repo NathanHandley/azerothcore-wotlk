@@ -46,6 +46,7 @@ struct PlayerSaveValues
     uint32 Money = 0;
     uint32 Health = 0;
     uint32 Powers[MAX_POWERS] = { };
+    bool IsInventorySaved = true; // False for the money alone (Player::SaveGoldToDB outside SaveInventoryAndGoldToDB)
 };
 
 enum PlayerHook
@@ -250,6 +251,16 @@ enum PlayerHook
     PLAYERHOOK_CAN_LOSE_DURABILITY, // MergedWorlds
     PLAYERHOOK_CAN_REGENERATE, // MergedWorlds
     PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, // MergedWorlds
+    PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, // MergedWorlds
+    PLAYERHOOK_CAN_BANK_ITEM, // MergedWorlds
+    PLAYERHOOK_CAN_BUY_BANK_SLOT, // MergedWorlds
+    PLAYERHOOK_ON_BANK_CURRENCY_TEXT, // MergedWorlds
+    PLAYERHOOK_CAN_GUILD_BANK_ITEM, // MergedWorlds
+    PLAYERHOOK_SELL_ITEM_MONEY, // MergedWorlds
+    PLAYERHOOK_CAN_BUYBACK_ITEM, // MergedWorlds
+    PLAYERHOOK_CAN_USE_CLASS_ABILITIES, // MergedWorlds
+    PLAYERHOOK_CAN_AUTO_RELEASE, // MergedWorlds
+    PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, // MergedWorlds
     PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, // MergedWorlds vendor prices
     PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE,
     PLAYERHOOK_END
@@ -1028,12 +1039,102 @@ public:
     [[nodiscard]] virtual bool OnPlayerCanLoseDurability(Player* /*player*/) { return true; }
 
     /**
+     * @brief MergedWorlds: called when a player lands from a fall long enough to hurt.
+     *
+     * @param player Contains information about the Player
+     * @return False to take no fall damage (a game identity form whose game has no falling)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanTakeFallDamage(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called when a player moves an item to a bank tab, and for what a bag carries.
+     *
+     * @param player Contains information about the Player
+     * @param item The item going there
+     * @param world The tab's world (WorldBankWorld).  WORLD_BANK_ACCOUNT for the Character and Account tabs, and for a bag going to a bag slot of a world's
+     *              tab, which takes a general bag of any game.  A module sees what such a bag holds, item by item, with the tab's world
+     * @param result Starts as EQUIP_ERR_OK on those.  On a world's tab it starts refused, and only the world's module sets EQUIP_ERR_OK
+     */
+    virtual void OnPlayerCanBankItem(Player* /*player*/, Item const* /*item*/, uint8 /*world*/, InventoryResult& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called when a bank window opens, and when a player buys a bank bag slot on any tab.
+     *
+     * @param player Contains information about the Player
+     * @param result Starts true.  False refuses the purchase and hides every purchase panel while that window is open.  A game's form can't change with
+     *               the bank open: leaving a form changes map, which closes it
+     */
+    virtual void OnPlayerCanBuyBankSlot(Player* /*player*/, bool& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called for the text in the bank window's corner, in place of the money, while a world's tab shows.
+     *
+     * @param player Contains information about the Player
+     * @param world The tab's world (WorldBankWorld).  Leave `text` alone for another module's world
+     * @param text The finished text, in the form or out of it, at most about 26 characters to fit: "1,234 z", "Influence: 1,234,567"
+     */
+    virtual void OnPlayerBankCurrencyText(Player* /*player*/, uint8 /*world*/, std::string& /*text*/) { }
+
+    /**
+     * @brief MergedWorlds: called when an item from a player's bags would go into a guild bank.
+     *
+     * @param player Contains information about the Player
+     * @param item The item going there
+     * @param result Starts as EQUIP_ERR_OK.  Anything else refuses it, and is sent to the player
+     */
+    virtual void OnPlayerCanGuildBankItem(Player* /*player*/, Item const* /*item*/, InventoryResult& /*result*/) { }
+
+    /**
+     * @brief MergedWorlds: called once a sale to a vendor can't fail, before the player is paid.
+     *
+     * @param player Contains information about the Player
+     * @param money What the sale pays, to be read and overwritten
+     */
+    virtual void OnPlayerSellItemMoney(Player* /*player*/, uint32& /*money*/) { }
+
+    /**
+     * @brief MergedWorlds: called when a player buys an item back from its buyback list.
+     *
+     * @param player Contains information about the Player
+     * @param item The item
+     * @return False to refuse it
+     */
+    [[nodiscard]] virtual bool OnPlayerCanBuybackItem(Player* /*player*/, Item* /*item*/) { return true; }
+
+    /**
      * @brief MergedWorlds: called before a player's health and powers regenerate.
      *
      * @param player Contains information about the Player
      * @return False to stop the regeneration (a game identity form regenerates by its own game's rules)
      */
     [[nodiscard]] virtual bool OnPlayerCanRegenerate(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: asked by systems that give a player auras or effects for its class (EverQuest's class auras).
+     *
+     * @param player Contains information about the Player
+     * @return False while the character's own class abilities are put away (a game identity form plays by its own game's rules)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanUseClassAbilities(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called before a dead player is released to a ghost by itself (the release timer running out, a logout while dead).
+     *
+     * @param player Contains information about the Player
+     * @return False to keep the player dead in its body (a game identity form has no spirit: it stays dead until it returns to its save point)
+     */
+    [[nodiscard]] virtual bool OnPlayerCanAutoRelease(Player* /*player*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called for the distance check whenever a player would deal with a creature (Player::GetNPCIfCanInteractWith: the
+     *        gossip window and its choices, a vendor's list, purchases and sales, a banker, a trainer, a quest giver).
+     *
+     * @param player Contains information about the Player
+     * @param creature Contains information about the Creature
+     * @param isInReach Starts as the core's check (INTERACTION_DISTANCE, height included), to be read and changed (a game identity form's NPCs
+     *                  answer from its own game's reach)
+     */
+    virtual void OnPlayerCreatureInteractionReach(Player* /*player*/, Creature const* /*creature*/, bool& /*isInReach*/) { }
 
     /**
      * @brief MergedWorlds: called when a player's auto attack is ready to swing, before it checks whether its victim is in reach.

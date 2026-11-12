@@ -52,6 +52,7 @@ class ChatHandler;
 class Creature;
 class CreatureAI;
 class DynamicObject;
+class Corpse;
 class GameObject;
 class GameObjectAI;
 class GridMap;
@@ -489,7 +490,17 @@ public: /* PlayerScript */
     void OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint32 spellId);
     void OnPlayerSaveCharacterValues(Player* player, CharacterDatabaseTransaction trans, PlayerSaveValues& values); // MergedWorlds
     bool OnPlayerCanLoseDurability(Player* player); // MergedWorlds
+    bool OnPlayerCanTakeFallDamage(Player* player); // MergedWorlds
+    void OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result); // MergedWorlds
+    void OnPlayerCanBuyBankSlot(Player* player, bool& result); // MergedWorlds
+    void OnPlayerBankCurrencyText(Player* player, uint8 world, std::string& text); // MergedWorlds
+    void OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result); // MergedWorlds
+    void OnPlayerSellItemMoney(Player* player, uint32& money); // MergedWorlds
+    bool OnPlayerCanBuybackItem(Player* player, Item* item); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
+    bool OnPlayerCanUseClassAbilities(Player* player); // MergedWorlds
+    bool OnPlayerCanAutoRelease(Player* player); // MergedWorlds
+    void OnPlayerCreatureInteractionReach(Player* player, Creature const* creature, bool& isInReach); // MergedWorlds
     bool OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack); // MergedWorlds
 
     // Anti cheat
@@ -750,6 +761,7 @@ public: /* WorldObjectScript */
     void OnWorldObjectSetMap(WorldObject* object, Map* map);
     void OnWorldObjectResetMap(WorldObject* object);
     void OnWorldObjectUpdate(WorldObject* object, uint32 diff);
+    void OnCorpseBuildValuesUpdateField(Corpse const* corpse, Player const* target, uint16 index, uint32& value); // MergedWorlds
 
 public: /* PetScript */
 

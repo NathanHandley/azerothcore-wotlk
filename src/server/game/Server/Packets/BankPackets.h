@@ -20,6 +20,7 @@
 
 #include "ObjectGuid.h"
 #include "Packet.h"
+#include <string>
 
 namespace WorldPackets
 {
@@ -34,7 +35,7 @@ namespace WorldPackets
 
             uint8 Bag = 0;
             uint8 Slot = 0;
-            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = the account bank tab is open
+            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = the account bank tab is open, 1 + n = world n's tab
         };
 
         class AutoStoreBankItem final : public ClientPacket
@@ -56,7 +57,30 @@ namespace WorldPackets
             void Read() override;
 
             ObjectGuid Banker;
-            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = buy an account bank bag slot
+            uint8 AccountBank = 0;      // MergedWorlds: optional trailing byte, 1 = buy an account bank bag slot, 1 + n = one of world n's tab
+        };
+
+        // MergedWorlds world bank: the bank tab the client now shows, or 0 for the Character tab or no bank
+        class BankShowTab final : public ClientPacket
+        {
+        public:
+            BankShowTab(WorldPacket&& packet) : ClientPacket(CMSG_BANK_SHOW_TAB, std::move(packet)) { }
+
+            void Read() override;
+
+            uint8 Tab = 0;              // 0 the Character tab or no bank, 1 the Account tab, 1 + n world n's tab
+        };
+
+        // MergedWorlds world bank: the text for the bank window's corner while world's tab shows
+        class BankCurrency final : public ServerPacket
+        {
+        public:
+            BankCurrency() : ServerPacket(SMSG_BANK_CURRENCY, 1 + 32) { }
+
+            WorldPacket const* Write() override;
+
+            uint8 World = 0;
+            std::string Text;
         };
 
         class BuyBankSlotResult final : public ServerPacket
@@ -72,11 +96,14 @@ namespace WorldPackets
         class ShowBank final : public ServerPacket
         {
         public:
-            ShowBank() : ServerPacket(SMSG_SHOW_BANK, 8) { }
+            ShowBank() : ServerPacket(SMSG_SHOW_BANK, 8 + 1 + 1 + 1) { }
 
             WorldPacket const* Write() override;
 
             ObjectGuid Banker;
+            uint8 World = 0;            // MergedWorlds: the world tab to open on, 0 for the Character tab
+            uint8 WorldMask = 0;        // MergedWorlds: the worlds that have a tab, bit (world - 1)
+            uint8 CanBuySlots = 1;      // MergedWorlds: 0 when a module refuses bag slot purchases, so every purchase panel hides
         };
     }
 }

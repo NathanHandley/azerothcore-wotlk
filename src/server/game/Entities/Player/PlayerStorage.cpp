@@ -20,6 +20,7 @@
 #include "AchievementMgr.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+#include "BankPackets.h"
 #include "Battlefield.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
@@ -467,10 +468,10 @@ Item* Player::GetItemByPos(uint8 bag, uint8 slot) const
 
 Bag* Player::GetBagByPos(uint8 bag) const
 {
-    // MergedWorlds account bank: account bank bags and the two vaults (m_items directly, GetItemByPos hides the vaults)
+    // MergedWorlds account bank: account bank bags and the vaults, a world tab's too (m_items directly, GetItemByPos hides the vaults)
     if ((bag >= INVENTORY_SLOT_BAG_START && bag < INVENTORY_SLOT_BAG_END)
         || (bag >= BANK_SLOT_BAG_START && bag < BANK_SLOT_BAG_END)
-        || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < ACCOUNT_BANK_VAULT_SLOT_END))
+        || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END && bag != LIGHT_SOURCE_SLOT)) // MergedWorlds: not the light source slot between
         if (Item* item = m_items[bag])
             return item->ToBag();
     return nullptr;
@@ -609,9 +610,31 @@ bool Player::IsAccountBankPos(uint8 bag, uint8 slot)
 {
     if (bag == INVENTORY_SLOT_BAG_0 && (slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END))
         return true;
-    if (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < ACCOUNT_BANK_VAULT_SLOT_END)
+    if (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END && bag != LIGHT_SOURCE_SLOT) // MergedWorlds: not the light source slot between
         return true;
     return false;
+}
+
+// MergedWorlds world bank: written by the modules at startup, before any session exists, and only read after that
+static uint8 WorldBankEnabledMask = 0;
+
+void Player::SetWorldBankEnabled(uint8 world, bool enabled)
+{
+    if (world == WORLD_BANK_ACCOUNT || world > MAX_WORLD_BANK_WORLD)
+        return;
+
+    uint8 worldBit = uint8(1 << (world - 1));
+    WorldBankEnabledMask = enabled ? uint8(WorldBankEnabledMask | worldBit) : uint8(WorldBankEnabledMask & ~worldBit);
+}
+
+bool Player::IsWorldBankEnabled(uint8 world)
+{
+    return world != WORLD_BANK_ACCOUNT && world <= MAX_WORLD_BANK_WORLD && (WorldBankEnabledMask & (1 << (world - 1))) != 0;
+}
+
+uint8 Player::GetWorldBankEnabledMask()
+{
+    return WorldBankEnabledMask;
 }
 
 uint16 Player::GetInventorySlotUpdateField(uint8 slot)
@@ -1012,7 +1035,7 @@ InventoryResult Player::CanStoreItem_InSpecificSlot(uint8 bag, uint8 slot, ItemP
     else
     {
         // can be merged at least partly
-        InventoryResult res  = pItem2->CanBeMergedPartlyWith(pProto);
+        InventoryResult res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
         if (res != EQUIP_ERR_OK)
             return res;
 
@@ -1078,7 +1101,7 @@ InventoryResult Player::CanStoreItem_InBag(uint8 bag, ItemPosCountVec& dest, Ite
         if (pItem2)
         {
             // can be merged at least partly
-            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto);
+            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
             if (res != EQUIP_ERR_OK)
                 continue;
 
@@ -1129,7 +1152,7 @@ InventoryResult Player::CanStoreItem_InInventorySlots(uint8 slot_begin, uint8 sl
         if (pItem2)
         {
             // can be merged at least partly
-            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto);
+            uint8 res  = pItem2->CanBeMergedPartlyWith(pProto, pSrcItem); // MergedWorlds: the source
             if (res != EQUIP_ERR_OK)
                 continue;
 
@@ -1698,7 +1721,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (uint8 t = KEYRING_SLOT_START; t < KEYRING_SLOT_END; ++t)
             {
                 item2 = keyringPointers[t - KEYRING_SLOT_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     keyringCounts[t - KEYRING_SLOT_START] += remaining_count;
                     remaining_count = keyringCounts[t - KEYRING_SLOT_START] < pProto->GetMaxStackSize() ? 0 : keyringCounts[t - KEYRING_SLOT_START] - pProto->GetMaxStackSize();
@@ -1717,7 +1740,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (int t = CURRENCYTOKEN_SLOT_START; t < CURRENCYTOKEN_SLOT_END; ++t)
             {
                 item2 = currencyPointers[t - CURRENCYTOKEN_SLOT_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && currencyCounts[t - CURRENCYTOKEN_SLOT_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && currencyCounts[t - CURRENCYTOKEN_SLOT_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     currencyCounts[t - CURRENCYTOKEN_SLOT_START] += remaining_count;
                     remaining_count =
@@ -1736,7 +1759,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
             for (int t = INVENTORY_SLOT_ITEM_START; t < INVENTORY_SLOT_ITEM_END; ++t)
             {
                 item2 = inventoryPointers[t - INVENTORY_SLOT_ITEM_START];
-                if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && inventoryCounts[t - INVENTORY_SLOT_ITEM_START] < pProto->GetMaxStackSize())
+                if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && inventoryCounts[t - INVENTORY_SLOT_ITEM_START] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                 {
                     inventoryCounts[t - INVENTORY_SLOT_ITEM_START] += remaining_count;
                     remaining_count =
@@ -1762,7 +1785,7 @@ InventoryResult Player::CanStoreItems(Item** items, int count, uint32* itemLimit
                     for (uint32 j = 0; j < bag->GetBagSize(); j++)
                     {
                         item2 = bagPointers[t - INVENTORY_SLOT_BAG_START][j];
-                        if (item2 && item2->CanBeMergedPartlyWith(pProto) == EQUIP_ERR_OK && bagCounts[t - INVENTORY_SLOT_BAG_START][j] < pProto->GetMaxStackSize())
+                        if (item2 && item2->CanBeMergedPartlyWith(pProto, item) == EQUIP_ERR_OK && bagCounts[t - INVENTORY_SLOT_BAG_START][j] < pProto->GetMaxStackSize()) // MergedWorlds: the source
                         {
                             // add count to stack so that later items in the list do not double-book
                             bagCounts[t - INVENTORY_SLOT_BAG_START][j] += remaining_count;
@@ -2153,7 +2176,7 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
     return EQUIP_ERR_OK;
 }
 
-InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading) const
+InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading, bool isBagExchange) const
 {
     // MergedWorlds account bank: an account bank destination has its own rules
     if (bag != NULL_BAG && IsAccountBankPos(bag, slot))
@@ -2183,6 +2206,14 @@ InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest
         LOG_ERROR("entities.player", "Possible hacking attempt: Player {} [{}] tried to move token [{}, entry: {}] out of the currency bag!",
                   GetName(), GetGUID().ToString(), pItem->GetGUID().ToString(), pProto->ItemId);
         return EQUIP_ERR_ITEMS_CANT_BE_SWAPPED;
+    }
+
+    // MergedWorlds world bank: a module can keep an item out of the bank (not at login, when what's in it stays)
+    if (not_loading)
+    {
+        InventoryResult tabResult = CanPlaceItemInBankTab(pItem, WORLD_BANK_ACCOUNT, isBagExchange);
+        if (tabResult != EQUIP_ERR_OK)
+            return tabResult;
     }
 
     // check count of items (skip for auto move for same player from bank)
@@ -2409,6 +2440,53 @@ void Player::MarkBagContentsChanged(Item* pItem)
                 bagItem->SetState(ITEM_CHANGED, this);
 }
 
+InventoryResult Player::CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept, bool isBagSlot) const
+{
+    if (!pItem)
+        return EQUIP_ERR_ITEM_NOT_FOUND;
+
+    // The core knows no game, so only the world's module can accept an item for a world's tab.  A bag slot there takes a general bag of any game
+    // instead, and a module can only refuse that, as on the Account tab.  What the bag holds is the tab's, below
+    InventoryResult result = EQUIP_ERR_OK;
+    uint8 moduleWorld = world;
+    if (world != WORLD_BANK_ACCOUNT)
+    {
+        if (isBagSlot)
+        {
+            ItemTemplate const* pProto = pItem->GetTemplate();
+            if (!pProto || pProto->Class != ITEM_CLASS_CONTAINER || pProto->SubClass != ITEM_SUBCLASS_CONTAINER)
+                return EQUIP_ERR_WORLD_BANK_BAG_NOT_ALLOWED;
+            moduleWorld = WORLD_BANK_ACCOUNT;
+        }
+        else
+        {
+            result = EQUIP_ERR_WORLD_BANK_ITEM_NOT_ALLOWED;
+            if (pItem->IsBag())
+                return result;
+        }
+    }
+
+    sScriptMgr->OnPlayerCanBankItem(const_cast<Player*>(this), pItem, moduleWorld, result);
+    if (result != EQUIP_ERR_OK)
+        return result;
+
+    // A bag carries what it holds, but for a bag exchange's full bag, which leaves it where it is
+    if (Bag const* pBag = !isBagContentKept ? pItem->ToBag() : nullptr)
+    {
+        for (uint32 i = 0; i < pBag->GetBagSize(); ++i)
+        {
+            if (Item const* pBagItem = pBag->GetItemByPos(i))
+            {
+                InventoryResult res = CanPlaceItemInBankTab(pBagItem, world);
+                if (res != EQUIP_ERR_OK)
+                    return res;
+            }
+        }
+    }
+
+    return EQUIP_ERR_OK;
+}
+
 InventoryResult Player::CanPlaceItemInAccountBank(Item const* pItem) const
 {
     if (!pItem)
@@ -2453,7 +2531,7 @@ InventoryResult Player::CanPlaceItemInAccountBank(Item const* pItem) const
     return EQUIP_ERR_OK;
 }
 
-InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap) const
+InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, uint8 world) const
 {
     if (!pItem)
         return swap ? EQUIP_ERR_ITEMS_CANT_BE_SWAPPED : EQUIP_ERR_ITEM_NOT_FOUND;
@@ -2469,6 +2547,13 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     if (!m_accountBankLoaded)
         return EQUIP_ERR_CANT_DO_RIGHT_NOW;
 
+    // MergedWorlds world bank: a position says which tab it is: a vault is its tab's, and the bag slots and what's in them are the page's that's in
+    // them.  A world that's off has no tab, whatever a client sends
+    if (bag != NULL_BAG)
+        world = IsAccountBankVaultSlot(bag) ? GetVaultSlotWorld(bag) : m_bankBagPage;
+    if (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world))
+        return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+
     if (pItem->IsBindedNotWith(this))
         return EQUIP_ERR_DONT_OWN_THAT_ITEM;
 
@@ -2481,7 +2566,12 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
         return EQUIP_ERR_ITEMS_CANT_BE_SWAPPED;
     }
 
-    InventoryResult res = CanPlaceItemInAccountBank(pItem);
+    // The modules first, so a world's tab turns an item away for what the tab holds, not for an account bank rule
+    InventoryResult res = CanPlaceItemInBankTab(pItem, world, false, bag == INVENTORY_SLOT_BAG_0 && slot >= ACCOUNT_BANK_BAG_SLOT_START && slot < ACCOUNT_BANK_BAG_SLOT_END);
+    if (res != EQUIP_ERR_OK)
+        return res;
+
+    res = CanPlaceItemInAccountBank(pItem);
     if (res != EQUIP_ERR_OK)
         return res;
 
@@ -2499,7 +2589,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
             if (!pItem->IsBag())
                 return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
 
-            if (slot - ACCOUNT_BANK_BAG_SLOT_START >= GetAccountBankBagSlotCount())
+            if (slot - ACCOUNT_BANK_BAG_SLOT_START >= GetAccountBankBagSlotCount(world))
                 return EQUIP_ERR_MUST_PURCHASE_THAT_BAG_SLOT;
 
             res = CanUseItem(pItem, true);
@@ -2517,15 +2607,15 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
 
     // not specific slot or have space for partly store only in specific slot
 
-    // in specific bag (a vault means the account bank item slots, so both vaults are searched)
+    // in specific bag (a vault means its tab's item slots, so all of that tab's vaults are searched)
     if (bag != NULL_BAG && bag != INVENTORY_SLOT_BAG_0)
     {
         if (pItem->IsNotEmptyBag())
             return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
 
         bool isVault = IsAccountBankVaultSlot(bag);
-        uint8 firstBag = isVault ? uint8(ACCOUNT_BANK_VAULT_SLOT_START) : bag;
-        uint8 endBag = isVault ? uint8(ACCOUNT_BANK_VAULT_SLOT_END) : uint8(bag + 1);
+        uint8 firstBag = isVault ? GetWorldVaultSlotStart(world) : bag;
+        uint8 endBag = isVault ? GetWorldVaultSlotEnd(world) : uint8(bag + 1);
 
         // search stack in bag for merge to
         if (pProto->Stackable != 1)
@@ -2561,14 +2651,18 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
         return EQUIP_ERR_BANK_FULL;
     }
 
-    // not specific bag: the item slots first, then the account bank bags (special bags before plain ones), like CanBankItem
+    // not specific bag: the item slots first, then the account bank bags (special bags before plain ones), like CanBankItem.
+    // The bag slots hold the bags of `world`'s tab: HandleAutoBankItemOpcode sees to that
     if (pItem->IsNotEmptyBag())
         return EQUIP_ERR_NONEMPTY_BAG_OVER_OTHER_BAG;
+
+    uint8 firstVault = GetWorldVaultSlotStart(world);
+    uint8 endVault = GetWorldVaultSlotEnd(world);
 
     // search stack for merge to
     if (pProto->Stackable != 1)
     {
-        for (uint8 i = ACCOUNT_BANK_VAULT_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; i++)
+        for (uint8 i = firstVault; i < endVault; i++)
         {
             res = CanStoreItem_InBag(i, dest, pProto, count, true, true, pItem, bag, slot);
             if (res != EQUIP_ERR_OK)
@@ -2617,7 +2711,7 @@ InventoryResult Player::CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVe
     }
 
     // search free space
-    for (uint8 i = ACCOUNT_BANK_VAULT_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; i++)
+    for (uint8 i = firstVault; i < endVault; i++)
     {
         res = CanStoreItem_InBag(i, dest, pProto, count, false, true, pItem, bag, slot);
         if (res != EQUIP_ERR_OK)
@@ -4225,13 +4319,18 @@ void Player::SwapItem(uint16 src, uint16 dst)
     // impossible merge/fill, do real swap
     InventoryResult msg = EQUIP_ERR_OK;
 
+    // MergedWorlds: the bag swap with item exchange below moves what the full bag holds into the empty one, so it stays where it is
+    Bag const* srcExchangeBag = pSrcItem->ToBag();
+    Bag const* dstExchangeBag = pDstItem->ToBag();
+    bool isBagExchange = srcExchangeBag && dstExchangeBag && ((srcExchangeBag->IsEmpty() && !IsBagPos(src)) || (dstExchangeBag->IsEmpty() && !IsBagPos(dst)));
+
     // check src->dest move possibility
     ItemPosCountVec sDest;
     uint16 eDest = 0;
     if (IsInventoryPos(dst))
         msg = CanStoreItem(dstbag, dstslot, sDest, pSrcItem, true);
     else if (IsBankPos(dst))
-        msg = CanBankItem(dstbag, dstslot, sDest, pSrcItem, true);
+        msg = CanBankItem(dstbag, dstslot, sDest, pSrcItem, true, true, isBagExchange); // MergedWorlds: isBagExchange
     else if (IsEquipmentPos(dst))
     {
         msg = CanEquipItem(dstslot, eDest, pSrcItem, true);
@@ -4258,7 +4357,7 @@ void Player::SwapItem(uint16 src, uint16 dst)
     if (IsInventoryPos(src))
         msg = CanStoreItem(srcbag, srcslot, sDest2, pDstItem, true);
     else if (IsBankPos(src))
-        msg = CanBankItem(srcbag, srcslot, sDest2, pDstItem, true);
+        msg = CanBankItem(srcbag, srcslot, sDest2, pDstItem, true, true, isBagExchange); // MergedWorlds: isBagExchange
     else if (IsEquipmentPos(src))
     {
         msg = CanEquipItem(srcslot, eDest2, pDstItem, true);
@@ -6124,6 +6223,488 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     return true;
 }
 
+/*********************************************************/
+/***          MergedWorlds live profile swap           ***/
+/*********************************************************/
+// A module can keep several profiles for one character and swap which one is live by moving rows between its own tables and the character
+// tables.  That used to need a relog, since everything below is only ever read at login.  These four functions let a character who is in
+// the world take the swapped rows on in place:
+//
+//   PrepareForProfileSwap          ends what the outgoing profile was doing (casts, pet, totems, charms, open windows)
+//   (caller)                       SaveToDB and the swap statements in one transaction, and waits for it to commit
+//   CreateProfileSwapQueryHolder   the same login queries LoadFromDB reads, for the parts of a character a profile holds
+//   ReloadProfileFromDB            drops those parts from memory without marking anything for a save, then loads them the way login does
+//   FinishProfileSwap              sends the client what login would have sent, and brings the profile's pet back
+//
+// What is reloaded is exactly what the database now holds, so the result is the one a relog would give.  Everything a profile does not hold
+// (bags, bank, money, reputation, achievements, cooldowns, position, group, guild) is left alone.  ReloadProfileFromDB must not be given a
+// character whose database rows differ from memory in any way other than the swap, or the difference is lost
+
+void Player::PrepareForProfileSwap()
+{
+    InterruptNonMeleeSpells(true);
+    AttackStop();
+    SendAttackSwingCancelAttack();
+    ClearComboPoints();
+
+    // Windows on the client that show or act on what is about to change
+    PlayerTalkClass->SendCloseGossip();
+    if (ObjectGuid lootGuid = GetLootGUID())
+        GetSession()->DoLootRelease(lootGuid);
+    if (GetTrader())
+        TradeCancel(true);
+    if (duel)
+        DuelComplete(DUEL_INTERRUPTED);
+
+    // The pet is saved as the profile's current pet, as a logout leaves it, so it comes back with the profile
+    if (Pet* pet = GetPet())
+        RemovePet(pet, PET_SAVE_AS_CURRENT);
+
+    ClearAllReactives();
+    UnsummonAllTotems();
+    RemoveAllControlled();
+    StopCastingBindSight();
+
+    // What its spells left standing in the world (ground effects, traps and the like), which a logout takes away too
+    RemoveAllGameObjects();
+    RemoveAllDynObjects();
+}
+
+std::shared_ptr<CharacterDatabaseQueryHolder> Player::CreateProfileSwapQueryHolder(ObjectGuid guid)
+{
+    std::shared_ptr<CharacterDatabaseQueryHolder> holder = std::make_shared<CharacterDatabaseQueryHolder>();
+    holder->SetSize(MAX_PLAYER_LOGIN_QUERY);
+
+    ObjectGuid::LowType lowGuid = guid.GetCounter();
+    auto setQuery = [&holder, lowGuid](PlayerLoginQueryIndex index, CharacterDatabaseStatements statement)
+    {
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(statement);
+        stmt->SetData(0, lowGuid);
+        holder->SetPreparedQuery(index, stmt);
+    };
+
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_FROM, CHAR_SEL_CHARACTER);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_AURAS, CHAR_SEL_CHARACTER_AURAS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_SPELLS, CHAR_SEL_CHARACTER_SPELL);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS, CHAR_SEL_CHARACTER_QUESTSTATUS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW, CHAR_SEL_CHARACTER_QUESTSTATUSREW);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_INVENTORY, CHAR_SEL_CHARACTER_INVENTORY);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_ACTIONS, CHAR_SEL_CHARACTER_ACTIONS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_GLYPHS, CHAR_SEL_CHARACTER_GLYPHS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_TALENTS, CHAR_SEL_CHARACTER_TALENTS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_SKILLS, CHAR_SEL_CHARACTER_SKILLS);
+    setQuery(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS, CHAR_SEL_CHAR_PETS);
+    return holder;
+}
+
+void Player::_UnloadProfileSwapItems()
+{
+    for (uint16 slot = 0; slot < PLAYER_SLOT_END; ++slot)
+    {
+        if (!IsProfileSwapItemSlot(uint8(slot)))
+            continue;
+
+        Item* item = m_items[slot];
+        if (!item)
+            continue;
+
+        // Takes off its stats, enchantments, set bonus and equip effects.  The item's rows are no business of this character's inventory any
+        // more, so it must leave no trace in the save queue or the refund list: the next save would write it back otherwise
+        RemoveItem(INVENTORY_SLOT_BAG_0, uint8(slot), false);
+        DeleteRefundReference(item->GetGUID());
+        item->RemoveFromUpdateQueueOf(this);
+        if (item->IsInWorld())
+        {
+            item->RemoveFromWorld();
+            item->DestroyForPlayer(this);
+        }
+        delete item;
+    }
+
+    UpdateTitansGrip();
+}
+
+void Player::_UnloadProfileSwapAuras(std::unordered_set<uint32> const& keptAuraSpellIds)
+{
+    // The equipped bags stay on through a swap, and nothing puts back what wearing one gives short of a login.  (An item carried in a bag
+    // gives its aura back in CastAllObtainSpells, and the profile's own worn items are already gone by now)
+    GuidUnorderedSet bagGuids;
+    for (uint8 slot = INVENTORY_SLOT_BAG_START; slot < INVENTORY_SLOT_BAG_END; ++slot)
+        if (Item* bag = m_items[slot])
+            bagGuids.insert(bag->GetGUID());
+
+    auto staysOn = [&keptAuraSpellIds, &bagGuids](Aura const* aura)
+    {
+        if (keptAuraSpellIds.find(aura->GetId()) != keptAuraSpellIds.end())
+            return true;
+        return aura->GetCastItemGUID() && bagGuids.find(aura->GetCastItemGUID()) != bagGuids.end();
+    };
+
+    // Removing one aura can take others with it, so each pass starts over rather than trusting an iterator
+    bool removedAny = true;
+    while (removedAny)
+    {
+        removedAny = false;
+        for (AuraMap::iterator itr = m_ownedAuras.begin(); itr != m_ownedAuras.end(); ++itr)
+        {
+            if (staysOn(itr->second))
+                continue;
+            RemoveOwnedAura(itr, AURA_REMOVE_BY_DEFAULT);
+            removedAny = true;
+            break;
+        }
+    }
+
+    // What others put on this character belongs to the outgoing profile too
+    removedAny = true;
+    while (removedAny)
+    {
+        removedAny = false;
+        for (AuraApplicationMap::iterator itr = m_appliedAuras.begin(); itr != m_appliedAuras.end(); ++itr)
+        {
+            // One already on its way out is left to whoever is removing it (RemoveAura would do nothing, and this would never end)
+            if (itr->second->GetRemoveMode())
+                continue;
+            if (staysOn(itr->second->GetBase()))
+                continue;
+            RemoveAura(itr, AURA_REMOVE_BY_DEFAULT);
+            removedAny = true;
+            break;
+        }
+    }
+}
+
+void Player::_LoadProfileSwapItems(PreparedQueryResult result)
+{
+    if (!result)
+        return;
+
+    // The same handling _LoadInventory gives an item outside the bags, for the slots a profile holds
+    uint32 zoneId = GetZoneId();
+    std::list<Item*> problematicItems;
+    std::vector<Item*> equippedItems;
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+    m_itemUpdateQueueBlocked = true;
+    do
+    {
+        Field* fields = result->Fetch();
+        ObjectGuid::LowType bagGuid = fields[11].Get<uint32>();
+        uint8 slot = fields[12].Get<uint8>();
+        if (bagGuid || !IsProfileSwapItemSlot(slot))
+            continue;
+
+        // Nothing but the swap may have put an item here
+        if (m_items[slot])
+        {
+            LOG_ERROR("entities.player", "Player::_LoadProfileSwapItems: player ({}, name: '{}') already holds an item in slot {}, so item guid {} is left for the next login to place",
+                      GetGUID().ToString(), GetName(), slot, fields[13].Get<uint32>());
+            continue;
+        }
+
+        Item* item = _LoadItem(trans, zoneId, 0, fields);
+        if (!item)
+            continue;
+
+        item->SetContainer(nullptr);
+        item->SetSlot(slot);
+
+        uint8 err = EQUIP_ERR_OK;
+        if (IsInventoryPos(INVENTORY_SLOT_BAG_0, slot))
+        {
+            ItemPosCountVec dest;
+            err = CanStoreItem(INVENTORY_SLOT_BAG_0, slot, dest, item, false);
+            if (err == EQUIP_ERR_OK)
+                item = StoreItem(dest, item, true);
+        }
+        else
+        {
+            uint16 dest;
+            if (sScriptMgr->OnPlayerCheckItemInSlotAtLoadInventory(this, item, slot, err, dest))
+                err = CanEquipItem(slot, dest, item, false, false);
+            if (err == EQUIP_ERR_OK)
+            {
+                QuickEquipItem(dest, item);
+                equippedItems.push_back(item);
+            }
+        }
+
+        if (err == EQUIP_ERR_OK)
+            item->SetState(ITEM_UNCHANGED, this);
+        else
+        {
+            LOG_ERROR("entities.player", "Player::_LoadProfileSwapItems: player ({}, name: '{}') has item ({}, entry: {}) which can't be loaded into slot {} by reason {}. Item will be sent by mail.",
+                      GetGUID().ToString(), GetName(), item->GetGUID().ToString(), item->GetEntry(), slot, err);
+            item->DeleteFromInventoryDB(trans);
+            problematicItems.push_back(item);
+        }
+    } while (result->NextRow());
+    m_itemUpdateQueueBlocked = false;
+
+    while (!problematicItems.empty())
+    {
+        std::string subject = GetSession()->GetAcoreString(LANG_NOT_EQUIPPED_ITEM);
+
+        MailDraft draft(subject, "There were problems with equipping item(s).");
+        for (uint8 i = 0; !problematicItems.empty() && i < MAX_MAIL_ITEMS; ++i)
+        {
+            draft.AddItem(problematicItems.front());
+            problematicItems.pop_front();
+        }
+        draft.SendMailTo(trans, this, MailSender(this, MAIL_STATIONERY_GM), MAIL_CHECK_MASK_COPIED);
+    }
+    CharacterDatabase.CommitTransaction(trans);
+
+    // Login applies every worn item's effects in one go (_ApplyAllItemMods).  The bags are worn too and kept theirs through the swap, so
+    // here it is done an item at a time, the way equipping one does
+    for (Item* item : equippedItems)
+    {
+        ItemTemplate const* proto = item->GetTemplate();
+        if (proto && proto->ItemSet)
+            AddItemsSetItem(this, item);
+        _ApplyItemMods(item, item->GetSlot(), true);
+    }
+}
+
+bool Player::ReloadProfileFromDB(CharacterDatabaseQueryHolder const& holder, std::unordered_set<uint32> const& keptAuraSpellIds)
+{
+    PreparedQueryResult result = holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_FROM);
+    if (!result || !IsInWorld() || !IsAlive() || GetPet())
+    {
+        LOG_ERROR("entities.player", "Player::ReloadProfileFromDB: player ({}, name: '{}') can't take on a swapped profile (row found: {}, in world: {}, alive: {}, pet out: {})",
+                  GetGUID().ToString(), GetName(), result ? 1 : 0, IsInWorld() ? 1 : 0, IsAlive() ? 1 : 0, GetPet() ? 1 : 0);
+
+        // The database holds the swapped profile and this object the one before it.  Saving would write the old profile over the new one, so
+        // this object never saves again: the caller has to disconnect the player, and the next login loads what the database holds
+        _profileSwapSaveBlocked = true;
+        return false;
+    }
+
+    // The field numbers are those of CHAR_SEL_CHARACTER, listed at the top of LoadFromDB
+    Field* fields = result->Fetch();
+    uint8 newLevel = fields[6].Get<uint8>();
+    if (newLevel == 0)
+        newLevel = 1;
+
+    // Loaders only leave what they add unmarked for saving while the session says the character is loading, and the spellbook goes to the
+    // client whole at the end.  FinishProfileSwap ends the second of these
+    GetSession()->SetPlayerLoadingForProfileSwap(true);
+    _profileSwapReloading = true;
+
+    // Final values are worked out once, at the end, as login does
+    SetCanModifyStats(false);
+
+    //
+    // Out with the old.  Items and auras are taken off properly, so everything they changed is changed back.  The rest is only forgotten
+    //
+    _UnloadProfileSwapItems();
+    _UnloadProfileSwapAuras(keptAuraSpellIds);
+
+    for (PlayerTalentMap::iterator itr = m_talents.begin(); itr != m_talents.end(); ++itr)
+        delete itr->second;
+    m_talents.clear();
+    m_usedTalentCount = 0;
+
+    for (PlayerSpellMap::iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
+        delete itr->second;
+    m_spells.clear();
+
+    // What casting a learned spell switches on, which nothing switches off again short of a login
+    SetCanParry(false);
+    SetCanBlock(false);
+    SetCanDualWield(false);
+    SetCanTitanGrip(false);
+    SetHas310Flyer(false);
+    m_WeaponProficiency = 0;
+    m_ArmorProficiency = 0;
+    InitPrimaryProfessions();
+
+    mSkillStatus.clear();
+
+    for (uint8 spec = 0; spec < MAX_TALENT_SPECS; ++spec)
+        for (uint8 slot = 0; slot < MAX_GLYPH_SLOT_INDEX; ++slot)
+            m_Glyphs[spec][slot] = 0;
+    for (uint8 slot = 0; slot < MAX_GLYPH_SLOT_INDEX; ++slot)
+        SetUInt32Value(PLAYER_FIELD_GLYPHS_1 + slot, 0);
+    SetNeedToSaveGlyphs(false);
+
+    m_QuestStatus.clear();
+    m_QuestStatusSave.clear();
+    m_RewardedQuests.clear();
+    m_RewardedQuestsSave.clear();
+    m_timedquests.clear();
+    m_questRewardTalentCount = 0;
+    SetDivider();
+
+    m_petStable.reset();
+    m_temporaryUnsummonedPetNumber = 0;
+    m_oldpetspell = 0;
+
+    //
+    // In with the new, in the order LoadFromDB keeps
+    //
+    if (newLevel != GetLevel())
+    {
+        if (Guild* guild = GetGuild())
+            guild->UpdateMemberData(this, GUILD_MEMBER_DATA_LEVEL, newLevel);
+        SetLevel(newLevel);
+    }
+
+    PlayerLevelInfo levelInfo;
+    sObjectMgr->GetPlayerLevelInfo(getRace(true), getClass(), newLevel, &levelInfo);
+    PlayerClassLevelInfo classLevelInfo;
+    sObjectMgr->GetPlayerClassLevelInfo(getClass(), newLevel, &classLevelInfo);
+    for (uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
+        SetCreateStat(Stats(i), levelInfo.stats[i]);
+    SetCreateHealth(classLevelInfo.basehealth);
+    SetCreateMana(classLevelInfo.basemana);
+
+    SetUInt32Value(PLAYER_NEXT_LEVEL_XP, sObjectMgr->GetXPForLevel(newLevel));
+    SetUInt32Value(PLAYER_XP, fields[7].Get<uint32>());
+    m_Played_time[PLAYED_TIME_LEVEL] = fields[25].Get<uint32>();
+    m_resetTalentsCost = fields[29].Get<uint32>();
+    m_resetTalentsTime = time_t(fields[30].Get<uint32>());
+    SetRestBonus(fields[26].Get<float>());
+
+    InitGlyphsForLevel();
+    InitTaxiNodesForLevel();
+
+    // _LoadSkills starts every skill's bonus from nothing.  An aura that stayed through the swap is not applied again to put its own bonus
+    // back, so that is done here, and only for those: an aura cast while the skills load (a racial passive) has already added its own
+    std::vector<AuraEffect*> keptSkillEffects;
+    for (AuraType skillAuraType : { SPELL_AURA_MOD_SKILL, SPELL_AURA_MOD_SKILL_TALENT })
+    {
+        AuraEffectList const& skillEffects = GetAuraEffectsByType(skillAuraType);
+        keptSkillEffects.insert(keptSkillEffects.end(), skillEffects.begin(), skillEffects.end());
+    }
+
+    _LoadSkills(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SKILLS));
+    UpdateSkillsForLevel();
+
+    for (AuraEffect* keptSkillEffect : keptSkillEffects)
+    {
+        // Still there (nothing in loading skills takes an aura off, but a pointer is not taken on trust)
+        bool stillApplied = false;
+        for (AuraType skillAuraType : { SPELL_AURA_MOD_SKILL, SPELL_AURA_MOD_SKILL_TALENT })
+        {
+            AuraEffectList const& skillEffects = GetAuraEffectsByType(skillAuraType);
+            if (std::find(skillEffects.begin(), skillEffects.end(), keptSkillEffect) != skillEffects.end())
+                stillApplied = true;
+        }
+        if (stillApplied)
+            keptSkillEffect->HandleEffect(this, AURA_EFFECT_HANDLE_SKILL, true);
+    }
+
+    m_specsCount = fields[64].Get<uint8>();
+    m_activeSpec = fields[65].Get<uint8>();
+
+    LearnDefaultSkills();
+    // LearnCustomSpells, as it goes for a character who is not in the world yet
+    if (sWorld->getBoolConfig(CONFIG_START_CUSTOM_SPELLS))
+        if (PlayerInfo const* info = sObjectMgr->GetPlayerInfo(getRace(), getClass()))
+            for (PlayerCreateInfoSpells::const_iterator itr = info->customSpells.begin(); itr != info->customSpells.end(); ++itr)
+                addSpell(*itr, SPEC_MASK_ALL, true);
+
+    _LoadSpells(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_SPELLS));
+    _LoadTalents(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TALENTS));
+
+    _LoadGlyphs(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_GLYPHS));
+    _LoadGlyphAuras();
+    _LoadAuras(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_AURAS), 0, &keptAuraSpellIds);
+
+    _LoadQuestStatus(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS));
+    _LoadQuestStatusRewarded(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_QUEST_STATUS_REW));
+
+    // after spell, bonus talents, and quest load
+    InitTalentForLevel();
+
+    _LoadProfileSwapItems(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_INVENTORY));
+
+    // An item in the bags gives its on-pickup aura when it is put there, which login does for every item and this never did
+    CastAllObtainSpells();
+
+    _LoadActions(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACTIONS));
+
+    _LoadPetStable(fields[37].Get<uint8>(), holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_PET_SLOTS));
+
+    RemoveAllAurasRequiringDeadTarget();
+
+    //apply all stat bonuses from items and auras
+    SetCanModifyStats(true);
+    UpdateAllStats();
+
+    // restore remembered power/health values (but not more max values).  A profile set aside at no health is not one to die of
+    uint32 savedHealth = fields[55].Get<uint32>();
+    SetHealth(savedHealth == 0 || savedHealth > GetMaxHealth() ? GetMaxHealth() : savedHealth);
+    for (uint8 i = 0; i < MAX_POWERS; ++i)
+    {
+        uint32 savedPower = fields[56 + i].Get<uint32>();
+        SetPower(Powers(i), savedPower > GetMaxPower(Powers(i)) ? GetMaxPower(Powers(i)) : savedPower);
+    }
+
+    // unapply aura stats if dont meet requirements, as LoadFromDB ends.  A passive that only works at some level of health was cast above
+    // with its effects on whatever the health was (while loading, addSpell leaves this to the end).  The health states themselves are live
+    // here and follow the health just set at the next update, which turns such an aura on or off from where this leaves it
+    AuraApplicationMap const& appliedAuras = GetAppliedAuras();
+    for (AuraApplicationMap::const_iterator itr = appliedAuras.begin(); itr != appliedAuras.end(); ++itr)
+    {
+        Aura* aura = itr->second->GetBase();
+        SpellInfo const* auraSpellInfo = aura->GetSpellInfo();
+        if (auraSpellInfo->CasterAuraState != AURA_STATE_HEALTHLESS_20_PERCENT &&
+            auraSpellInfo->CasterAuraState != AURA_STATE_HEALTHLESS_35_PERCENT &&
+            auraSpellInfo->CasterAuraState != AURA_STATE_HEALTH_ABOVE_75_PERCENT)
+            continue;
+
+        // One that stayed through the swap is already as its state has it
+        if (keptAuraSpellIds.find(aura->GetId()) != keptAuraSpellIds.end())
+            continue;
+
+        if (!HasAuraState((AuraStateType)auraSpellInfo->CasterAuraState))
+            aura->HandleAllEffects(itr->second, AURA_EFFECT_HANDLE_REAL, false);
+    }
+
+    GetSession()->SetPlayerLoadingForProfileSwap(false);
+    return true;
+}
+
+void Player::FinishProfileSwap()
+{
+    _profileSwapReloading = false;
+
+    // A mount saved with the profile, which _LoadAuras leaves for after loading
+    if (GetMountBlockId())
+    {
+        if (!HasMountedAura())
+            CastSpell(this, GetMountBlockId(), true);
+        SetMountBlockId(0);
+    }
+
+    // Auras the place gives, which may depend on the quests now held
+    UpdateZoneDependentAuras(GetZoneId());
+    UpdateAreaDependentAuras(GetAreaId());
+
+    // What SendInitialPacketsBeforeAddToMap sends for the parts that changed.  The spellbook has to be known before the action bars: the
+    // client drops, and tells the server to drop, a button for a spell it does not know
+    SendTalentsInfoData(false);
+    SendInitialSpells();
+    SendUnlearnSpells();
+    SendActionButtons(1);
+    SendProficiency(ITEM_CLASS_WEAPON, GetWeaponProficiency());
+    SendProficiency(ITEM_CLASS_ARMOR, GetArmorProficiency());
+
+    // Quest markers over heads and on objects follow the quest log
+    SendQuestGiverStatusMultiple();
+    UpdateForQuestWorldObjects();
+
+    if (GetGroup())
+        SetGroupUpdateFlag(GROUP_UPDATE_FULL);
+
+    UpdateObjectVisibility(false);
+
+    // Load pet if any, as login does
+    LoadPet();
+}
+
 bool Player::isAllowedToLoot(Creature const* creature)
 {
     if (!creature->isDead() || !creature->IsDamageEnoughForLootingAndReward() || creature->IsLootRewardDisabled())
@@ -6204,7 +6785,7 @@ void Player::_LoadActions(PreparedQueryResult result)
     }
 }
 
-void Player::_LoadAuras(PreparedQueryResult result, uint32 timediff)
+void Player::_LoadAuras(PreparedQueryResult result, uint32 timediff, std::unordered_set<uint32> const* skipSpellIds /*= nullptr*/)
 {
     LOG_DEBUG("entities.player.loading", "Loading auras for player {}", GetGUID().ToString());
 
@@ -6242,6 +6823,10 @@ void Player::_LoadAuras(PreparedQueryResult result, uint32 timediff)
                 damage[i] = fields[15 + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
                 baseDamage[i] = fields[15 + MAX_SPELL_EFFECTS_EXTENDED + i - MAX_SPELL_EFFECTS_DBC].Get<int32>();
             }
+
+            // MergedWorlds live profile swap: an aura that stayed on the character through the swap is still applied
+            if (skipSpellIds && skipSpellIds->find(spellid) != skipSpellIds->end())
+                continue;
 
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellid);
             if (!spellInfo)
@@ -6489,9 +7074,15 @@ void Player::_LoadInventory(PreparedQueryResult result, uint32 timeDiff)
 
 bool Player::_CreateAccountBankVaults()
 {
-    for (uint8 vaultSlot = ACCOUNT_BANK_VAULT_SLOT_START; vaultSlot < ACCOUNT_BANK_VAULT_SLOT_END; ++vaultSlot)
+    for (uint8 vaultSlot = ACCOUNT_BANK_VAULT_SLOT_START; vaultSlot < WORLD_BANK_VAULT_SLOT_END; ++vaultSlot)
     {
-        if (m_items[vaultSlot])
+        // MergedWorlds: the light source slot sits between the account vaults and the world vaults
+        if (!IsAccountBankVaultSlot(vaultSlot) || m_items[vaultSlot])
+            continue;
+
+        // MergedWorlds world bank: only the tabs of the worlds that are on
+        uint8 world = GetVaultSlotWorld(vaultSlot);
+        if (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world))
             continue;
 
         // Fixed guids at the very top of the item range: the vaults are rebuilt at every login and never saved, so they
@@ -6514,10 +7105,81 @@ bool Player::_CreateAccountBankVaults()
     return true;
 }
 
-void Player::SetAccountBankBagSlotCount(uint8 count)
+void Player::SetAccountBankBagSlotCount(uint8 count, uint8 world)
 {
-    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, count);
-    m_accountBankSettingsChanged = true;
+    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, world, count);
+    m_accountBankSettingsChanged |= uint8(1 << world);
+}
+
+// MergedWorlds world bank: only one character of an account is ever in world, so a tab's bags have one owner, wherever they wait
+void Player::SetBankBagPage(uint8 world)
+{
+    if (world == m_bankBagPage || world > MAX_WORLD_BANK_WORLD)
+        return;
+
+    for (uint8 i = 0; i < MAX_ACCOUNT_BANK_BAG_SLOT_COUNT; ++i)
+    {
+        uint8 slot = ACCOUNT_BANK_BAG_SLOT_START + i;
+        Item* bag = m_hiddenBankBags[world][i];
+        m_hiddenBankBags[world][i] = nullptr;
+        m_hiddenBankBags[m_bankBagPage][i] = m_items[slot];
+        m_items[slot] = bag;
+        SetGuidValue(GetInventorySlotUpdateField(slot), bag ? bag->GetGUID() : ObjectGuid::Empty);
+    }
+    m_bankBagPage = world;
+}
+
+void Player::SetBankTabShowing(uint8 tab)
+{
+    // Tab 0 is the Character tab or no bank.  Any other is a tab of the account, and its bags come into the slots
+    uint8 world = tab ? uint8(tab - 1) : uint8(WORLD_BANK_ACCOUNT);
+    if (world > MAX_WORLD_BANK_WORLD || (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world)) || !m_accountBankLoaded)
+        return;
+
+    m_bankTabShowing = tab;
+    if (tab)
+        SetBankBagPage(world);
+    SendBankCurrencyText(world);
+}
+
+void Player::SendBankCurrencyText(uint8 world)
+{
+    if (world == WORLD_BANK_ACCOUNT || m_bankTabShowing != world + 1)
+        return;
+
+    WorldPackets::Bank::BankCurrency packet;
+    packet.World = world;
+    sScriptMgr->OnPlayerBankCurrencyText(this, world, packet.Text);
+    SendDirectMessage(packet.Write());
+}
+
+// The world of a bag in a bag slot, whichever page it's on
+uint8 Player::_GetBankBagWorld(Item const* bag) const
+{
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+        if (m_hiddenBankBags[world][bag->GetSlot() - ACCOUNT_BANK_BAG_SLOT_START] == bag)
+            return world;
+    return m_bankBagPage;
+}
+
+// A bag on a page that isn't in the slots, or something inside one
+bool Player::_IsOnHiddenBankBagPage(Item* item) const
+{
+    Item const* holder = item->GetContainer() ? item->GetContainer() : item;
+    if (holder->GetBagSlot() != INVENTORY_SLOT_BAG_0 || holder->GetSlot() < ACCOUNT_BANK_BAG_SLOT_START || holder->GetSlot() >= ACCOUNT_BANK_BAG_SLOT_END)
+        return false;
+    return m_items[holder->GetSlot()] != holder && _GetBankBagWorld(holder) != m_bankBagPage;
+}
+
+// The bags of the pages that aren't in the slots.  Each needs what m_items gets from the player's world, client and destructor
+std::vector<Item*> Player::_GetHiddenBankBags() const
+{
+    std::vector<Item*> bags;
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+        for (uint8 i = 0; i < MAX_ACCOUNT_BANK_BAG_SLOT_COUNT; ++i)
+            if (m_hiddenBankBags[world][i])
+                bags.push_back(m_hiddenBankBags[world][i]);
+    return bags;
 }
 
 void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff)
@@ -6526,16 +7188,23 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
     if (!_CreateAccountBankVaults())
         return;
 
-    uint8 bagSlots = 0;
+    // MergedWorlds world bank: one row per tab with a slot bought.  A world that's off has no tab, and its row stays as it is
+    SetUInt32Value(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0);
     if (settingsResult)
-        bagSlots = std::min<uint8>((*settingsResult)[0].Get<uint8>(), MAX_ACCOUNT_BANK_BAG_SLOT_COUNT);
-    SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0, bagSlots);
-    m_accountBankSettingsChanged = false;
+    {
+        do
+        {
+            uint8 world = (*settingsResult)[0].Get<uint8>();
+            if (world == WORLD_BANK_ACCOUNT || IsWorldBankEnabled(world))
+                SetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, world, std::min<uint8>((*settingsResult)[1].Get<uint8>(), MAX_ACCOUNT_BANK_BAG_SLOT_COUNT));
+        } while (settingsResult->NextRow());
+    }
+    m_accountBankSettingsChanged = 0;
 
     if (itemsResult)
     {
         uint32 zoneId = GetZoneId();
-        std::map<ObjectGuid::LowType, Bag*> bagMap;
+        std::map<ObjectGuid::LowType, std::pair<Bag*, uint8>> bagMap;  // Each bag and its world
         std::list<Item*> problematicItems;
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
@@ -6545,6 +7214,12 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             Field* fields = itemsResult->Fetch();
             ObjectGuid::LowType bagGuid = fields[11].Get<uint32>();
             uint8 dbSlot = fields[12].Get<uint8>();
+            uint8 world = fields[15].Get<uint8>();
+
+            // MergedWorlds world bank: a world that's off keeps its rows as they are.  Its item templates may not exist, and every path
+            // below can delete a row or an item, so nothing here looks at it
+            if (world != WORLD_BANK_ACCOUNT && !IsWorldBankEnabled(world))
+                continue;
 
             // an item is in one place only: already loaded from this character's inventory or mail, the account row is stale
             ObjectGuid itemGuid = ObjectGuid::Create<HighGuid::Item>(fields[13].Get<uint32>());
@@ -6569,7 +7244,7 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             {
                 if (dbSlot < ACCOUNT_BANK_ITEM_SLOT_COUNT)
                 {
-                    bag = ACCOUNT_BANK_VAULT_SLOT_START + dbSlot / ACCOUNT_BANK_VAULT_SIZE;
+                    bag = GetWorldVaultSlotStart(world) + dbSlot / ACCOUNT_BANK_VAULT_SIZE;
                     slot = dbSlot % ACCOUNT_BANK_VAULT_SIZE;
                 }
                 else if (dbSlot < ACCOUNT_BANK_DB_BAG_SLOT_START + MAX_ACCOUNT_BANK_BAG_SLOT_COUNT && item->IsBag())
@@ -6580,13 +7255,17 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             }
             else
             {
-                std::map<ObjectGuid::LowType, Bag*>::const_iterator itr = bagMap.find(bagGuid);
+                std::map<ObjectGuid::LowType, std::pair<Bag*, uint8>>::const_iterator itr = bagMap.find(bagGuid);
                 if (itr != bagMap.end())
                 {
-                    bag = itr->second->GetSlot();
+                    bag = itr->second.first->GetSlot();
                     slot = dbSlot;
+                    world = itr->second.second;
                 }
             }
+
+            // MergedWorlds world bank: a tab's bags, and what's in them, go in through its page.  The slots go back to the Account tab below
+            SetBankBagPage(world);
 
             Item* placed = nullptr;
             if (bag != NULL_BAG && GetItemByPos(bag, slot) == nullptr)
@@ -6623,9 +7302,10 @@ void Player::_LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryR
             placed->SetState(ITEM_UNCHANGED, this);
             if (bag == INVENTORY_SLOT_BAG_0)
                 if (Bag* pBag = placed->ToBag())
-                    bagMap[placed->GetGUID().GetCounter()] = pBag;
+                    bagMap[placed->GetGUID().GetCounter()] = std::make_pair(pBag, world);
         } while (itemsResult->NextRow());
         m_itemUpdateQueueBlocked = false;
+        SetBankBagPage(WORLD_BANK_ACCOUNT);
 
         while (!problematicItems.empty())
         {
@@ -7849,6 +8529,13 @@ void Player::SaveToDB(CharacterDatabaseTransaction trans, bool create, bool logo
     // delay auto save at any saves (manual, in code, or autosave)
     m_nextSave = sWorld->getIntConfig(CONFIG_INTERVAL_SAVE);
 
+    // MergedWorlds live profile swap: see ReloadProfileFromDB
+    if (_profileSwapSaveBlocked)
+    {
+        LOG_ERROR("entities.player", "Player::SaveToDB: player ({}, name: '{}') is not saved, since the database holds a swapped profile this object never took on", GetGUID().ToString(), GetName());
+        return;
+    }
+
     //lets allow only players in world to be saved
     if (IsBeingTeleportedFar())
     {
@@ -7921,10 +8608,10 @@ void Player::AdditionalSavingAddMask(uint8 mask)
 void Player::SaveInventoryAndGoldToDB(CharacterDatabaseTransaction trans)
 {
     _SaveInventory(trans);
-    SaveGoldToDB(trans);
+    SaveGoldToDB(trans, true); // MergedWorlds: with the inventory
 }
 
-void Player::SaveGoldToDB(CharacterDatabaseTransaction trans)
+void Player::SaveGoldToDB(CharacterDatabaseTransaction trans, bool isInventorySaved)
 {
     // MergedWorlds: a game identity form saves the character's own money (see OnPlayerSaveCharacterValues)
     PlayerSaveValues saveValues;
@@ -7934,6 +8621,7 @@ void Player::SaveGoldToDB(CharacterDatabaseTransaction trans)
     saveValues.Health = GetHealth();
     for (uint32 i = 0; i < MAX_POWERS; ++i)
         saveValues.Powers[i] = GetPower(Powers(i));
+    saveValues.IsInventorySaved = isInventorySaved;
     sScriptMgr->OnPlayerSaveCharacterValues(this, trans, saveValues);
 
     CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UDP_CHAR_MONEY);
@@ -8058,35 +8746,47 @@ void Player::_SaveAccountBankSettings(CharacterDatabaseTransaction trans)
     if (!m_accountBankSettingsChanged || !m_accountBankLoaded)
         return;
 
-    CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK);
-    stmt->SetData(0, GetSession()->GetAccountId());
-    stmt->SetData(1, GetAccountBankBagSlotCount());
-    trans->Append(stmt);
-    m_accountBankSettingsChanged = false;
+    // MergedWorlds world bank: only the tabs that changed, so a world that's off keeps its row
+    for (uint8 world = 0; world <= MAX_WORLD_BANK_WORLD; ++world)
+    {
+        if (!(m_accountBankSettingsChanged & (1 << world)))
+            continue;
+
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK);
+        stmt->SetData(0, GetSession()->GetAccountId());
+        stmt->SetData(1, world);
+        stmt->SetData(2, GetAccountBankBagSlotCount(world));
+        trans->Append(stmt);
+    }
+    m_accountBankSettingsChanged = 0;
 }
 
-bool Player::_GetAccountBankDBPosition(Item const* item, ObjectGuid::LowType& bagGuid, uint8& slot) const
+bool Player::_GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGuid::LowType& bagGuid, uint8& slot) const
 {
     if (!IsAccountBankPos(item->GetBagSlot(), item->GetSlot()))
         return false;
 
+    world = WORLD_BANK_ACCOUNT;
     Bag* container = const_cast<Item*>(item)->GetContainer();
     if (!container)
     {
-        // an account bank bag slot
+        // an account bank bag slot, of the tab whose page it's on
         bagGuid = 0;
+        world = _GetBankBagWorld(item);
         slot = ACCOUNT_BANK_DB_BAG_SLOT_START + (item->GetSlot() - ACCOUNT_BANK_BAG_SLOT_START);
     }
     else if (container->IsAccountBankVault())
     {
-        // one of the 72 item slots
+        // one of the item slots of the account bank or a world's tab
         bagGuid = 0;
-        slot = (container->GetSlot() - ACCOUNT_BANK_VAULT_SLOT_START) * ACCOUNT_BANK_VAULT_SIZE + item->GetSlot();
+        world = GetVaultSlotWorld(container->GetSlot());
+        slot = (container->GetSlot() - GetWorldVaultSlotStart(world)) * ACCOUNT_BANK_VAULT_SIZE + item->GetSlot();
     }
     else
     {
         // inside an account bank bag
         bagGuid = container->GetGUID().GetCounter();
+        world = _GetBankBagWorld(container);
         slot = item->GetSlot();
     }
     return true;
@@ -8171,7 +8871,8 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
 
         if (item->GetState() != ITEM_REMOVED)
         {
-            Item* test = GetItemByPos(item->GetBagSlot(), item->GetSlot());
+            // MergedWorlds world bank: the slots hold one tab's bags, so a position says nothing about another tab's
+            Item* test = _IsOnHiddenBankBagPage(item) ? item : GetItemByPos(item->GetBagSlot(), item->GetSlot());
             if (!test)
             {
                 ObjectGuid::LowType bagTestGUID = 0;
@@ -8236,9 +8937,10 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
         }
 
         // MergedWorlds account bank: an item lives in exactly one of character_inventory / account_bank_item
+        uint8 accountBankWorld = WORLD_BANK_ACCOUNT;
         ObjectGuid::LowType accountBankBagGuid = 0;
         uint8 accountBankSlot = 0;
-        bool isInAccountBank = item->GetState() != ITEM_REMOVED && _GetAccountBankDBPosition(item, accountBankBagGuid, accountBankSlot);
+        bool isInAccountBank = item->GetState() != ITEM_REMOVED && _GetAccountBankDBPosition(item, accountBankWorld, accountBankBagGuid, accountBankSlot);
 
         switch (item->GetState())
         {
@@ -8248,9 +8950,10 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                 {
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK_ITEM);
                     stmt->SetData(0, GetSession()->GetAccountId());
-                    stmt->SetData(1, accountBankBagGuid);
-                    stmt->SetData(2, accountBankSlot);
-                    stmt->SetData(3, item->GetGUID().GetCounter());
+                    stmt->SetData(1, accountBankWorld);
+                    stmt->SetData(2, accountBankBagGuid);
+                    stmt->SetData(3, accountBankSlot);
+                    stmt->SetData(4, item->GetGUID().GetCounter());
                     trans->Append(stmt);
 
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);

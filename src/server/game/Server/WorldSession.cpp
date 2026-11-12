@@ -706,7 +706,7 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
 
         ///- If the player just died before logging out, make him appear as a ghost
         //FIXME: logout must be delayed in case lost connection with client in time of combat
-        if (_player->GetDeathTimer())
+        if (_player->GetDeathTimer() && sScriptMgr->OnPlayerCanAutoRelease(_player)) // MergedWorlds: the script hook
         {
             _player->GetThreatMgr().RemoveMeFromThreatLists();
             _player->BuildPlayerRepop();

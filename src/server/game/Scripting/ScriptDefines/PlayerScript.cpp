@@ -1025,9 +1025,59 @@ bool ScriptMgr::OnPlayerCanLoseDurability(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_LOSE_DURABILITY, !script->OnPlayerCanLoseDurability(player));
 }
 
+bool ScriptMgr::OnPlayerCanTakeFallDamage(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, !script->OnPlayerCanTakeFallDamage(player));
+}
+
+void ScriptMgr::OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BANK_ITEM, script->OnPlayerCanBankItem(player, item, world, result));
+}
+
+void ScriptMgr::OnPlayerCanBuyBankSlot(Player* player, bool& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUY_BANK_SLOT, script->OnPlayerCanBuyBankSlot(player, result));
+}
+
+void ScriptMgr::OnPlayerBankCurrencyText(Player* player, uint8 world, std::string& text)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BANK_CURRENCY_TEXT, script->OnPlayerBankCurrencyText(player, world, text));
+}
+
+void ScriptMgr::OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_GUILD_BANK_ITEM, script->OnPlayerCanGuildBankItem(player, item, result));
+}
+
+void ScriptMgr::OnPlayerSellItemMoney(Player* player, uint32& money)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_SELL_ITEM_MONEY, script->OnPlayerSellItemMoney(player, money));
+}
+
+bool ScriptMgr::OnPlayerCanBuybackItem(Player* player, Item* item)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUYBACK_ITEM, !script->OnPlayerCanBuybackItem(player, item));
+}
+
 bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));
+}
+
+bool ScriptMgr::OnPlayerCanUseClassAbilities(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_USE_CLASS_ABILITIES, !script->OnPlayerCanUseClassAbilities(player));
+}
+
+bool ScriptMgr::OnPlayerCanAutoRelease(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_AUTO_RELEASE, !script->OnPlayerCanAutoRelease(player));
+}
+
+void ScriptMgr::OnPlayerCreatureInteractionReach(Player* player, Creature const* creature, bool& isInReach)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, script->OnPlayerCreatureInteractionReach(player, creature, isInReach));
 }
 
 bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack)

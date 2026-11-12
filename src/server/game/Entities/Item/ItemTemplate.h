@@ -72,7 +72,7 @@ enum ItemModType
 
 #define MAX_ITEM_MOD                    49
 
-// MergedWorlds account bank: entry of the hidden 36 slot vault bags that hold the account bank item slots.  The template only
+// MergedWorlds account bank: entry of the hidden 36 slot vault bags that hold the account bank's and world tabs' item slots.  The template only
 // exists in memory (ObjectMgr::LoadItemTemplates adds it); the entry sits between the stock items and the EverQuest items
 #define ACCOUNT_BANK_VAULT_ITEM_ENTRY   84990
 

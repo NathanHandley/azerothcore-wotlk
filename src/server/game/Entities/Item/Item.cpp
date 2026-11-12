@@ -882,7 +882,7 @@ bool Item::IsBoundByTempEnchant() const
     return false;
 }
 
-InventoryResult Item::CanBeMergedPartlyWith(ItemTemplate const* proto) const
+InventoryResult Item::CanBeMergedPartlyWith(ItemTemplate const* proto, Item const* source) const
 {
     // not allow merge looting currently items
     if (m_lootGenerated)
@@ -894,6 +894,10 @@ InventoryResult Item::CanBeMergedPartlyWith(ItemTemplate const* proto) const
 
     // check free space (full stacks can't be target of merge
     if (GetCount() >= proto->GetMaxStackSize())
+        return EQUIP_ERR_ITEM_CANT_STACK;
+
+    // MergedWorlds: a stack with a maker keeps to its maker (Ragnarok's named potions).  Stock stacks never have one (HasSignature)
+    if (GetGuidValue(ITEM_FIELD_CREATOR) != (source != nullptr ? source->GetGuidValue(ITEM_FIELD_CREATOR) : ObjectGuid::Empty))
         return EQUIP_ERR_ITEM_CANT_STACK;
 
     return EQUIP_ERR_OK;

@@ -122,6 +122,29 @@ void AuraApplication::_Remove()
     }
 }
 
+void AuraApplication::HideFromClient()
+{
+    // MergedWorlds: the slot is given up as a removal gives it up (the clients are told it's empty), and the application stays on as a passive's does
+    if (_slot >= MAX_AURAS)
+        return;
+    if (GetTarget()->GetVisibleAura(_slot) == this)
+    {
+        GetTarget()->RemoveVisibleAura(_slot);
+        ClientUpdate(true);
+    }
+    _slot = MAX_AURAS;
+    _needClientUpdate = false;
+}
+
+void Aura::SetClientHidden()
+{
+    if (m_isClientHidden)
+        return;
+    m_isClientHidden = true;
+    for (auto const& application : m_applications)
+        application.second->HideFromClient();
+}
+
 void AuraApplication::_InitFlags(Unit* caster, uint32 effMask)
 {
     // mark as selfcasted if needed
@@ -373,7 +396,7 @@ Aura::Aura(SpellInfo const* spellproto, WorldObject* owner, Unit* caster, Item* 
     m_castItemGuid(itemGUID ? itemGUID : castItem ? castItem->GetGUID() : ObjectGuid::Empty), m_castItemEntry(castItem ? castItem->GetEntry() : 0), m_applyTime(GameTime::GetGameTime().count()),
     m_applySequence(++AuraApplySequenceCounter), m_owner(owner), m_timeCla(0), m_updateTargetMapInterval(0),
     m_casterLevel(caster ? caster->GetLevel() : m_spellInfo->SpellLevel), m_procCharges(0), m_stackAmount(1),
-    m_isRemoved(false), m_isSingleTarget(false), m_isUsingCharges(false), m_triggeredByAuraSpellInfo(nullptr)
+    m_isRemoved(false), m_isSingleTarget(false), m_isUsingCharges(false), m_isClientHidden(false), m_triggeredByAuraSpellInfo(nullptr)
 {
     if ((m_spellInfo->ManaPerSecond || m_spellInfo->ManaPerSecondPerLevel) && !m_spellInfo->HasAttribute(SPELL_ATTR2_NO_TARGET_PER_SECOND_COST))
         m_timeCla = 1 * IN_MILLISECONDS;
@@ -1153,6 +1176,9 @@ bool Aura::IsRemovedOnShapeLost(Unit* target) const
 
 bool Aura::CanBeSaved() const
 {
+    if (m_isClientHidden) // MergedWorlds: put on again by whoever hid it
+        return false;
+
     SpellInfo const* spellInfo = GetSpellInfo();
 
     if (spellInfo->HasAttribute(SPELL_ATTR0_CU_FORCE_AURA_SAVING))
@@ -1200,6 +1226,8 @@ bool Aura::CanBeSaved() const
 
 bool Aura::CanBeSentToClient() const
 {
+    if (m_isClientHidden)
+        return false;
     return !IsPassive() || GetSpellInfo()->HasAreaAuraEffect() || HasEffectType(SPELL_AURA_ABILITY_IGNORE_AURASTATE);
 }
 
