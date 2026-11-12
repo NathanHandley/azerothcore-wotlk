@@ -1085,6 +1085,11 @@ bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& ex
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));
 }
 
+void ScriptMgr::OnPlayerWhoListInfo(Player* player, WhoListWorldInfo& info)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_WHO_LIST_INFO, script->OnPlayerWhoListInfo(player, info));
+}
+
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, PLAYERHOOK_END)
 {

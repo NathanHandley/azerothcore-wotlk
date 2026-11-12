@@ -38,6 +38,8 @@ namespace WorldPackets::NPC
     class TrainerList;
 }
 
+struct WhoListWorldInfo; // MergedWorlds, WhoListCacheMgr.h
+
 // MergedWorlds: the values of a character's row that a game identity form (mod-rowow's RO form) changes while it's on
 struct PlayerSaveValues
 {
@@ -263,6 +265,7 @@ enum PlayerHook
     PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, // MergedWorlds
     PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, // MergedWorlds vendor prices
     PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE,
+    PLAYERHOOK_ON_WHO_LIST_INFO, // MergedWorlds
     PLAYERHOOK_END
 };
 
@@ -1146,6 +1149,16 @@ public:
      * @return False to hold the swing (the script stops the attack itself, as an RO bow with no ammo does)
      */
     [[nodiscard]] virtual bool OnPlayerBeforeAutoAttack(Player* /*player*/, Unit* /*victim*/, float& /*extraRange*/, bool& /*hasOffhandAttack*/) { return true; }
+
+    /**
+     * @brief MergedWorlds: called for each player as the who list's cache is rebuilt (WhoListCacheMgr::Update, every few seconds on the world
+     *        thread), for the world the player is in and the classes it shows there.
+     *
+     * @param player Contains information about the Player
+     * @param info Starts as the core's: Azeroth, the player's zone, the character's class as the primary class and no secondary class.  A game
+     *             module changes what is its own: its world's name and zone on its maps, the classes the player shows in its game
+     */
+    virtual void OnPlayerWhoListInfo(Player* /*player*/, WhoListWorldInfo& /*info*/) { }
 };
 
 #endif
