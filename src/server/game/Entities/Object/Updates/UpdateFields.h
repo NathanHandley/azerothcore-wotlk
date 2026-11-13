@@ -323,7 +323,9 @@ enum EUnitFields
     PLAYER_VISIBLE_ITEM_19_ENCHANTMENT        = UNIT_END + 0x00AC, // Size: 1, Type: TWO_SHORT, Flags: PUBLIC
     PLAYER_CHOSEN_TITLE                       = UNIT_END + 0x00AD, // Size: 1, Type: INT, Flags: PUBLIC
     PLAYER_FAKE_INEBRIATION                   = UNIT_END + 0x00AE, // Size: 1, Type: INT, Flags: PUBLIC
-    PLAYER_FIELD_PAD_0                        = UNIT_END + 0x00AF, // Size: 1, Type: INT, Flags: NONE
+    PLAYER_FIELD_MW_RO_JOB                    = UNIT_END + 0x00AF, // Size: 1, Type: INT, Flags: PUBLIC.  MergedWorlds: was PLAYER_FIELD_PAD_0 (NONE, unused); a player's
+                                                                   // Ragnarok Online job + 1 while it's in the RO form, 0 otherwise (set by mod-rowow), which every
+                                                                   // client that sees the player gets as it does the class (the client's UnitRagnarokJob)
     PLAYER_FIELD_INV_SLOT_HEAD                = UNIT_END + 0x00B0, // Size: 46, Type: LONG, Flags: PRIVATE
     PLAYER_FIELD_PACK_SLOT_1                  = UNIT_END + 0x00DE, // Size: 32, Type: LONG, Flags: PRIVATE
     PLAYER_FIELD_BANK_SLOT_1                  = UNIT_END + 0x00FE, // Size: 56, Type: LONG, Flags: PRIVATE
@@ -391,10 +393,11 @@ enum EUnitFields
     PLAYER_PET_SPELL_POWER                    = UNIT_END + 0x0499, // Size: 1, Type: INT, Flags: PRIVATE
     // MergedWorlds bank expansion: inventory slots 150 and up (bank 72 items / 24 bags, account bank) continue here, so the
     // stock fields keep their indices.  Player::GetInventorySlotUpdateField maps a slot to its field
-    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 176, Type: LONG, Flags: PRIVATE
-    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x054A, // Size: 1, Type: BYTES, Flags: PRIVATE (byte 0 = purchased account bank bag slots)
-    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x054B, // Size: 1, Type: INT, Flags: NONE
-    PLAYER_END                                = UNIT_END + 0x054C,
+    // MergedWorlds: slots 150-241, so the light source slot 237 and the world bank vaults 238-241
+    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 184, Type: LONG, Flags: PRIVATE
+    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x0552, // Size: 1, Type: BYTES, Flags: PRIVATE (byte n = purchased bag slots of the tab of world n: 0 Account, 1 Ragnarok, 2 City of Heroes)
+    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x0553, // Size: 1, Type: INT, Flags: NONE
+    PLAYER_END                                = UNIT_END + 0x0554,
 };
 
 enum EGameObjectFields

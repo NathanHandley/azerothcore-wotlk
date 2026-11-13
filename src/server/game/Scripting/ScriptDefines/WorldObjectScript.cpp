@@ -54,6 +54,11 @@ void ScriptMgr::OnWorldObjectUpdate(WorldObject* object, uint32 diff)
     CALL_ENABLED_HOOKS(WorldObjectScript, WORLDOBJECTHOOK_ON_WORLD_OBJECT_UPDATE, script->OnWorldObjectUpdate(object, diff));
 }
 
+void ScriptMgr::OnCorpseBuildValuesUpdateField(Corpse const* corpse, Player const* target, uint16 index, uint32& value)
+{
+    CALL_ENABLED_HOOKS(WorldObjectScript, WORLDOBJECTHOOK_ON_CORPSE_BUILD_VALUES_UPDATE_FIELD, script->OnCorpseBuildValuesUpdateField(corpse, target, index, value));
+}
+
 WorldObjectScript::WorldObjectScript(char const* name, std::vector<uint16> enabledHooks)
     : ScriptObject(name, WORLDOBJECTHOOK_END)
 {

@@ -1340,7 +1340,8 @@ enum Opcodes : uint16
     SMSG_MULTIPLE_MOVES                             = 0x51E, // uncompressed version of SMSG_COMPRESSED_MOVES
     TC9_CMSG_PREPARE_FOR_REDIRECT                   = 0x51F,
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
-    // 0x521 and 0x522 are ROWOW's bank tab opcodes (CMSG_BANK_SHOW_TAB, SMSG_BANK_CURRENCY), which come with the integration merge
+    CMSG_BANK_SHOW_TAB                              = 0x521, // MergedWorlds world bank
+    SMSG_BANK_CURRENCY                              = 0x522, // MergedWorlds world bank
     CMSG_COH_QUERY_COSTUME                          = 0x523, // MergedWorlds: a hero's costume, as CMSG_GET_MIRRORIMAGE_DATA
     SMSG_COH_COSTUME                                = 0x524,
     CMSG_COH_SET_COSTUME                            = 0x525,

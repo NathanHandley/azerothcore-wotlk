@@ -104,6 +104,7 @@ namespace WorldPackets
         class AutoBankItem;
         class AutoStoreBankItem;
         class BuyBankSlot;
+        class BankShowTab;
     }
 
     namespace Combat
@@ -448,6 +449,9 @@ public:
     uint8 GetBillingPlanFlags() const;
 
     bool PlayerLoading() const { return m_playerLoading; }
+    // MergedWorlds live profile swap: Player::ReloadProfileFromDB runs the login loaders on a character that is already in the world, and they
+    // only behave as they do at login (nothing they add is marked as needing a save) while this is set.  Nothing else may set it
+    void SetPlayerLoadingForProfileSwap(bool loading) { m_playerLoading = loading; }
     bool PlayerLogout() const { return m_playerLogout; }
     bool PlayerRecentlyLoggedOut() const { return m_playerRecentlyLogout; }
     bool PlayerLogoutWithSave() const { return m_playerLogout && m_playerSave; }
@@ -569,7 +573,12 @@ public:
 
     void SendTrainerList(Creature* npc);
     void SendListInventory(ObjectGuid guid, uint32 vendorEntry = 0);
-    void SendShowBank(ObjectGuid guid);
+    void SendShowBank(ObjectGuid guid, uint8 world = 0); // MergedWorlds: world opens the bank window on that world's tab
+    bool IsPlayerBanker() const; // MergedWorlds: the player is its own banker (SendShowBank with its GUID)
+    void ClearPlayerBanker(); // MergedWorlds: ... and stops being: the window that opened is over
+    // MergedWorlds: the guild bank shown with the player as its own banker, with no vault in reach (mod-rowow's Kafra guild storage), as
+    // SendShowBank with the player's GUID shows the bank.  An empty GUID ends it
+    void SendShowGuildBank(ObjectGuid guid);
     bool CanOpenMailBox(ObjectGuid guid);
     void SendShowMailBox(ObjectGuid guid);
     void SendMailList();
@@ -924,6 +933,7 @@ public:                                                 // opcodes handlers
     void HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& packet);
     void HandleAutoStoreBankItemOpcode(WorldPackets::Bank::AutoStoreBankItem& packet);
     void HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyBankSlot);
+    void HandleBankShowTabOpcode(WorldPackets::Bank::BankShowTab& packet); // MergedWorlds world bank
 
     void HandleGetMailList(WorldPacket& recvData);
     void HandleSendMail(WorldPacket& recvData);
@@ -1276,8 +1286,11 @@ private:
     void moveItems(Item* myItems[], Item* hisItems[]);
 
     bool CanUseBank(ObjectGuid bankerGUID = ObjectGuid::Empty) const;
+
     // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client)
     bool IsBankPosOutOfReach(uint8 bag, uint8 slot) const;
+    // MergedWorlds: a guild vault in reach, or the player itself after SendShowGuildBank
+    bool CanUseGuildBank(ObjectGuid bankerGUID) const;
 
     bool recoveryItem(Item* pItem);
 
@@ -1337,6 +1350,7 @@ private:
     LockedQueue<WorldPacket*> _recvQueue;
     uint32 m_currentVendorEntry;
     ObjectGuid m_currentBankerGUID;
+    ObjectGuid m_currentGuildBankerGUID; // MergedWorlds: set by SendShowGuildBank
     uint32 _offlineTime;
     bool _kicked;
     // Packets cooldown

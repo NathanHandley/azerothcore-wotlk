@@ -968,6 +968,17 @@ void ScriptMgr::OnPlayerGetReputationPriceDiscount(Player const* player, Faction
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_REPUTATION_PRICE_DISCOUNT, script->OnPlayerGetReputationPriceDiscount(player, factionTemplate, discount));
 }
 
+// MergedWorlds vendor prices
+void ScriptMgr::OnPlayerGetVendorItemBuyPrice(Player const* player, Creature const* vendor, ItemTemplate const* itemTemplate, uint32 count, uint32& price)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_BUY_PRICE, script->OnPlayerGetVendorItemBuyPrice(player, vendor, itemTemplate, count, price));
+}
+
+void ScriptMgr::OnPlayerGetVendorItemSellPrice(Player const* player, Creature const* vendor, Item const* item, uint32& unitPrice)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_VENDOR_ITEM_SELL_PRICE, script->OnPlayerGetVendorItemSellPrice(player, vendor, item, unitPrice));
+}
+
 void ScriptMgr::OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId)
 {
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_LEARN_TAXI_NODE, script->OnPlayerLearnTaxiNode(player, nodeId));
@@ -1014,6 +1025,41 @@ bool ScriptMgr::OnPlayerCanLoseDurability(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_LOSE_DURABILITY, !script->OnPlayerCanLoseDurability(player));
 }
 
+bool ScriptMgr::OnPlayerCanTakeFallDamage(Player* player)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_TAKE_FALL_DAMAGE, !script->OnPlayerCanTakeFallDamage(player));
+}
+
+void ScriptMgr::OnPlayerCanBankItem(Player* player, Item const* item, uint8 world, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BANK_ITEM, script->OnPlayerCanBankItem(player, item, world, result));
+}
+
+void ScriptMgr::OnPlayerCanBuyBankSlot(Player* player, bool& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUY_BANK_SLOT, script->OnPlayerCanBuyBankSlot(player, result));
+}
+
+void ScriptMgr::OnPlayerBankCurrencyText(Player* player, uint8 world, std::string& text)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_BANK_CURRENCY_TEXT, script->OnPlayerBankCurrencyText(player, world, text));
+}
+
+void ScriptMgr::OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_CAN_GUILD_BANK_ITEM, script->OnPlayerCanGuildBankItem(player, item, result));
+}
+
+void ScriptMgr::OnPlayerSellItemMoney(Player* player, uint32& money)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_SELL_ITEM_MONEY, script->OnPlayerSellItemMoney(player, money));
+}
+
+bool ScriptMgr::OnPlayerCanBuybackItem(Player* player, Item* item)
+{
+    CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUYBACK_ITEM, !script->OnPlayerCanBuybackItem(player, item));
+}
+
 bool ScriptMgr::OnPlayerCanRegenerate(Player* player)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_REGENERATE, !script->OnPlayerCanRegenerate(player));
@@ -1029,6 +1075,11 @@ bool ScriptMgr::OnPlayerCanAutoRelease(Player* player)
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_AUTO_RELEASE, !script->OnPlayerCanAutoRelease(player));
 }
 
+void ScriptMgr::OnPlayerCreatureInteractionReach(Player* player, Creature const* creature, bool& isInReach)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_CREATURE_INTERACTION_REACH, script->OnPlayerCreatureInteractionReach(player, creature, isInReach));
+}
+
 bool ScriptMgr::OnPlayerBeforeAutoAttack(Player* player, Unit* victim, float& extraRange, bool& hasOffhandAttack)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_BEFORE_AUTO_ATTACK, !script->OnPlayerBeforeAutoAttack(player, victim, extraRange, hasOffhandAttack));
@@ -1042,6 +1093,11 @@ void ScriptMgr::OnPlayerGetVendorItemPrice(Player const* player, Creature const*
 bool ScriptMgr::OnPlayerGetDestinationInstanceId(Player* player, uint32 mapId, Difficulty difficulty, uint32& instanceId)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_ON_GET_DESTINATION_INSTANCE_ID, !script->OnPlayerGetDestinationInstanceId(player, mapId, difficulty, instanceId));
+}
+
+void ScriptMgr::OnPlayerWhoListInfo(Player* player, WhoListWorldInfo& info)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_ON_WHO_LIST_INFO, script->OnPlayerWhoListInfo(player, info));
 }
 
 PlayerScript::PlayerScript(char const* name, std::vector<uint16> enabledHooks)

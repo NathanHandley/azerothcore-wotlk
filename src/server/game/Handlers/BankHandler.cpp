@@ -20,6 +20,7 @@
 #include "Item.h"
 #include "Log.h"
 #include "Player.h"
+#include "ScriptMgr.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
@@ -39,6 +40,17 @@ bool WorldSession::CanUseBank(ObjectGuid bankerGUID) const
     }
 
     return true;
+}
+
+bool WorldSession::IsPlayerBanker() const
+{
+    return m_currentBankerGUID == GetPlayer()->GetGUID();
+}
+
+void WorldSession::ClearPlayerBanker()
+{
+    if (IsPlayerBanker())
+        m_currentBankerGUID.Clear();
 }
 
 bool WorldSession::IsBankPosOutOfReach(uint8 bag, uint8 slot) const
@@ -80,9 +92,16 @@ void WorldSession::HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& pa
     if (!item)
         return;
 
-    // MergedWorlds account bank: with the account bank tab open the item goes there instead
+    // MergedWorlds account bank: with the account bank tab or a world's tab open the item goes there instead.  The bag slots hold one tab's bags at a
+    // time, so it has to be the one the server has
+    if (packet.AccountBank && packet.AccountBank - 1 != _player->GetBankBagPage())
+    {
+        _player->SendEquipError(EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT, item, nullptr);
+        return;
+    }
+
     ItemPosCountVec dest;
-    InventoryResult msg = packet.AccountBank ? _player->CanAccountBankItem(NULL_BAG, NULL_SLOT, dest, item, false) : _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
+    InventoryResult msg = packet.AccountBank ? _player->CanAccountBankItem(NULL_BAG, NULL_SLOT, dest, item, false, packet.AccountBank - 1) : _player->CanBankItem(NULL_BAG, NULL_SLOT, dest, item, false);
     if (msg != EQUIP_ERR_OK)
     {
         _player->SendEquipError(msg, item, nullptr);
@@ -157,16 +176,20 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
         return;
     }
 
-    // MergedWorlds bank expansion: 24 bag slots, for the character and (bought separately, same prices) for the account bank
+    // MergedWorlds bank expansion: 24 bag slots, for the character and (bought separately, same prices) for the account bank.
+    // MergedWorlds world bank: and for each world's tab, which counts its own.  A module can refuse a purchase on every tab
     bool accountBank = buyBankSlot.AccountBank != 0;
-    if (accountBank && !_player->IsAccountBankLoaded())
+    uint8 world = accountBank ? uint8(buyBankSlot.AccountBank - 1) : uint8(WORLD_BANK_ACCOUNT);
+    bool canBuy = true;
+    sScriptMgr->OnPlayerCanBuyBankSlot(_player, canBuy);
+    if (!canBuy || world > MAX_WORLD_BANK_WORLD || (world != WORLD_BANK_ACCOUNT && !Player::IsWorldBankEnabled(world)) || (accountBank && !_player->IsAccountBankLoaded()))
     {
         packet.Result = ERR_BANKSLOT_FAILED_TOO_MANY;
         SendPacket(packet.Write());
         return;
     }
 
-    uint32 slot = accountBank ? _player->GetAccountBankBagSlotCount() : _player->GetBankBagSlotCount();
+    uint32 slot = accountBank ? _player->GetAccountBankBagSlotCount(world) : _player->GetBankBagSlotCount();
 
     // next slot
     ++slot;
@@ -190,7 +213,7 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
     }
 
     if (accountBank)
-        _player->SetAccountBankBagSlotCount(slot);
+        _player->SetAccountBankBagSlotCount(slot, world);
     else
         _player->SetBankBagSlotCount(slot);
     _player->ModifyMoney(-int32(price));
@@ -211,10 +234,30 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPackets::Bank::BuyBankSlot& buyB
         _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT);
 }
 
-void WorldSession::SendShowBank(ObjectGuid guid)
+void WorldSession::SendShowBank(ObjectGuid guid, uint8 world)
 {
     m_currentBankerGUID = guid;
+
+    // MergedWorlds world bank: the bag slots follow the tab the window opens on.  The client says when it has shown it (HandleBankShowTabOpcode)
+    if (world != WORLD_BANK_ACCOUNT && !Player::IsWorldBankEnabled(world))
+        world = WORLD_BANK_ACCOUNT;
+    _player->SetBankBagPage(world);
+
     WorldPackets::Bank::ShowBank packet;
     packet.Banker = guid;
+    packet.World = world;
+    packet.WorldMask = Player::GetWorldBankEnabledMask();
+    bool canBuy = true;
+    sScriptMgr->OnPlayerCanBuyBankSlot(_player, canBuy);
+    packet.CanBuySlots = canBuy ? 1 : 0;
     SendPacket(packet.Write());
+}
+
+void WorldSession::HandleBankShowTabOpcode(WorldPackets::Bank::BankShowTab& packet)
+{
+    // No bank, no tab of it: leaving the bank is always heard
+    if (packet.Tab && !CanUseBank())
+        return;
+
+    _player->SetBankTabShowing(packet.Tab);
 }

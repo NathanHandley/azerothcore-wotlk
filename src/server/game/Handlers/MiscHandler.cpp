@@ -225,7 +225,7 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     uint32 matchCount = 0;
 
     uint32 levelMin, levelMax, racemask, classmask, zonesCount, strCount;
-    std::array<uint32, 10> zoneids = {};                    // 10 is client limit
+    std::array<uint32, WHO_LIST_MAX_ZONES> zoneids = {};    // 10 is the stock client's limit, WHO_LIST_MAX_ZONES MergedWorlds'
     std::string packetPlayerName, packetGuildName;
 
     recvData >> levelMin;                                   // maximal player level, default 0
@@ -238,7 +238,7 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     recvData >> classmask;                                  // class mask
     recvData >> zonesCount;                                 // zones count, client limit = 10 (2.0.10)
 
-    if (zonesCount > 10)
+    if (zonesCount > WHO_LIST_MAX_ZONES)
         return;                                             // can't be received from real client or broken packet
 
     for (uint32 i = 0; i < zonesCount; ++i)
@@ -271,6 +271,25 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         LOG_DEBUG("network.who", "String {}: {}", i, temp);
     }
 
+    // MergedWorlds: a MergedWorlds client ends the packet with its world block (WhoListCacheMgr.h): the world filter (w-), and that it reads
+    // the world block of the answer
+    bool isWorldBlockClient = false;
+    std::wstring wpacketWorldName;
+    if (recvData.rpos() + sizeof(uint32) <= recvData.size())
+    {
+        uint32 magic = 0;
+        recvData >> magic;
+        if (magic == WHO_LIST_MERGEDWORLDS_MAGIC)
+        {
+            std::string packetWorldName;
+            recvData >> packetWorldName;
+            if (Utf8toWStr(packetWorldName, wpacketWorldName) == false)
+                return;
+            wstrToLower(wpacketWorldName);
+            isWorldBlockClient = true;
+        }
+    }
+
     std::wstring wpacketPlayerName;
     std::wstring wpacketGuildName;
     if (!(Utf8toWStr(packetPlayerName, wpacketPlayerName) && Utf8toWStr(packetGuildName, wpacketGuildName)))
@@ -291,6 +310,8 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
     WorldPacket data(SMSG_WHO, 50);     // guess size
     data << uint32(matchCount);         // placeholder, count of players matching criteria
     data << uint32(displaycount);       // placeholder, count of players displayed
+
+    std::vector<WhoListWorldInfo const*> displayedWorldInfos; // MergedWorlds: the world block's, in the list's order
 
     for (auto const& target : sWhoListCacheMgr->GetWhoList())
     {
@@ -329,13 +350,16 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
             continue;
         }
 
-        uint32 playerZoneId = target.GetZoneId();
+        // MergedWorlds: the zone shown is the Ragnarok map's own area inside a stitched map (Izlude Town in Midgard); a zone search finds the
+        // player by either
+        uint32 playerZoneId = target.GetShownZoneId();
+        uint32 playerRealZoneId = target.GetZoneId();
         uint8 gender = target.GetGender();
 
         bool showZones = true;
         for (uint32 i = 0; i < zonesCount; ++i)
         {
-            if (zoneids[i] == playerZoneId)
+            if (zoneids[i] == playerZoneId || zoneids[i] == playerRealZoneId)
             {
                 showZones = true;
                 break;
@@ -345,6 +369,12 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         }
 
         if (!showZones)
+        {
+            continue;
+        }
+
+        // MergedWorlds: the world filter (w-), by the start or any part of the world's name as the other filters
+        if (!(wpacketWorldName.empty() || target.GetWideWorld().find(wpacketWorldName) != std::wstring::npos))
         {
             continue;
         }
@@ -372,9 +402,13 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         {
             if (!str[i].empty())
             {
+                // MergedWorlds: also the world's name and a game's class names (a Ragnarok job, an EverQuest secondary class)
                 if (wideguildname.find(str[i]) != std::wstring::npos ||
                     wideplayername.find(str[i]) != std::wstring::npos ||
-                    Utf8FitTo(aname, str[i]))
+                    Utf8FitTo(aname, str[i]) ||
+                    target.GetWideWorld().find(str[i]) != std::wstring::npos ||
+                    (!target.GetWidePrimaryClass().empty() && target.GetWidePrimaryClass().find(str[i]) != std::wstring::npos) ||
+                    (!target.GetWideSecondaryClass().empty() && target.GetWideSecondaryClass().find(str[i]) != std::wstring::npos))
                 {
                     s_show = true;
                     break;
@@ -404,11 +438,30 @@ void WorldSession::HandleWhoOpcode(WorldPacket& recvData)
         data << uint8(gender);                            // player gender
         data << uint32(playerZoneId);                     // player zone id
 
+        displayedWorldInfos.push_back(&target.GetWorldInfo());
         ++displaycount;
     }
 
     data.put(0, displaycount);                            // insert right count, count displayed
     data.put(4, matchCount);                              // insert right count, count of matches
+
+    // MergedWorlds: the world block, after the stock fields, to a client that asked for it
+    if (isWorldBlockClient)
+    {
+        data << uint32(WHO_LIST_MERGEDWORLDS_MAGIC);
+        for (WhoListWorldInfo const* worldInfo : displayedWorldInfos)
+        {
+            uint8 classFlags = 0;
+            if (worldInfo->IsPrimaryClassTheClass)
+                classFlags |= WHO_LIST_CLASS_PRIMARY_IS_CLASS;
+            if (worldInfo->IsSecondaryClassTheClass)
+                classFlags |= WHO_LIST_CLASS_SECONDARY_IS_CLASS;
+            data << worldInfo->World;
+            data << uint8(classFlags);
+            data << (worldInfo->IsPrimaryClassTheClass ? std::string() : worldInfo->PrimaryClass);
+            data << (worldInfo->IsSecondaryClassTheClass ? std::string() : worldInfo->SecondaryClass);
+        }
+    }
 
     SendPacket(&data);
     LOG_DEBUG("network", "WORLD: Send SMSG_WHO Message");

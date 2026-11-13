@@ -629,9 +629,21 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
     uint32 initAccountId = GetAccountId();
 
     // can't delete loaded character
-    if (ObjectAccessor::FindConnectedPlayer(guid) || sWorldSessionMgr->FindOfflineSessionForCharacterGUID(guid.GetCounter()))
+    // MergedWorlds: answered and logged, as the client otherwise waits at "Deleting Character" until it's cancelled (seen once on ROWOW 11-05, cause unknown)
+    if (Player* loadedPlayer = ObjectAccessor::FindConnectedPlayer(guid))
     {
+        LOG_ERROR("entities.player.character", "Account {} tried to delete character {} while it is still loaded (in world: {}, has map: {}, being teleported far: {}, session account: {}, logging out: {})",
+            initAccountId, guid.ToString(), loadedPlayer->IsInWorld(), loadedPlayer->FindMap() != nullptr, loadedPlayer->IsBeingTeleportedFar(),
+            loadedPlayer->GetSession() ? loadedPlayer->GetSession()->GetAccountId() : 0, loadedPlayer->GetSession() ? loadedPlayer->GetSession()->PlayerLogout() : false);
         sScriptMgr->OnPlayerFailedDelete(guid, initAccountId);
+        SendCharDelete(CHAR_DELETE_FAILED);
+        return;
+    }
+    if (sWorldSessionMgr->FindOfflineSessionForCharacterGUID(guid.GetCounter()))
+    {
+        LOG_ERROR("entities.player.character", "Account {} tried to delete character {} while an offline session still holds it", initAccountId, guid.ToString());
+        sScriptMgr->OnPlayerFailedDelete(guid, initAccountId);
+        SendCharDelete(CHAR_DELETE_FAILED);
         return;
     }
 
@@ -665,7 +677,10 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
     // prevent deleting other players' characters using cheating tools
     if (accountId != initAccountId)
     {
+        // MergedWorlds: answered and logged (see the loaded character's check above)
+        LOG_ERROR("entities.player.character", "Account {} tried to delete character {}, which the character cache gives to account {}", initAccountId, guid.ToString(), accountId);
         sScriptMgr->OnPlayerFailedDelete(guid, initAccountId);
+        SendCharDelete(CHAR_DELETE_FAILED);
         return;
     }
 

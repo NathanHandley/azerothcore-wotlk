@@ -484,7 +484,7 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PUBLIC,                                         // PLAYER_VISIBLE_ITEM_19_ENCHANTMENT
     UF_FLAG_PUBLIC,                                         // PLAYER_CHOSEN_TITLE
     UF_FLAG_PUBLIC,                                         // PLAYER_FAKE_INEBRIATION
-    UF_FLAG_NONE,                                           // PLAYER_FIELD_PAD_0
+    UF_FLAG_PUBLIC,                                         // PLAYER_FIELD_MW_RO_JOB (MergedWorlds; PLAYER_FIELD_PAD_0, NONE, before)
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD+1
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_HEAD+2
@@ -1663,6 +1663,14 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+173
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+174
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+175
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+176
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+177
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+178
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+179
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+180
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+181
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+182
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+183
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_ACCOUNT_BANK_BYTES
     UF_FLAG_NONE,                                           // PLAYER_FIELD_ACCOUNT_BANK_PAD
 };

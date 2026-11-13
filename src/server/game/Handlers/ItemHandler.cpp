@@ -679,7 +679,9 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
         {
             if (pProto->SellPrice > 0)
             {
-                uint32 money = pProto->SellPrice * packet.Count;
+                uint32 unitPrice = pProto->SellPrice;
+                sScriptMgr->OnPlayerGetVendorItemSellPrice(_player, creature, pItem, unitPrice); // MergedWorlds vendor prices
+                uint32 money = unitPrice * packet.Count;
                 if (_player->GetMoney() >= MAX_MONEY_AMOUNT - money)               // prevent exceeding gold limit
                 {
                     _player->SendEquipError(EQUIP_ERR_TOO_MUCH_GOLD, nullptr, nullptr);
@@ -760,6 +762,7 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
                     _player->UpdateTitansGrip();
                 }
 
+                sScriptMgr->OnPlayerSellItemMoney(_player, money); // MergedWorlds: what a game's shop pays
                 _player->ModifyMoney(money);
                 _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_VENDORS, money);
             }
@@ -789,6 +792,13 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuybackItem& packet)
     Item* pItem = _player->GetItemFromBuyBackSlot(packet.Slot);
     if (pItem)
     {
+        // MergedWorlds: a game's money never crosses: what its shop bought, the character's gold can't buy back
+        if (!sScriptMgr->OnPlayerCanBuybackItem(_player, pItem))
+        {
+            _player->SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, pItem->GetEntry(), 0);
+            return;
+        }
+
         uint32 price = _player->GetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + packet.Slot - BUYBACK_SLOT_START);
         if (!_player->HasEnoughMoney(price))
         {
@@ -961,7 +971,9 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
                 }
 
                 // reputation discount
-                int32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
+                uint32 price = item->IsGoldRequired(itemTemplate) ? uint32(std::floor(itemTemplate->BuyPrice * discountMod)) : 0;
+                if (price > 0) // MergedWorlds vendor prices
+                    sScriptMgr->OnPlayerGetVendorItemBuyPrice(_player, vendor, itemTemplate, 1, price);
 
                 // MergedWorlds: modules can change the price (mod-cityofheroes's store markups)
                 if (price > 0)

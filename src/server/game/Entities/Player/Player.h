@@ -41,8 +41,10 @@
 #include "TradeData.h"
 #include "Unit.h"
 #include "WorldSession.h"
+#include <memory>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 struct CreatureTemplate;
@@ -650,8 +652,9 @@ enum PlayerSlots
     // first slot for item stored (in any way in player m_items data)
     PLAYER_SLOT_START           = 0,
     // last+1 slot for item stored (in any way in player m_items data)
-    // MergedWorlds bank expansion: 150 -> 237 (72 bank items, 24 bank bags, account bank bags + vaults), and the light source slot
-    PLAYER_SLOT_END             = 238,
+    // MergedWorlds bank expansion: 150 -> 242 (72 bank items, 24 bank bags, account bank bags + vaults, the light source slot 237,
+    // world bank vaults 238-241)
+    PLAYER_SLOT_END             = 242,
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
@@ -741,6 +744,25 @@ enum AccountBankVaultSlots                                  // 2 slots
     ACCOUNT_BANK_VAULT_SLOT_END     = 237
 };
 
+// MergedWorlds world bank: an account wide tab per game world, the Account tab's shape.  Its 72 item slots are two hidden vault bags like the
+// account bank's, a block built once with room for every world, so a world's tab needs no slot, update field or client change of its own.  Its 24
+// bag slots are the account bank's: a uint8 slot leaves too few numbers for more, so ACCOUNT_BANK_BAG_SLOT_START-END hold the bags of one tab at a
+// time, SetBankBagPage picks which, and the other tabs' bags wait in m_hiddenBankBags.  They follow the light source slot 237 (MergedWorlds)
+enum WorldBankVaultSlots                                    // 4 slots
+{
+    WORLD_BANK_VAULT_SLOT_START     = 238,
+    WORLD_BANK_VAULT_SLOT_END       = 242
+};
+
+// The bank tabs that are shared by the account.  A world's tab shows only when its module is on (Player::SetWorldBankEnabled)
+enum WorldBankWorld : uint8
+{
+    WORLD_BANK_ACCOUNT              = 0,    // The plain Account tab
+    WORLD_BANK_RAGNAROK             = 1,
+    WORLD_BANK_CITY_OF_HEROES       = 2,
+    MAX_WORLD_BANK_WORLD            = 2
+};
+
 #define MAX_BANK_BAG_SLOT_COUNT             (BANK_SLOT_BAG_END - BANK_SLOT_BAG_START)
 #define MAX_ACCOUNT_BANK_BAG_SLOT_COUNT     (ACCOUNT_BANK_BAG_SLOT_END - ACCOUNT_BANK_BAG_SLOT_START)
 
@@ -753,6 +775,7 @@ enum AccountBankVaultSlots                                  // 2 slots
 #define PLAYER_INV_SLOT_STOCK_FIELD_COUNT   150
 // `account_bank_item` rows with bag 0 use slot 0-71 for the item slots and this + n for bag slot n
 #define ACCOUNT_BANK_DB_BAG_SLOT_START      ACCOUNT_BANK_ITEM_SLOT_COUNT
+#define WORLD_BANK_VAULTS_PER_WORLD         2
 
 enum EquipmentSetUpdateState
 {
@@ -1322,24 +1345,47 @@ public:
     // MergedWorlds account bank: an account bank bag slot, or anything inside an account bank bag or vault (never the vault slot itself)
     static bool IsAccountBankPos(uint16 pos) { return IsAccountBankPos(pos >> 8, pos & 255); }
     static bool IsAccountBankPos(uint8 bag, uint8 slot);
-    static bool IsAccountBankVaultSlot(uint8 slot) { return slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < ACCOUNT_BANK_VAULT_SLOT_END; }
+    // MergedWorlds: the light source slot 237 sits between the account vaults and the world vaults
+    static bool IsAccountBankVaultSlot(uint8 slot) { return (slot >= ACCOUNT_BANK_VAULT_SLOT_START && slot < ACCOUNT_BANK_VAULT_SLOT_END) || (slot >= WORLD_BANK_VAULT_SLOT_START && slot < WORLD_BANK_VAULT_SLOT_END); }
+    // MergedWorlds world bank: the tab a vault slot belongs to (WORLD_BANK_ACCOUNT for the account bank's own), and the vault slots of a tab
+    static uint8 GetVaultSlotWorld(uint8 slot) { return slot < WORLD_BANK_VAULT_SLOT_START ? uint8(WORLD_BANK_ACCOUNT) : uint8(1 + (slot - WORLD_BANK_VAULT_SLOT_START) / WORLD_BANK_VAULTS_PER_WORLD); }
+    static uint8 GetWorldVaultSlotStart(uint8 world) { return world == WORLD_BANK_ACCOUNT ? uint8(ACCOUNT_BANK_VAULT_SLOT_START) : uint8(WORLD_BANK_VAULT_SLOT_START + (world - 1) * WORLD_BANK_VAULTS_PER_WORLD); }
+    static uint8 GetWorldVaultSlotEnd(uint8 world) { return world == WORLD_BANK_ACCOUNT ? uint8(ACCOUNT_BANK_VAULT_SLOT_END) : uint8(GetWorldVaultSlotStart(world) + WORLD_BANK_VAULTS_PER_WORLD); }
+    // Modules say which worlds are on at startup, before any session exists.  It's read only after that
+    static void SetWorldBankEnabled(uint8 world, bool enabled);
+    static bool IsWorldBankEnabled(uint8 world);
+    static uint8 GetWorldBankEnabledMask();                 // Bit (world - 1) for each world that's on
     // EQWOW light source slot: whether an item may go in it, which only the module knows
     typedef bool (*LightSourceItemCheck)(uint32 itemEntry);
     static void SetLightSourceItemCheck(LightSourceItemCheck check) { s_lightSourceItemCheck = check; }
     // Walks the keyring, the currency tokens and the light source slot: for (i = KEYRING_SLOT_START; i < PLAYER_SLOT_END; i = NextSpecialStorageSlot(i))
-    static uint8 NextSpecialStorageSlot(uint8 slot) { return slot + 1 == CURRENCYTOKEN_SLOT_END ? uint8(LIGHT_SOURCE_SLOT) : uint8(slot + 1); }
+    // MergedWorlds: the world bank vaults follow the light source slot, so the walk ends there
+    static uint8 NextSpecialStorageSlot(uint8 slot) { return slot + 1 == CURRENCYTOKEN_SLOT_END ? uint8(LIGHT_SOURCE_SLOT) : slot == LIGHT_SOURCE_SLOT ? uint8(PLAYER_SLOT_END) : uint8(slot + 1); }
     // Update field that holds the item guid of inventory slot `slot` (two fields per slot)
     static uint16 GetInventorySlotUpdateField(uint8 slot);
     bool IsValidPos(uint16 pos, bool explicit_pos) { return IsValidPos(pos >> 8, pos & 255, explicit_pos); }
     bool IsValidPos(uint8 bag, uint8 slot, bool explicit_pos);
     [[nodiscard]] uint8 GetBankBagSlotCount() const { return GetByteValue(PLAYER_BYTES_2, 2); }
     void SetBankBagSlotCount(uint8 count) { SetByteValue(PLAYER_BYTES_2, 2, count); }
-    [[nodiscard]] uint8 GetAccountBankBagSlotCount() const { return GetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, 0); }
-    void SetAccountBankBagSlotCount(uint8 count);
+    // MergedWorlds world bank: each tab counts its own purchased bag slots
+    [[nodiscard]] uint8 GetAccountBankBagSlotCount(uint8 world = WORLD_BANK_ACCOUNT) const { return GetByteValue(PLAYER_FIELD_ACCOUNT_BANK_BYTES, world); }
+    void SetAccountBankBagSlotCount(uint8 count, uint8 world = WORLD_BANK_ACCOUNT);
+    // The bank tab the client is showing (0 the Character tab or no bank, 1 the Account tab, 1 + n world n's tab), as AutoBankItem's byte
+    [[nodiscard]] uint8 GetBankTabShowing() const { return m_bankTabShowing; }
+    void SetBankTabShowing(uint8 tab);
+    // The tab whose bags are in the account bank bag slots (a WorldBankWorld).  The Character tab has none of its own there, so it leaves them
+    [[nodiscard]] uint8 GetBankBagPage() const { return m_bankBagPage; }
+    void SetBankBagPage(uint8 world);
+    // Sends the module's text for the bank window's corner, and does nothing unless that world's tab is showing, so a module can call it on every
+    // change of its currency.  It only sends to this player's own session, so the player's own map thread may call it
+    void SendBankCurrencyText(uint8 world);
     [[nodiscard]] bool IsAccountBankLoaded() const { return m_accountBankLoaded; }
     // Checks that an item (and anything inside it, for a bag) may be stored in the account bank
     InventoryResult CanPlaceItemInAccountBank(Item const* pItem) const;
-    InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap) const;
+    InventoryResult CanAccountBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, uint8 world = WORLD_BANK_ACCOUNT) const;
+    // What the modules say about an item (and anything inside it, for a bag) going to a bank tab.  A world's tab takes nothing no module accepts, but
+    // for a general bag of any game in one of its bag slots.  MergedWorlds: isBagContentKept, a bag exchange's full bag
+    InventoryResult CanPlaceItemInBankTab(Item const* pItem, uint8 world, bool isBagContentKept = false, bool isBagSlot = false) const;
     // Queues a bag's contents for saving (they are saved to the character or the account bank by where the bag is)
     void MarkBagContentsChanged(Item* pItem);
     // Unique / limit category checks for the contents of a bag leaving the account bank
@@ -1379,7 +1425,7 @@ public:
     InventoryResult CanEquipUniqueItem(ItemTemplate const* itemProto, uint8 except_slot = NULL_SLOT, uint32 limit_count = 1) const;
     [[nodiscard]] InventoryResult CanUnequipItems(uint32 item, uint32 count) const;
     [[nodiscard]] InventoryResult CanUnequipItem(uint16 src, bool swap) const;
-    InventoryResult CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading = true) const;
+    InventoryResult CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading = true, bool isBagExchange = false) const; // MergedWorlds: isBagExchange
     InventoryResult CanUseItem(Item* pItem, bool not_loading = true) const;
     [[nodiscard]] bool HasItemTotemCategory(uint32 TotemCategory) const;
     bool IsTotemCategoryCompatiableWith(ItemTemplate const* pProto, uint32 requiredTotemCategoryId) const;
@@ -1648,6 +1694,17 @@ public:
     bool LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& holder);
     [[nodiscard]] bool isBeingLoaded() const override;
 
+    // MergedWorlds live profile swap: a module that keeps several profiles for one character (level, spells, talents, glyphs, skills, action
+    // bars, auras, quests, worn equipment, pets) swaps them in the database, then has the character in the world take the new one on without a
+    // relog.  The order is: PrepareForProfileSwap, SaveToDB and the module's own statements in one transaction, wait for that to commit, read
+    // the holder from CreateProfileSwapQueryHolder, ReloadProfileFromDB, whatever the module itself does at login, then FinishProfileSwap.
+    // See PlayerStorage.cpp
+    void PrepareForProfileSwap();
+    static std::shared_ptr<CharacterDatabaseQueryHolder> CreateProfileSwapQueryHolder(ObjectGuid guid);
+    bool ReloadProfileFromDB(CharacterDatabaseQueryHolder const& holder, std::unordered_set<uint32> const& keptAuraSpellIds);
+    void FinishProfileSwap();
+    [[nodiscard]] bool IsProfileSwapReloading() const { return _profileSwapReloading; }
+
     void Initialize(ObjectGuid::LowType guid);
     static uint32 GetZoneIdFromDB(ObjectGuid guid);
     static bool   LoadPositionFromDB(uint32& mapid, float& x, float& y, float& z, float& o, bool& in_flight, ObjectGuid::LowType guid);
@@ -1661,7 +1718,7 @@ public:
     void SaveToDB(bool create, bool logout);
     void SaveToDB(CharacterDatabaseTransaction trans, bool create, bool logout);
     void SaveInventoryAndGoldToDB(CharacterDatabaseTransaction trans);                    // fast save function for item/money cheating preventing
-    void SaveGoldToDB(CharacterDatabaseTransaction trans);
+    void SaveGoldToDB(CharacterDatabaseTransaction trans, bool isInventorySaved = false); // MergedWorlds: isInventorySaved
     void _SaveSkills(CharacterDatabaseTransaction trans);
 
     static void Customize(CharacterCustomizeInfo const* customizeInfo, CharacterDatabaseTransaction trans);
@@ -2836,9 +2893,14 @@ protected:
     /*********************************************************/
 
     void _LoadActions(PreparedQueryResult result);
-    void _LoadAuras(PreparedQueryResult result, uint32 timediff);
+    void _LoadAuras(PreparedQueryResult result, uint32 timediff, std::unordered_set<uint32> const* skipSpellIds = nullptr);
     void _LoadGlyphAuras();
     void _LoadInventory(PreparedQueryResult result, uint32 timeDiff);
+    // MergedWorlds live profile swap
+    void _UnloadProfileSwapItems();
+    void _UnloadProfileSwapAuras(std::unordered_set<uint32> const& keptAuraSpellIds);
+    void _LoadProfileSwapItems(PreparedQueryResult result);
+    static bool IsProfileSwapItemSlot(uint8 slot) { return slot < EQUIPMENT_SLOT_END || slot == LIGHT_SOURCE_SLOT; }
     void _LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff);
     bool _CreateAccountBankVaults();
     void _LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mailItemsResult);
@@ -2874,7 +2936,10 @@ protected:
     void _SaveAuras(CharacterDatabaseTransaction trans, bool logout);
     void _SaveInventory(CharacterDatabaseTransaction trans);
     void _SaveAccountBankSettings(CharacterDatabaseTransaction trans);
-    bool _GetAccountBankDBPosition(Item const* item, ObjectGuid::LowType& bagGuid, uint8& slot) const;
+    [[nodiscard]] uint8 _GetBankBagWorld(Item const* bag) const;
+    [[nodiscard]] bool _IsOnHiddenBankBagPage(Item* item) const;
+    [[nodiscard]] std::vector<Item*> _GetHiddenBankBags() const;
+    bool _GetAccountBankDBPosition(Item const* item, uint8& world, ObjectGuid::LowType& bagGuid, uint8& slot) const;
     void _SaveMail(CharacterDatabaseTransaction trans);
     void _SaveQuestStatus(CharacterDatabaseTransaction trans);
     void _SaveDailyQuestStatus(CharacterDatabaseTransaction trans);
@@ -2928,7 +2993,10 @@ protected:
     std::vector<Item*> m_itemUpdateQueue;
     bool m_itemUpdateQueueBlocked;
     bool m_accountBankLoaded;
-    bool m_accountBankSettingsChanged;
+    uint8 m_accountBankSettingsChanged;                     // Bit world for each tab with a purchased count to save
+    uint8 m_bankTabShowing;
+    uint8 m_bankBagPage;
+    Item* m_hiddenBankBags[MAX_WORLD_BANK_WORLD + 1][MAX_ACCOUNT_BANK_BAG_SLOT_COUNT]; // By world and bag slot.  A tab's bags while they aren't in the slots
 
     uint32 m_ExtraFlags;
 
@@ -3100,6 +3168,8 @@ private:
     float  m_lastFallZ;
 
     int32 m_MirrorTimer[MAX_TIMERS];
+    bool _profileSwapReloading = false;   // MergedWorlds live profile swap: the spellbook is sent whole afterwards, so nothing is sent per spell
+    bool _profileSwapSaveBlocked = false; // MergedWorlds live profile swap: the database is ahead of this object, which must not be written over it
     float _mapArrivalMovementLeft = 0.0f; // MergedWorlds EQ levitation
     uint32 _ignoredArrivalTriggerID = 0;  // MergedWorlds EQ levitation
     uint8 m_MirrorTimerFlags;

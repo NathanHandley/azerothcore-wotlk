@@ -52,6 +52,8 @@ namespace
     constexpr float EQ_PATH_GROUND_SEARCH_UP = 3.0f;
     constexpr float EQ_PATH_GROUND_SEARCH_DOWN = 20.0f;
     constexpr uint32 EQ_PATH_MAX_POINTS = 400;
+    constexpr float EQ_PATH_PACKET_MAX_ACROSS = 250.0f;      // A move packet's points can be 256 yd across from the path's middle (see FitPathToMovePacket)
+    constexpr float EQ_PATH_PACKET_MAX_UP = 120.0f;          // And 128 yd up or down
 }
 
 EverQuestMovementHooks::IdleMovementSelectorFunction EverQuestMovementHooks::IdleMovementSelector = nullptr;
@@ -170,6 +172,17 @@ float EQPathBuilder::GetCornerGroundZ(EQZoneMap const* zoneMap, WorldObject cons
     if (hasUp)
         return upZ;
     return z;
+}
+
+// A swimmer's height at a route corner under water: its swimming height there, kept off the bottom and under the surface.  The bottom is
+// looked for from the higher of that height and the corner's own (the mesh's, which is just over the bottom), so a swimming height that
+// would be under a rise in the bottom is still caught
+float EQPathBuilder::GetSwimCornerZ(EQZoneMap const* zoneMap, G3D::Vector3 const& meshCorner, float swimZ, float surfaceZ)
+{
+    float floorZ = zoneMap->GetFloorZ(meshCorner.x, meshCorner.y, std::max(swimZ, meshCorner.z) + EQ_PATH_SWIM_FLOOR_CLEARANCE, EQ_PATH_STEP_SEARCH_DOWN);
+    if (floorZ > EQ_ZONE_MAP_INVALID_HEIGHT)
+        swimZ = std::max(swimZ, floorZ + EQ_PATH_SWIM_FLOOR_CLEARANCE);
+    return std::min(swimZ, surfaceZ - EQ_PATH_SWIM_SURFACE_CLEARANCE);
 }
 
 // Adds the step from one floor point to the next, split where the floor bends away from the straight line between them (a dune's crest,
@@ -385,6 +398,44 @@ void EQPathBuilder::AddLeg(EQZoneMap const* zoneMap, G3D::Vector3 const& from, G
             pathPoints.push_back(legPoints[i]);
 }
 
+// A monster move packet sends every point of a path but the last as its offset from the middle of the path (halfway between its two ends),
+// packed into quarter yards in 11 bits across and 10 bits up.  So a point more than 256 yd across or 128 yd up or down from there wraps
+// around, and the client walks the mover toward somewhere else entirely until the path catches up with it (a long roam floating off the
+// ground or dropping through it at the start of the trip).  A path that long ends at its last point that still fits, and the mover asks for
+// the rest when it gets there
+bool EQPathBuilder::FitPathToMovePacket(Movement::PointsArray& pathPoints)
+{
+    if (pathPoints.size() < 3)
+        return false;
+
+    // Every point is within the path's bounds of its middle, so a path that small always fits
+    G3D::Vector3 low = pathPoints[0];
+    G3D::Vector3 high = pathPoints[0];
+    for (G3D::Vector3 const& point : pathPoints)
+    {
+        low = low.min(point);
+        high = high.max(point);
+    }
+    G3D::Vector3 extent = high - low;
+    if (extent.x <= EQ_PATH_PACKET_MAX_ACROSS && extent.y <= EQ_PATH_PACKET_MAX_ACROSS && extent.z <= EQ_PATH_PACKET_MAX_UP)
+        return false;
+
+    for (uint32 lastIndex = 2; lastIndex < pathPoints.size(); ++lastIndex)
+    {
+        G3D::Vector3 middle = (pathPoints[0] + pathPoints[lastIndex]) * 0.5f;
+        for (uint32 i = 1; i < lastIndex; ++i)
+        {
+            G3D::Vector3 offset = middle - pathPoints[i];
+            if (std::fabs(offset.x) > EQ_PATH_PACKET_MAX_ACROSS || std::fabs(offset.y) > EQ_PATH_PACKET_MAX_ACROSS || std::fabs(offset.z) > EQ_PATH_PACKET_MAX_UP)
+            {
+                pathPoints.resize(lastIndex);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* source, G3D::Vector3 const& start, G3D::Vector3 const& end,
     Movement::PointsArray const& routeCorners, Movement::PointsArray& pathPoints)
 {
@@ -402,15 +453,26 @@ bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* sourc
     bool swims = unit ? unit->CanSwim() : false;
 
     // The corners to walk between: the route, or a straight line.  The route's own corner heights come from the navigation mesh, so
-    // they go back on the floor too
+    // they go back on the floor too.  Under water the mesh is the bottom, so a swimmer's corner keeps its depth instead, on the line between
+    // the trip's ends as it is between corners (otherwise it would dive to the bottom at the start of every long swim and come back up at
+    // the end)
     Movement::PointsArray corners;
     corners.push_back(start);
     if (routeCorners.size() > 2)
     {
+        float routeLength = 0.0f;
+        for (uint32 i = 1; i < routeCorners.size(); ++i)
+            routeLength += (routeCorners[i] - routeCorners[i - 1]).xy().length();
+        float lengthSoFar = 0.0f;
         for (uint32 i = 1; i + 1 < routeCorners.size(); ++i)
         {
             G3D::Vector3 corner = routeCorners[i];
-            corner.z = GetCornerGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
+            lengthSoFar += (routeCorners[i] - routeCorners[i - 1]).xy().length();
+            float surfaceZ = 0.0f;
+            if (swims && IsInLiquid(zoneMap, corner.x, corner.y, corner.z, surfaceZ))
+                corner.z = GetSwimCornerZ(zoneMap, corner, start.z + (end.z - start.z) * (routeLength > 0.001f ? lengthSoFar / routeLength : 0.0f), surfaceZ);
+            else
+                corner.z = GetCornerGroundZ(zoneMap, source, corner.x, corner.y, corner.z);
             corners.push_back(corner);
         }
     }
@@ -427,5 +489,7 @@ bool EQPathBuilder::BuildPath(EQZoneMap const* zoneMap, WorldObject const* sourc
             break;
         }
     }
+    if (FitPathToMovePacket(pathPoints))
+        cutShort = true;
     return cutShort;
 }

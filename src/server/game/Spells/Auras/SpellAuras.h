@@ -75,6 +75,7 @@ public:
     AuraRemoveMode GetRemoveMode() const {return _removeMode;}
 
     void SetNeedClientUpdate() { _needClientUpdate = true;}
+    void HideFromClient();                          // MergedWorlds: gives up the visible slot (see Aura::SetClientHidden)
     bool IsNeedClientUpdate() const { return _needClientUpdate;}
     void BuildUpdatePacket(ByteBuffer& data, bool remove) const;
     void ClientUpdate(bool remove = false);
@@ -165,6 +166,10 @@ public:
     bool CanBeSaved() const;
     bool IsRemoved() const { return m_isRemoved; }
     bool CanBeSentToClient() const;
+    // MergedWorlds: an aura a module keeps on a unit as part of what it is (an identity's look), not as a buff: it takes no visible slot (no icon
+    // for anyone, nothing to click off) and isn't saved (whoever put it on puts it on again)
+    void SetClientHidden();
+    bool IsClientHidden() const { return m_isClientHidden; }
     // Single cast aura helpers
     bool IsSingleTarget() const {return m_isSingleTarget; }
     bool IsSingleTargetWith(Aura const* aura) const;
@@ -281,6 +286,7 @@ protected:
     bool m_isRemoved: 1;
     bool m_isSingleTarget: 1;                       // true if it's a single target spell and registered at caster - can change at spell steal for example
     bool m_isUsingCharges: 1;
+    bool m_isClientHidden: 1;                       // MergedWorlds: see SetClientHidden
 
     TimePoint m_procCooldown;
 
