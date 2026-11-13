@@ -656,13 +656,14 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     // correct realm database for the transaction.
     PrepareStatement(CHAR_NO_OP_PROVIDE_REALM_CONTEXT, "SELECT ? AS no_op", CONNECTION_ASYNC);
 
-    // MergedWorlds account bank.  account_bank_item: bag 0 = the account bank itself (slot 0-71 item slots, 72-95 bag slots),
-    // otherwise the item guid of the account bank bag that holds it.  The item columns match CHAR_SEL_CHARACTER_INVENTORY
-    PrepareStatement(CHAR_SEL_ACCOUNT_BANK, "SELECT bagSlots FROM account_bank WHERE account = ?", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_REP_ACCOUNT_BANK, "REPLACE INTO account_bank (account, bagSlots) VALUES (?, ?)", CONNECTION_ASYNC);
+    // MergedWorlds account bank.  account_bank_item: world 0 is the account bank, any other world that world's tab, each the same: bag 0 = the tab
+    // itself (slot 0-71 item slots, 72-95 bag slots), otherwise the item guid of the bag that holds it.  The item columns match
+    // CHAR_SEL_CHARACTER_INVENTORY.  account_bank: the purchased bag slots of each tab, the row of a tab with none bought may not exist
+    PrepareStatement(CHAR_SEL_ACCOUNT_BANK, "SELECT world, bagSlots FROM account_bank WHERE account = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_ACCOUNT_BANK, "REPLACE INTO account_bank (account, world, bagSlots) VALUES (?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_SEL_ACCOUNT_BANK_ITEMS, "SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, bag, slot, "
-                     "item, itemEntry FROM account_bank_item abi JOIN item_instance ii ON abi.item = ii.guid WHERE abi.account = ? ORDER BY bag, slot", CONNECTION_ASYNC);
-    PrepareStatement(CHAR_REP_ACCOUNT_BANK_ITEM, "REPLACE INTO account_bank_item (account, bag, slot, item) VALUES (?, ?, ?, ?)", CONNECTION_ASYNC);
+                     "item, itemEntry, world FROM account_bank_item abi JOIN item_instance ii ON abi.item = ii.guid WHERE abi.account = ? ORDER BY bag, slot", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_ACCOUNT_BANK_ITEM, "REPLACE INTO account_bank_item (account, world, bag, slot, item) VALUES (?, ?, ?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM, "DELETE FROM account_bank_item WHERE item = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_INSTANCES_BY_ACCOUNT, "DELETE ii FROM item_instance ii JOIN account_bank_item abi ON abi.item = ii.guid WHERE abi.account = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK_ITEMS_BY_ACCOUNT, "DELETE FROM account_bank_item WHERE account = ?", CONNECTION_ASYNC);

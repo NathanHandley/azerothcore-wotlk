@@ -21,6 +21,9 @@
 #include "ScriptObject.h"
 #include <vector>
 
+class Corpse;
+class Player;
+
 enum WorldObjectHook
 {
     WORLDOBJECTHOOK_ON_WORLD_OBJECT_DESTROY,
@@ -28,6 +31,7 @@ enum WorldObjectHook
     WORLDOBJECTHOOK_ON_WORLD_OBJECT_SET_MAP,
     WORLDOBJECTHOOK_ON_WORLD_OBJECT_RESET_MAP,
     WORLDOBJECTHOOK_ON_WORLD_OBJECT_UPDATE,
+    WORLDOBJECTHOOK_ON_CORPSE_BUILD_VALUES_UPDATE_FIELD, // MergedWorlds
     WORLDOBJECTHOOK_END
 };
 
@@ -74,6 +78,17 @@ public:
      * @param diff Contains information about the diff time
      */
     virtual void OnWorldObjectUpdate(WorldObject* /*object*/, uint32 /*diff*/) { }
+
+    /**
+     * @brief MergedWorlds: called as a corpse's display or one of its item fields is written into an update for one player, so a module can show
+     * that player something else there (mod-rowow: no Ragnarok Online model to a client without its content).  The map's own thread
+     *
+     * @param corpse The corpse
+     * @param target The player the update is for
+     * @param index CORPSE_FIELD_DISPLAY_ID or CORPSE_FIELD_ITEM + slot
+     * @param value The field's value, which the player is sent
+     */
+    virtual void OnCorpseBuildValuesUpdateField(Corpse const* /*corpse*/, Player const* /*target*/, uint16 /*index*/, uint32& /*value*/) { }
 };
 
 #endif

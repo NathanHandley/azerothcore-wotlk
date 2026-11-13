@@ -66,6 +66,12 @@ void ScriptMgr::OnDispelSelection(Spell* spell, Unit* target, DispelChargesList&
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_DISPEL_SELECTION, script->OnDispelSelection(spell, target, dispelList, inListOrder));
 }
 
+// MergedWorlds
+void ScriptMgr::OnSpellCalcCastTime(Spell* spell, int32& castTime)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_CALC_CAST_TIME, script->OnSpellCalcCastTime(spell, castTime));
+}
+
 void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_BEFORE_AURA_RANK_FOR_LEVEL, script->OnBeforeAuraRankForLevel(spellInfo, latestSpellInfo, level));

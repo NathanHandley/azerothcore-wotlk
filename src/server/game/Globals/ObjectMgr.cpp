@@ -10721,8 +10721,16 @@ void ObjectMgr::LoadBroadcastTextLocales()
     LOG_INFO("server.loading", " ");
 }
 
+// MergedWorlds: the highest creature level with real creature_classlevelstats values
+static constexpr uint8 MERGEDWORLDS_CREATURE_BASE_STATS_MAX_LEVEL = 83;
+
 CreatureBaseStats const* ObjectMgr::GetCreatureBaseStats(uint8 level, uint8 unitClass)
 {
+    // MergedWorlds: Ragnarok monsters keep their exact RO level (up to 117), but creature_classlevelstats only has real values up to
+    // level 83 (its rows 84-100 are 1 health placeholders, and there are none past 100), so higher levels use the class's level 83 stats
+    if (level > MERGEDWORLDS_CREATURE_BASE_STATS_MAX_LEVEL)
+        level = MERGEDWORLDS_CREATURE_BASE_STATS_MAX_LEVEL;
+
     CreatureBaseStatsContainer::const_iterator it = _creatureBaseStatsStore.find(MAKE_PAIR16(level, unitClass));
 
     if (it != _creatureBaseStatsStore.end())
@@ -10838,7 +10846,8 @@ void ObjectMgr::LoadCreatureClassLevelStats()
     {
         for (uint16 lvl = itr->second.minlevel; lvl <= itr->second.maxlevel; ++lvl)
         {
-            if (_creatureBaseStatsStore.find(MAKE_PAIR16(lvl, itr->second.unit_class)) == _creatureBaseStatsStore.end())
+            // MergedWorlds: levels above 83 use the class's level 83 stats (GetCreatureBaseStats)
+            if (lvl <= MERGEDWORLDS_CREATURE_BASE_STATS_MAX_LEVEL && _creatureBaseStatsStore.find(MAKE_PAIR16(lvl, itr->second.unit_class)) == _creatureBaseStatsStore.end())
                 LOG_ERROR("sql.sql", "Missing base stats for creature class {} level {}", itr->second.unit_class, lvl);
         }
     }

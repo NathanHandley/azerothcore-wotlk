@@ -504,6 +504,7 @@ struct CalcDamageInfo
     uint32 procVictim;
     uint32 cleanDamage;          // Used only for rage calculation
     MeleeHitOutcome hitOutCome;  /// @todo: remove this field (need use TargetState)
+    bool isCalculatedByScript = false; // MergedWorlds: a game's own combat rules worked out the swing (UnitScript::OnCalculateMeleeDamage)
 };
 
 // Spell damage info structure based on structure sending in SMSG_SPELLNONMELEEDAMAGELOG opcode

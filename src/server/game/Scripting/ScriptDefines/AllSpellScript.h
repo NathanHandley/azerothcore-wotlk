@@ -43,6 +43,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_IS_AURA_EXCLUSIVE_BY_SPECIFIC_WITH,
     ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, // MergedWorlds
     ALLSPELLHOOK_ON_DISPEL_SELECTION, // MergedWorlds
+    ALLSPELLHOOK_ON_CALC_CAST_TIME, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -77,6 +78,10 @@ public:
 
     // MergedWorlds eq-dispel-order: a dispel effect is about to pick auras off of a target. Sort dispelList and set inListOrder to remove them front to back instead of at random
     virtual void OnDispelSelection(Spell* /*spell*/, Unit* /*target*/, DispelChargesList& /*dispelList*/, bool& /*inListOrder*/) { }
+
+    // MergedWorlds: a spell's cast time was just worked out (Spell::prepare, after the first CheckCast), and can be replaced (mod-rowow's RO
+    // skills use RO's cast time rules)
+    virtual void OnSpellCalcCastTime(Spell* /*spell*/, int32& /*castTime*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 

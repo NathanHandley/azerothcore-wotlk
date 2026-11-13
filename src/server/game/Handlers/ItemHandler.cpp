@@ -762,6 +762,7 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
                     _player->UpdateTitansGrip();
                 }
 
+                sScriptMgr->OnPlayerSellItemMoney(_player, money); // MergedWorlds: what a game's shop pays
                 _player->ModifyMoney(money);
                 _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_VENDORS, money);
             }
@@ -791,6 +792,13 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuybackItem& packet)
     Item* pItem = _player->GetItemFromBuyBackSlot(packet.Slot);
     if (pItem)
     {
+        // MergedWorlds: a game's money never crosses: what its shop bought, the character's gold can't buy back
+        if (!sScriptMgr->OnPlayerCanBuybackItem(_player, pItem))
+        {
+            _player->SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, pItem->GetEntry(), 0);
+            return;
+        }
+
         uint32 price = _player->GetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + packet.Slot - BUYBACK_SLOT_START);
         if (!_player->HasEnoughMoney(price))
         {

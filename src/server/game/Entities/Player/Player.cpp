@@ -205,6 +205,7 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     clearResurrectRequestData();
 
     memset(m_items, 0, sizeof(Item*)*PLAYER_SLOTS_COUNT);
+    memset(m_hiddenBankBags, 0, sizeof(m_hiddenBankBags));
 
     m_social = nullptr;
 
@@ -292,7 +293,9 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_resetTalentsTime = 0;
     m_itemUpdateQueueBlocked = false;
     m_accountBankLoaded = false;
-    m_accountBankSettingsChanged = false;
+    m_accountBankSettingsChanged = 0;
+    m_bankTabShowing = 0;
+    m_bankBagPage = WORLD_BANK_ACCOUNT;
 
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_forced_speed_changes[i] = 0;
@@ -438,6 +441,9 @@ Player::~Player()
     // Note: buy back item already deleted from DB when player was saved
     for (uint8 i = 0; i < PLAYER_SLOTS_COUNT; ++i)
         delete m_items[i];
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        delete bag;
 
     for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
         delete itr->second;
@@ -1759,6 +1765,9 @@ void Player::AddToWorld()
     for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         if (m_items[i])
             m_items[i]->AddToWorld();
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        bag->AddToWorld();
 }
 
 void Player::RemoveFromWorld()
@@ -1785,6 +1794,9 @@ void Player::RemoveFromWorld()
         if (m_items[i])
             m_items[i]->RemoveFromWorld();
     }
+
+    for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
+        bag->RemoveFromWorld();
 
     for (ItemMap::iterator iter = mMitems.begin(); iter != mMitems.end(); ++iter)
         iter->second->RemoveFromWorld();
@@ -2161,7 +2173,10 @@ Creature* Player::GetNPCIfCanInteractWith(ObjectGuid const& guid, uint32 npcflag
     //                return nullptr;
 
     // not too far
-    if (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
+    // MergedWorlds: a game identity form's NPCs can answer from its own game's reach (an RO NPC on an RO map, from RO's click range)
+    bool isInReach = creature->IsWithinDistInMap(this, INTERACTION_DISTANCE);
+    sScriptMgr->OnPlayerCreatureInteractionReach(this, creature, isInReach);
+    if (!isInReach)
         return nullptr;
 
     return creature;
@@ -3146,6 +3161,10 @@ void Player::_addTalentAurasAndSpells(uint32 spellId)
 
 void Player::SendLearnPacket(uint32 spellId, bool learn)
 {
+    // MergedWorlds live profile swap: the whole spellbook follows in one packet
+    if (_profileSwapReloading)
+        return;
+
     if (learn)
     {
         WorldPacket data(SMSG_LEARNED_SPELL, 6);
@@ -3188,7 +3207,7 @@ bool Player::addSpell(uint32 spellId, uint8 addSpecMask, bool updateActive, bool
                     if (!isBeingLoaded() && IsUnlearnNeededForSpell(spellId))
                         SendUnlearnSpells();
 
-                    if (IsInWorld())
+                    if (IsInWorld() && !_profileSwapReloading) // MergedWorlds live profile swap: the whole spellbook follows in one packet
                     {
                         WorldPacket data(SMSG_SUPERCEDED_SPELL, 4 + 4);
                         data << uint32(nextSpellInfo->Id);
@@ -4026,14 +4045,18 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
-        // MergedWorlds account bank: bag slots and the two vaults (a bag also sends what it holds)
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
+        // MergedWorlds account bank: bag slots and the vaults, a world tab's too (a bag also sends what it holds).  The light source slot
+        // between them went with the keyring
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
-            if (!m_items[i])
+            if (i == LIGHT_SOURCE_SLOT || !m_items[i])
                 continue;
 
             m_items[i]->BuildCreateUpdateBlockForPlayer(data, target);
         }
+        // MergedWorlds world bank: and the bags of the pages not in the slots, so a page turn is only the slot fields
+        for (Item* bag : _GetHiddenBankBags())
+            bag->BuildCreateUpdateBlockForPlayer(data, target);
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
@@ -4067,14 +4090,16 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
 
             m_items[i]->DestroyForPlayer(target);
         }
-        // MergedWorlds account bank
-        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < ACCOUNT_BANK_VAULT_SLOT_END; ++i)
+        // MergedWorlds account bank (the light source slot between went with the keyring)
+        for (uint8 i = ACCOUNT_BANK_BAG_SLOT_START; i < WORLD_BANK_VAULT_SLOT_END; ++i)
         {
-            if (!m_items[i])
+            if (i == LIGHT_SOURCE_SLOT || !m_items[i])
                 continue;
 
             m_items[i]->DestroyForPlayer(target);
         }
+        for (Item* bag : _GetHiddenBankBags())
+            bag->DestroyForPlayer(target);
     }
 }
 
@@ -14241,7 +14266,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored
     if (z_diff >= MIN_FALL_DMG_DIST && !isDead() && !IsGameMaster() && !GetCommandStatus(CHEAT_GOD) &&
             !HasHoverAura() && !HasFeatherFallAura() &&
-            !HasFlyAura())
+            !HasFlyAura() && sScriptMgr->OnPlayerCanTakeFallDamage(this)) // MergedWorlds: a game identity form may have no fall damage
     {
         //Safe fall, fall height reduction
         int32 safe_fall = GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);
@@ -15156,6 +15181,16 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
 
     auto finiteAlways = [](float f) { return std::isfinite(f) ? f : 0.0f; };
 
+    // MergedWorlds: a game identity form saves the character's own values (see OnPlayerSaveCharacterValues)
+    PlayerSaveValues saveValues;
+    saveValues.Level = GetLevel();
+    saveValues.XP = GetUInt32Value(PLAYER_XP);
+    saveValues.Money = GetMoney();
+    saveValues.Health = GetHealth();
+    for (uint32 i = 0; i < MAX_POWERS; ++i)
+        saveValues.Powers[i] = GetPower(Powers(i));
+    sScriptMgr->OnPlayerSaveCharacterValues(this, trans, saveValues);
+
     if (create)
     {
         //! Insert query
@@ -15167,9 +15202,9 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, getRace(true));
         stmt->SetData(index++, getClass());
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES_3, 0));   // save gender from PLAYER_BYTES_3, UNIT_BYTES_0 changes with every transform effect
-        stmt->SetData(index++, GetLevel());
-        stmt->SetData(index++, GetUInt32Value(PLAYER_XP));
-        stmt->SetData(index++, GetMoney());
+        stmt->SetData(index++, saveValues.Level);
+        stmt->SetData(index++, saveValues.XP);
+        stmt->SetData(index++, saveValues.Money);
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 0));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 1));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 2));
@@ -15234,10 +15269,10 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, GetUInt64Value(PLAYER_FIELD_KNOWN_CURRENCIES));
         stmt->SetData(index++, GetUInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX));
         stmt->SetData(index++, GetDrunkValue());
-        stmt->SetData(index++, GetHealth());
+        stmt->SetData(index++, saveValues.Health);
 
         for (uint32 i = 0; i < MAX_POWERS; ++i)
-            stmt->SetData(index++, GetPower(Powers(i)));
+            stmt->SetData(index++, saveValues.Powers[i]);
 
         stmt->SetData(index++, GetSession()->GetLatency());
 
@@ -15285,9 +15320,9 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, getRace(true));
         stmt->SetData(index++, getClass());
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES_3, 0));   // save gender from PLAYER_BYTES_3, UNIT_BYTES_0 changes with every transform effect
-        stmt->SetData(index++, GetLevel());
-        stmt->SetData(index++, GetUInt32Value(PLAYER_XP));
-        stmt->SetData(index++, GetMoney());
+        stmt->SetData(index++, saveValues.Level);
+        stmt->SetData(index++, saveValues.XP);
+        stmt->SetData(index++, saveValues.Money);
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 0));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 1));
         stmt->SetData(index++, GetByteValue(PLAYER_BYTES, 2));
@@ -15374,10 +15409,10 @@ void Player::_SaveCharacter(bool create, CharacterDatabaseTransaction trans)
         stmt->SetData(index++, GetUInt64Value(PLAYER_FIELD_KNOWN_CURRENCIES));
         stmt->SetData(index++, GetUInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX));
         stmt->SetData(index++, GetDrunkValue());
-        stmt->SetData(index++, GetHealth());
+        stmt->SetData(index++, saveValues.Health);
 
         for (uint32 i = 0; i < MAX_POWERS; ++i)
-            stmt->SetData(index++, GetPower(Powers(i)));
+            stmt->SetData(index++, saveValues.Powers[i]);
 
         stmt->SetData(index++, GetSession()->GetLatency());
 

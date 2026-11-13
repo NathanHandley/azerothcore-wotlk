@@ -208,23 +208,23 @@ void OpcodeTable::Initialize()
     /*0x04D*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_LOGOUT_COMPLETE,                                    STATUS_NEVER);
     /*0x04E*/ DEFINE_HANDLER(CMSG_LOGOUT_CANCEL,                                                    STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_THREADUNSAFE,   &WorldSession::HandleLogoutCancelOpcode);
     /*0x04F*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_LOGOUT_CANCEL_ACK,                                  STATUS_NEVER);
-    /*0x050*/ DEFINE_HANDLER(CMSG_NAME_QUERY,                                                       STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleNameQueryOpcode                    );
+    /*0x050*/ DEFINE_HANDLER(CMSG_NAME_QUERY,                                                       STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_INPLACE,        &WorldSession::HandleNameQueryOpcode); // MergedWorlds: answered before the player is in world too (STATUS_LOGGEDIN dropped one sent at login or during a transfer, and the client never asks again, so the name stayed Unknown)
     /*0x051*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_NAME_QUERY_RESPONSE,                                STATUS_NEVER);
     /*0x052*/ DEFINE_HANDLER(CMSG_PET_NAME_QUERY,                                                   STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandlePetNameQuery                       );
     /*0x053*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_PET_NAME_QUERY_RESPONSE,                            STATUS_NEVER);
     /*0x054*/ DEFINE_HANDLER(CMSG_GUILD_QUERY,                                                      STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleGuildQueryOpcode                   );
     /*0x055*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GUILD_QUERY_RESPONSE,                               STATUS_NEVER);
-    /*0x056*/ DEFINE_HANDLER(CMSG_ITEM_QUERY_SINGLE,                                                STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandleItemQuerySingleOpcode              );
+    /*0x056*/ DEFINE_HANDLER(CMSG_ITEM_QUERY_SINGLE,                                                STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_THREADSAFE,     &WorldSession::HandleItemQuerySingleOpcode              ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x057*/ DEFINE_HANDLER(CMSG_ITEM_QUERY_MULTIPLE,                                              STATUS_NEVER,      PROCESS_INPLACE,        &WorldSession::Handle_NULL                              );
     /*0x058*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_ITEM_QUERY_SINGLE_RESPONSE,                         STATUS_NEVER);
     /*0x059*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_ITEM_QUERY_MULTIPLE_RESPONSE,                       STATUS_NEVER);
-    /*0x05A*/ DEFINE_HANDLER(CMSG_PAGE_TEXT_QUERY,                                                  STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandlePageTextQueryOpcode                );
+    /*0x05A*/ DEFINE_HANDLER(CMSG_PAGE_TEXT_QUERY,                                                  STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_INPLACE,        &WorldSession::HandlePageTextQueryOpcode                ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x05B*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_PAGE_TEXT_QUERY_RESPONSE,                           STATUS_NEVER);
-    /*0x05C*/ DEFINE_HANDLER(CMSG_QUEST_QUERY,                                                      STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleQuestQueryOpcode                   );
+    /*0x05C*/ DEFINE_HANDLER(CMSG_QUEST_QUERY,                                                      STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_INPLACE,        &WorldSession::HandleQuestQueryOpcode                   ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x05D*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_QUEST_QUERY_RESPONSE,                               STATUS_NEVER);
-    /*0x05E*/ DEFINE_HANDLER(CMSG_GAMEOBJECT_QUERY,                                                 STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandleGameObjectQueryOpcode              );
+    /*0x05E*/ DEFINE_HANDLER(CMSG_GAMEOBJECT_QUERY,                                                 STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_THREADSAFE,     &WorldSession::HandleGameObjectQueryOpcode              ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x05F*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GAMEOBJECT_QUERY_RESPONSE,                          STATUS_NEVER);
-    /*0x060*/ DEFINE_HANDLER(CMSG_CREATURE_QUERY,                                                   STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandleCreatureQueryOpcode                );
+    /*0x060*/ DEFINE_HANDLER(CMSG_CREATURE_QUERY,                                                   STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_THREADSAFE,     &WorldSession::HandleCreatureQueryOpcode                ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x061*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_CREATURE_QUERY_RESPONSE,                            STATUS_NEVER);
     /*0x062*/ DEFINE_HANDLER(CMSG_WHO,                                                              STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandleWhoOpcode                          );
     /*0x063*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_WHO,                                                STATUS_NEVER);
@@ -511,7 +511,7 @@ void OpcodeTable::Initialize()
     /*0x17C*/ DEFINE_HANDLER(CMSG_GOSSIP_SELECT_OPTION,                                             STATUS_LOGGEDIN,   PROCESS_THREADUNSAFE,   &WorldSession::HandleGossipSelectOptionOpcode           );
     /*0x17D*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GOSSIP_MESSAGE,                                     STATUS_NEVER);
     /*0x17E*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GOSSIP_COMPLETE,                                    STATUS_NEVER);
-    /*0x17F*/ DEFINE_HANDLER(CMSG_NPC_TEXT_QUERY,                                                   STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleNpcTextQueryOpcode                 );
+    /*0x17F*/ DEFINE_HANDLER(CMSG_NPC_TEXT_QUERY,                                                   STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_INPLACE,        &WorldSession::HandleNpcTextQueryOpcode                 ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x180*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_NPC_TEXT_UPDATE,                                    STATUS_NEVER);
     /*0x181*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_NPC_WONT_TALK,                                      STATUS_NEVER);
     /*0x182*/ DEFINE_HANDLER(CMSG_QUESTGIVER_STATUS_QUERY,                                          STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandleQuestgiverStatusQueryOpcode        );
@@ -836,7 +836,7 @@ void OpcodeTable::Initialize()
     /*0x2C1*/ DEFINE_HANDLER(MSG_PETITION_RENAME,                                                   STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::HandlePetitionRenameOpcode               );
     /*0x2C2*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_INIT_WORLD_STATES,                                  STATUS_NEVER);
     /*0x2C3*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_UPDATE_WORLD_STATE,                                 STATUS_NEVER);
-    /*0x2C4*/ DEFINE_HANDLER(CMSG_ITEM_NAME_QUERY,                                                  STATUS_LOGGEDIN,   PROCESS_INPLACE,     &WorldSession::HandleItemNameQueryOpcode                );
+    /*0x2C4*/ DEFINE_HANDLER(CMSG_ITEM_NAME_QUERY,                                                  STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT,   PROCESS_INPLACE,     &WorldSession::HandleItemNameQueryOpcode                ); // MergedWorlds: answered before the player is in world too, as CMSG_NAME_QUERY (dropped at login and during a far teleport, and the client never asks again)
     /*0x2C5*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_ITEM_NAME_QUERY_RESPONSE,                           STATUS_NEVER);
     /*0x2C6*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_PET_ACTION_FEEDBACK,                                STATUS_NEVER);
     /*0x2C7*/ DEFINE_HANDLER(CMSG_CHAR_RENAME,                                                      STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleCharRenameOpcode                   );
@@ -1441,6 +1441,8 @@ void OpcodeTable::Initialize()
     /*0x51E*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_MULTIPLE_MOVES, STATUS_NEVER);
     /*0x51F*/ DEFINE_HANDLER(TC9_CMSG_PREPARE_FOR_REDIRECT,                                         STATUS_AUTHED,     PROCESS_THREADUNSAFE,   &WorldSession::HandleTC9PrepareForRedirect);
     /*0x520*/ DEFINE_SERVER_OPCODE_HANDLER(TC9_SMSG_READY_FOR_REDIRECT, STATUS_NEVER);
+    /*0x521*/ DEFINE_HANDLER(CMSG_BANK_SHOW_TAB,                                                    STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleBankShowTabOpcode                  ); // MergedWorlds world bank
+    /*0x522*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_BANK_CURRENCY, STATUS_NEVER); // MergedWorlds world bank
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER
