@@ -58,6 +58,7 @@ bool checkDirectories(std::string const& dataDirPath, bool debugOutput)
 }
 
 bool handleArgs(int argc, char** argv,
+                std::vector<uint32>& mapnums,
                 int& mapnum,
                 int& tileX,
                 int& tileY,
@@ -121,9 +122,14 @@ bool handleArgs(int argc, char** argv,
         }
         else
         {
+            // MergedWorlds: several map ids build those maps together (MapBuilder::buildMapList); one builds as before
             int map = atoi(argv[i]);
             if (map > 0 || (map == 0 && (strcmp(argv[i], "0") == 0)))
-                mapnum = map;
+            {
+                if (mapnums.empty())
+                    mapnum = map;
+                mapnums.push_back(uint32(map));
+            }
             else
             {
                 printf("invalid map id\n");
@@ -163,11 +169,12 @@ int main(int argc, char** argv)
 {
     unsigned int threads = std::thread::hardware_concurrency();
     int mapnum = -1;
+    std::vector<uint32> mapnums;
     int tileX = -1, tileY = -1;
     bool silent = false;
     char* file = nullptr;
     std::string configFilePath = "mmaps-config.yaml";
-    bool validParam = handleArgs(argc, argv, mapnum,
+    bool validParam = handleArgs(argc, argv, mapnums, mapnum,
                                  tileX, tileY, configFilePath, silent, file, threads);
 
     if (!validParam)
@@ -199,6 +206,8 @@ int main(int argc, char** argv)
         builder.buildMeshFromFile(file);
     else if (tileX > -1 && tileY > -1 && mapnum >= 0)
         builder.buildSingleTile(mapnum, tileX, tileY);
+    else if (mapnums.size() > 1)
+        builder.buildMapList(mapnums);
     else if (mapnum >= 0)
         builder.buildMaps(uint32(mapnum));
     else

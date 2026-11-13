@@ -16,6 +16,7 @@
  */
 
 #include "MapBuilder.h"
+#include <cmath>
 #include <DetourCommon.h>
 #include <DetourNavMesh.h>
 #include <DetourNavMeshBuilder.h>
@@ -195,6 +196,40 @@ namespace MMAP
         std::set<uint32>* tiles = new std::set<uint32>();
         m_tiles.emplace_back(mapID, tiles);
         return tiles;
+    }
+
+    /**************************************************************************/
+    void MapBuilder::buildMapList(std::vector<uint32> const& mapIDs)
+    {
+        std::vector<uint32> ordered = mapIDs;
+        std::stable_sort(ordered.begin(), ordered.end(), [this](uint32 left, uint32 right) { return getTileList(left)->size() > getTileList(right)->size(); });
+        m_totalTiles = 0;
+        for (uint32 mapID : ordered)
+            m_totalTiles += getTileList(mapID)->size();
+
+        printf("Using %u threads to generate mmaps of %u maps\n", m_threads, uint32(ordered.size()));
+
+        for (unsigned int i = 0; i < m_threads; ++i)
+        {
+            m_tileBuilders.push_back(new TileBuilder(this, m_skipLiquid, m_debugOutput));
+        }
+
+        for (uint32 mapID : ordered)
+            buildMap(mapID);
+
+        while (!_queue.Empty())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+
+        _cancelationToken = true;
+
+        _queue.Cancel();
+
+        for (auto& builder : m_tileBuilders)
+            delete builder;
+
+        m_tileBuilders.clear();
     }
 
     /**************************************************************************/
@@ -627,6 +662,62 @@ namespace MMAP
         rcPolyMeshDetail** dmmerge = new rcPolyMeshDetail*[tilesPerMap * tilesPerMap];
         int nmerge = 0;
 
+        // MergedWorlds: the walkable marks are the same for every sub-tile (one slope angle for the whole tile), so they are worked out once, and each
+        // sub-tile is given only the solid triangles whose x/z bounds reach it, in their order: the rasterizer skips every other triangle anyway
+        // (rasterizeTri's overlapBounds), so the heightfield gets the same spans, and a tile of a few million triangles (a City of Heroes zone's WMO)
+        // isn't gone through again for each of its 625 sub-tiles.  The reach test is the rasterizer's own, on the same floats
+        unsigned char* solidTriFlags = new unsigned char[tTriCount];
+        memset(solidTriFlags, NAV_GROUND, tTriCount * sizeof(unsigned char));
+        rcClearUnwalkableTriangles(m_rcContext, config.walkableSlopeAngle, tVerts, tVertCount, tTris, tTriCount, solidTriFlags);
+        std::vector<std::vector<int>> solidTrisBySubTile(tilesPerMap * tilesPerMap);
+        {
+            std::vector<float> subTileMinX(tilesPerMap), subTileMaxX(tilesPerMap), subTileMinZ(tilesPerMap), subTileMaxZ(tilesPerMap);
+            for (int i = 0; i < tilesPerMap; ++i)
+            {
+                subTileMinX[i] = config.bmin[0] + i * float(config.tileSize * config.cs);
+                subTileMaxX[i] = config.bmin[0] + (i + 1) * float(config.tileSize * config.cs);
+                subTileMinZ[i] = config.bmin[2] + i * float(config.tileSize * config.cs);
+                subTileMaxZ[i] = config.bmin[2] + (i + 1) * float(config.tileSize * config.cs);
+                subTileMinX[i] -= tileCfg.borderSize * tileCfg.cs;
+                subTileMinZ[i] -= tileCfg.borderSize * tileCfg.cs;
+                subTileMaxX[i] += tileCfg.borderSize * tileCfg.cs;
+                subTileMaxZ[i] += tileCfg.borderSize * tileCfg.cs;
+            }
+            float const subTileSpan = float(config.tileSize * config.cs);
+            for (int i = 0; i < tTriCount; ++i)
+            {
+                float const* v0 = &tVerts[tTris[i * 3 + 0] * 3];
+                float const* v1 = &tVerts[tTris[i * 3 + 1] * 3];
+                float const* v2 = &tVerts[tTris[i * 3 + 2] * 3];
+                float const minX = std::min(v0[0], std::min(v1[0], v2[0]));
+                float const maxX = std::max(v0[0], std::max(v1[0], v2[0]));
+                float const minZ = std::min(v0[2], std::min(v1[2], v2[2]));
+                float const maxZ = std::max(v0[2], std::max(v1[2], v2[2]));
+                // (one with a coordinate that isn't a number goes to every sub-tile, where the rasterizer decides as it always did)
+                if (!std::isfinite(minX) || !std::isfinite(maxX) || !std::isfinite(minZ) || !std::isfinite(maxZ))
+                {
+                    for (std::vector<int>& subTile : solidTrisBySubTile)
+                        subTile.push_back(i);
+                    continue;
+                }
+                // (a sub-tile one either side of the estimate is tested too, so float rounding can't leave one out)
+                int const firstX = std::max(0, int(std::floor((minX - config.bmin[0]) / subTileSpan)) - 2);
+                int const lastX = std::min(tilesPerMap - 1, int(std::floor((maxX - config.bmin[0]) / subTileSpan)) + 2);
+                int const firstZ = std::max(0, int(std::floor((minZ - config.bmin[2]) / subTileSpan)) - 2);
+                int const lastZ = std::min(tilesPerMap - 1, int(std::floor((maxZ - config.bmin[2]) / subTileSpan)) + 2);
+                for (int y = firstZ; y <= lastZ; ++y)
+                {
+                    if (minZ > subTileMaxZ[y] || maxZ < subTileMinZ[y])
+                        continue;
+                    for (int x = firstX; x <= lastX; ++x)
+                        if (!(minX > subTileMaxX[x] || maxX < subTileMinX[x]))
+                            solidTrisBySubTile[x + y * tilesPerMap].push_back(i);
+                }
+            }
+        }
+        std::vector<int> subTileTris;
+        std::vector<unsigned char> subTileTriFlags;
+
         // build all tiles
         for (int y = 0; y < tilesPerMap; ++y)
         {
@@ -653,13 +744,18 @@ namespace MMAP
                     continue;
                 }
 
-                // mark all walkable tiles, both liquids and solids
-
-                unsigned char* triFlags = new unsigned char[tTriCount];
-                memset(triFlags, NAV_GROUND, tTriCount * sizeof(unsigned char));
-                rcClearUnwalkableTriangles(m_rcContext, tileCfg.walkableSlopeAngle, tVerts, tVertCount, tTris, tTriCount, triFlags);
-                rcRasterizeTriangles(m_rcContext, tVerts, tVertCount, tTris, triFlags, tTriCount, *tile.solid, config.walkableClimb);
-                delete[] triFlags;
+                // mark all walkable tiles, both liquids and solids (the solid ones that reach this sub-tile, marked above)
+                std::vector<int> const& reaching = solidTrisBySubTile[x + y * tilesPerMap];
+                subTileTris.resize(reaching.size() * 3);
+                subTileTriFlags.resize(reaching.size());
+                for (size_t i = 0; i < reaching.size(); ++i)
+                {
+                    subTileTris[i * 3 + 0] = tTris[reaching[i] * 3 + 0];
+                    subTileTris[i * 3 + 1] = tTris[reaching[i] * 3 + 1];
+                    subTileTris[i * 3 + 2] = tTris[reaching[i] * 3 + 2];
+                    subTileTriFlags[i] = solidTriFlags[reaching[i]];
+                }
+                rcRasterizeTriangles(m_rcContext, tVerts, tVertCount, subTileTris.data(), subTileTriFlags.data(), int(reaching.size()), *tile.solid, config.walkableClimb);
 
                 rcFilterLowHangingWalkableObstacles(m_rcContext, config.walkableClimb, *tile.solid);
                 rcFilterLedgeSpans(m_rcContext, tileCfg.walkableHeight, tileCfg.walkableClimb, *tile.solid);
@@ -732,6 +828,9 @@ namespace MMAP
                 nmerge++;
             }
         }
+
+        delete[] solidTriFlags;
+        solidTrisBySubTile.clear();
 
         iv.polyMesh = rcAllocPolyMesh();
         if (!iv.polyMesh)

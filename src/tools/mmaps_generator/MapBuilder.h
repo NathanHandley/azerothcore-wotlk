@@ -136,6 +136,9 @@ namespace MMAP
 
         // builds list of maps, then builds all of mmap tiles (based on the skip settings)
         void buildMaps(Optional<uint32> mapID);
+        // MergedWorlds: builds the mmap tiles of the maps listed (ignores skip settings), their tiles in one queue for all the threads, so a list of maps
+        // of very different sizes keeps every thread busy to the end (the biggest map's tiles go first)
+        void buildMapList(std::vector<uint32> const& mapIDs);
 
         Config const& getConfig() const { return *m_config; }
     private:
