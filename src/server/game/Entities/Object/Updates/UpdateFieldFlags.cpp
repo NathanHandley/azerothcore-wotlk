@@ -1671,6 +1671,10 @@ uint32 UnitUpdateFieldFlags[PLAYER_END] =
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+181
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+182
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+183
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+184 (MergedWorlds m59-bank: Meridian 59's vaults 242-243)
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+185
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+186
+    UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_INV_SLOT_EXTENDED+187
     UF_FLAG_PRIVATE,                                        // PLAYER_FIELD_ACCOUNT_BANK_BYTES
     UF_FLAG_NONE,                                           // PLAYER_FIELD_ACCOUNT_BANK_PAD
 };

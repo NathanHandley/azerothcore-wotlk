@@ -652,9 +652,9 @@ enum PlayerSlots
     // first slot for item stored (in any way in player m_items data)
     PLAYER_SLOT_START           = 0,
     // last+1 slot for item stored (in any way in player m_items data)
-    // MergedWorlds bank expansion: 150 -> 242 (72 bank items, 24 bank bags, account bank bags + vaults, the light source slot 237,
-    // world bank vaults 238-241)
-    PLAYER_SLOT_END             = 242,
+    // MergedWorlds bank expansion: 150 -> 244 (72 bank items, 24 bank bags, account bank bags + vaults, the light source slot 237,
+    // world bank vaults 238-243; Meridian 59's 242-243 added on ws/mw-m59, E:\MW\SHARED.md section 2)
+    PLAYER_SLOT_END             = 244,
     PLAYER_SLOTS_COUNT          = (PLAYER_SLOT_END - PLAYER_SLOT_START)
 };
 
@@ -748,10 +748,10 @@ enum AccountBankVaultSlots                                  // 2 slots
 // account bank's, a block built once with room for every world, so a world's tab needs no slot, update field or client change of its own.  Its 24
 // bag slots are the account bank's: a uint8 slot leaves too few numbers for more, so ACCOUNT_BANK_BAG_SLOT_START-END hold the bags of one tab at a
 // time, SetBankBagPage picks which, and the other tabs' bags wait in m_hiddenBankBags.  They follow the light source slot 237 (MergedWorlds)
-enum WorldBankVaultSlots                                    // 4 slots
+enum WorldBankVaultSlots                                    // 6 slots (MergedWorlds m59-bank: 4 -> 6 for Meridian 59's, the last world that fits)
 {
     WORLD_BANK_VAULT_SLOT_START     = 238,
-    WORLD_BANK_VAULT_SLOT_END       = 242
+    WORLD_BANK_VAULT_SLOT_END       = 244
 };
 
 // The bank tabs that are shared by the account.  A world's tab shows only when its module is on (Player::SetWorldBankEnabled)
@@ -760,7 +760,8 @@ enum WorldBankWorld : uint8
     WORLD_BANK_ACCOUNT              = 0,    // The plain Account tab
     WORLD_BANK_RAGNAROK             = 1,
     WORLD_BANK_CITY_OF_HEROES       = 2,
-    MAX_WORLD_BANK_WORLD            = 2
+    WORLD_BANK_MERIDIAN59           = 3,    // MergedWorlds m59-bank: the last one the 4 bytes of PLAYER_FIELD_ACCOUNT_BANK_BYTES hold
+    MAX_WORLD_BANK_WORLD            = 3
 };
 
 #define MAX_BANK_BAG_SLOT_COUNT             (BANK_SLOT_BAG_END - BANK_SLOT_BAG_START)

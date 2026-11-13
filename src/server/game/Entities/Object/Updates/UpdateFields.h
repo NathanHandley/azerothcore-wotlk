@@ -393,11 +393,12 @@ enum EUnitFields
     PLAYER_PET_SPELL_POWER                    = UNIT_END + 0x0499, // Size: 1, Type: INT, Flags: PRIVATE
     // MergedWorlds bank expansion: inventory slots 150 and up (bank 72 items / 24 bags, account bank) continue here, so the
     // stock fields keep their indices.  Player::GetInventorySlotUpdateField maps a slot to its field
-    // MergedWorlds: slots 150-241, so the light source slot 237 and the world bank vaults 238-241
-    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 184, Type: LONG, Flags: PRIVATE
-    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x0552, // Size: 1, Type: BYTES, Flags: PRIVATE (byte n = purchased bag slots of the tab of world n: 0 Account, 1 Ragnarok, 2 City of Heroes)
-    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x0553, // Size: 1, Type: INT, Flags: NONE
-    PLAYER_END                                = UNIT_END + 0x0554,
+    // MergedWorlds: slots 150-243, so the light source slot 237 and the world bank vaults 238-243 (MergedWorlds m59-bank: 184 -> 188 for
+    // Meridian 59's vaults 242-243, which moves the fields after it up by 4)
+    PLAYER_FIELD_INV_SLOT_EXTENDED            = UNIT_END + 0x049A, // Size: 188, Type: LONG, Flags: PRIVATE
+    PLAYER_FIELD_ACCOUNT_BANK_BYTES           = UNIT_END + 0x0556, // Size: 1, Type: BYTES, Flags: PRIVATE (byte n = purchased bag slots of the tab of world n: 0 Account, 1 Ragnarok, 2 City of Heroes, 3 Meridian 59)
+    PLAYER_FIELD_ACCOUNT_BANK_PAD             = UNIT_END + 0x0557, // Size: 1, Type: INT, Flags: NONE
+    PLAYER_END                                = UNIT_END + 0x0558,
 };
 
 enum EGameObjectFields
