@@ -39,7 +39,10 @@ namespace
     constexpr int TILES_PER_MAP_EDGE = VERTICES_PER_MAP_EDGE / VERTICES_PER_TILE_EDGE;
     constexpr float WALKABLE_SLOPE_ANGLE = 60.0f;
     constexpr int WALKABLE_HEIGHT = 6;
-    constexpr int WALKABLE_CLIMB = 6;
+    // What a step up may be: 3 cells, 0.8 yd (2.4 ft).  The zones' 6 (1.6 yd) let a path go over a prop a hero can't step onto: the P_Tutorial tunnel's
+    // barricade, its top plank 1.05 yd up at 17 155.5, was on the way out of the mission, and the client stopped at it (the hero has to jump).  A composed
+    // mission's stairs and curbs are under a foot a step
+    constexpr int WALKABLE_CLIMB = 3;
     constexpr int WALKABLE_RADIUS = 2;
     constexpr float MAX_SIMPLIFICATION_ERROR = 1.8f;
     constexpr float BASE_UNIT_DIM = SIZE_OF_GRIDS / float(VERTICES_PER_MAP_EDGE);
