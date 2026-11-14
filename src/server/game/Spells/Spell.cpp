@@ -7371,6 +7371,9 @@ SpellCastResult Spell::CheckRange(bool strict)
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, max_range, this);
 
+    // MergedWorlds: a module can change the maximum range (mod-rowow: an RO skill's, with Vulture's Eye or Snake Eye)
+    sScriptMgr->OnSpellMaxRange(this, max_range);
+
     // xinef: dont check max_range to strictly after cast
     if (range_type != SPELL_RANGE_MELEE && !strict)
         max_range += std::min(3.0f, max_range * 0.1f); // 10% but no more than 3yd
