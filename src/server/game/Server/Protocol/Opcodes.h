@@ -1342,7 +1342,10 @@ enum Opcodes : uint16
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
     CMSG_BANK_SHOW_TAB                              = 0x521, // MergedWorlds world bank
     SMSG_BANK_CURRENCY                              = 0x522, // MergedWorlds world bank
-    NUM_MSG_TYPES                                   = 0x523
+    // 0x523-0x527 City of Heroes (ws/cohwow), 0x528-0x52F GunBound (ws/mw-gb), reserved (E:\MW\SHARED.md section 3)
+    CMSG_M59_FIGURE_QUERY                           = 0x530, // MergedWorlds m59-figure: a Meridian 59 player figure is asked for (mod-meridian59 answers)
+    SMSG_M59_FIGURE                                 = 0x531, // MergedWorlds m59-figure: a Meridian 59 player figure's parts, colours and animations
+    NUM_MSG_TYPES                                   = 0x532
 };
 
 enum OpcodeMisc : uint16

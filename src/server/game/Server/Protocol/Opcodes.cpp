@@ -1443,6 +1443,9 @@ void OpcodeTable::Initialize()
     /*0x520*/ DEFINE_SERVER_OPCODE_HANDLER(TC9_SMSG_READY_FOR_REDIRECT, STATUS_NEVER);
     /*0x521*/ DEFINE_HANDLER(CMSG_BANK_SHOW_TAB,                                                    STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleBankShowTabOpcode                  ); // MergedWorlds world bank
     /*0x522*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_BANK_CURRENCY, STATUS_NEVER); // MergedWorlds world bank
+    // MergedWorlds m59-figure: mod-meridian59 takes the query in its CanPacketReceive before this (null) handler sees it
+    /*0x530*/ DEFINE_HANDLER(CMSG_M59_FIGURE_QUERY,                                                 STATUS_LOGGEDIN,   PROCESS_THREADUNSAFE,   &WorldSession::Handle_NULL                              );
+    /*0x531*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_M59_FIGURE, STATUS_NEVER);
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER
