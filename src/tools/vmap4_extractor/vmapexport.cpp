@@ -71,6 +71,7 @@ char const* szWorkDirWmo = "./Buildings";
 
 // MergedWorlds: with any here, only these maps are extracted (and the gameobject models are left out)
 static std::set<uint32> MapIDFilter;
+static bool ExtractGameobjectModelsWithMapFilter = false; // MergedWorlds: -g
 
 // MergedWorlds: a placement only goes in if its model has vertices, and a WMO's doodads are placed again on every tile the WMO touches, so asking the file each time
 // opened files 80 million times over a run with the City of Heroes zones, nearly all of the run.  Each model is read once.  An answer of no holds until any model
@@ -472,6 +473,11 @@ bool processArgv(int argc, char** argv, char const* versionString)
         {
             preciseVectorData = true;
         }
+        else if (strcmp("-g", argv[i]) == 0)
+        {
+            // MergedWorlds: the gameobject models too when only some maps are (composed maps' pieces are gameobject models)
+            ExtractGameobjectModelsWithMapFilter = true;
+        }
         else if (strcmp("-m", argv[i]) == 0)
         {
             if ((i + 1) < argc)
@@ -496,11 +502,12 @@ bool processArgv(int argc, char** argv, char const* versionString)
     if (!result)
     {
         printf("Extract %s.\n", versionString);
-        printf("%s [-?][-s][-l][-d <path>][-m <map id,map id...>]\n", argv[0]);
+        printf("%s [-?][-s][-l][-d <path>][-m <map id,map id...>][-g]\n", argv[0]);
         printf("   -s : (default) small size (data size optimization), ~500MB less vmap data.\n");
         printf("   -l : large size, ~500MB more vmap data. (might contain more details)\n");
         printf("   -d <path>: Path to the vector data source folder.\n");
         printf("   -m <ids>: Only these maps, and no gameobject models.\n");
+        printf("   -g : With -m, the gameobject models as well.\n");
         printf("   -? : This message.\n");
     }
     return result;
@@ -600,7 +607,7 @@ int main(int argc, char** argv)
         ParsMapFiles();
         //nError = ERROR_SUCCESS;
         // Extract models, listed in DameObjectDisplayInfo.dbc
-        if (MapIDFilter.empty())
+        if (MapIDFilter.empty() || ExtractGameobjectModelsWithMapFilter)
             ExtractGameobjectModels();
     }
 
