@@ -161,6 +161,7 @@ void WorldSession::HandleSendMail(WorldPacket& recvData)
     }
 
     uint32 cost = items_count ? 30 * items_count : 30; // price hardcoded in client
+    sScriptMgr->OnPlayerMailPostage(player, cost); // MergedWorlds: a game's own postage (mod-rowow's RO mail is free)
 
     uint32 reqmoney = cost + money;
 
@@ -502,7 +503,7 @@ void WorldSession::HandleMailReturnToSender(WorldPacket& recvData)
                 player->RemoveMItem(itr2->item_guid);
             }
         }
-        draft.AddMoney(m->money).SendReturnToSender(GetAccountId(), m->receiver, m->sender, trans);
+        draft.AddMoney(m->money).SendReturnToSender(GetAccountId(), m->receiver, m->sender, trans, MailCheckMask(m->checked & MAIL_CHECK_MASK_MW_ZENY));
     }
 
     CharacterDatabase.CommitTransaction(trans);

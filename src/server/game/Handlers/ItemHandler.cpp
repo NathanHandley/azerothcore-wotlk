@@ -731,6 +731,9 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
                     }
                 }
 
+                // MergedWorlds: what a game's shop pays, before the buyback slot takes it as its price, so buying back costs what the sale paid
+                sScriptMgr->OnPlayerSellItemMoney(_player, money);
+
                 if (packet.Count < pItem->GetCount())               // need split items
                 {
                     Item* pNewItem = pItem->CloneItem(packet.Count, _player);
@@ -762,7 +765,6 @@ void WorldSession::HandleSellItemOpcode(WorldPackets::Item::SellItem& packet)
                     _player->UpdateTitansGrip();
                 }
 
-                sScriptMgr->OnPlayerSellItemMoney(_player, money); // MergedWorlds: what a game's shop pays
                 _player->ModifyMoney(money);
                 _player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_VENDORS, money);
             }
@@ -792,7 +794,7 @@ void WorldSession::HandleBuybackItem(WorldPackets::Item::BuybackItem& packet)
     Item* pItem = _player->GetItemFromBuyBackSlot(packet.Slot);
     if (pItem)
     {
-        // MergedWorlds: a game's money never crosses: what its shop bought, the character's gold can't buy back
+        // MergedWorlds: a game's money never crosses: what its shop bought only its own money buys back
         if (!sScriptMgr->OnPlayerCanBuybackItem(_player, pItem))
         {
             _player->SendBuyError(BUY_ERR_CANT_FIND_ITEM, creature, pItem->GetEntry(), 0);

@@ -165,7 +165,7 @@ void MailMgr::ReturnOrDeleteOldMails(bool serverUp)
                 stmt->SetData(1, m->sender);
                 stmt->SetData(2, uint32(curTime + 30 * DAY));
                 stmt->SetData(3, uint32(curTime));
-                stmt->SetData(4, uint8(MAIL_CHECK_MASK_RETURNED));
+                stmt->SetData(4, uint8(MAIL_CHECK_MASK_RETURNED | (m->checked & MAIL_CHECK_MASK_MW_ZENY))); // MergedWorlds: an RO mail's zeny stays zeny
                 stmt->SetData(5, m->messageID);
                 trans->Append(stmt);
                 for (auto const& mailedItem : m->items)

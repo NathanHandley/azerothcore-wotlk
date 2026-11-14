@@ -259,6 +259,7 @@ enum PlayerHook
     PLAYERHOOK_ON_BANK_CURRENCY_TEXT, // MergedWorlds
     PLAYERHOOK_CAN_GUILD_BANK_ITEM, // MergedWorlds
     PLAYERHOOK_SELL_ITEM_MONEY, // MergedWorlds
+    PLAYERHOOK_MAIL_POSTAGE, // MergedWorlds
     PLAYERHOOK_CAN_BUYBACK_ITEM, // MergedWorlds
     PLAYERHOOK_CAN_USE_CLASS_ABILITIES, // MergedWorlds
     PLAYERHOOK_CAN_AUTO_RELEASE, // MergedWorlds
@@ -1094,6 +1095,14 @@ public:
      * @param money What the sale pays, to be read and overwritten
      */
     virtual void OnPlayerSellItemMoney(Player* /*player*/, uint32& /*money*/) { }
+
+    /**
+     * @brief MergedWorlds: called when a player sends mail, before the postage is checked and taken.
+     *
+     * @param player Contains information about the Player
+     * @param cost The postage (30 copper an item, 30 for none), to be read and overwritten
+     */
+    virtual void OnPlayerMailPostage(Player* /*player*/, uint32& /*cost*/) { }
 
     /**
      * @brief MergedWorlds: called when a player buys an item back from its buyback list.
