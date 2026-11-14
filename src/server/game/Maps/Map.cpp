@@ -2087,9 +2087,18 @@ Map::EnterState InstanceMap::CannotEnter(Player* player, bool loginCheck)
                 return CANNOT_ENTER_UNSPECIFIED_REASON;
             }
 
+    // MergedWorlds gb: a player in no group whom a module bound to this very instance (a server-arranged save: mod-gunbound's match) may enter
+    // beside the others it bound there
+    bool isArrangedEntry = false;
+    if (!player->GetGroup())
+        if (InstanceSave* mapSave = sInstanceSaveMgr->GetInstanceSave(GetInstanceId()))
+            if (mapSave->IsServerArranged())
+                if (InstancePlayerBind* bind = sInstanceSaveMgr->PlayerGetBoundInstance(player->GetGUID(), GetId(), Difficulty(GetSpawnMode())))
+                    isArrangedEntry = bind->save == mapSave;
+
     // cannot enter if instance is in use by another party/soloer that have a permanent save in the same instance id
     PlayerList const& playerList = GetPlayers();
-    if (!playerList.IsEmpty())
+    if (!isArrangedEntry && !playerList.IsEmpty())
         for (PlayerList::const_iterator i = playerList.begin(); i != playerList.end(); ++i)
             if (Player* iPlayer = i->GetSource())
             {
@@ -2166,7 +2175,8 @@ bool InstanceMap::AddPlayerToMap(Player* player)
 
         // increase current instances (hourly limit)
         // xinef: specific instances are still limited
-        if (!group || !group->isLFGGroup() || !group->IsLfgRandomInstance())
+        // MergedWorlds gb: a server-arranged instance (mod-gunbound's match) isn't counted
+        if ((!group || !group->isLFGGroup() || !group->IsLfgRandomInstance()) && !mapSave->IsServerArranged())
             player->AddInstanceEnterTime(GetInstanceId(), GameTime::GetGameTime().count());
 
         if (!playerBind->perm && !mapSave->CanReset() && group && !group->isLFGGroup() && !group->IsLfgRandomInstance())

@@ -88,7 +88,14 @@ public:
     void AddPlayer(ObjectGuid guid);
     bool RemovePlayer(ObjectGuid guid, InstanceSaveMgr* ism);
 
+    // MergedWorlds gb: a save a module made and bound players to itself (mod-gunbound's match: up to 8 players in no group in one stage
+    // instance).  Its bound players may enter beside each other with no group, and it doesn't count toward the hourly instance limit
+    // (InstanceMap::CannotEnter, AddPlayerToMap).  Set on the world thread before anyone is bound; not saved (gone with the save)
+    [[nodiscard]] bool IsServerArranged() const { return m_serverArranged; }
+    void SetServerArranged(bool serverArranged) { m_serverArranged = serverArranged; }
+
 private:
+    bool m_serverArranged = false; // MergedWorlds gb
     GuidList m_playerList;
     time_t m_resetTime;
     time_t m_extendedResetTime;
