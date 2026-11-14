@@ -28,6 +28,7 @@
 #include "PacketLog.h"
 #include "Random.h"
 #include "Realm.h"
+#include "UpdateFields.h"
 #include "ScriptMgr.h"
 #include "World.h"
 #include "WorldSession.h"
@@ -686,6 +687,19 @@ void WorldSocket::HandleAuthSessionCallback(std::shared_ptr<ClientAuthSession> a
         {
             SendAuthResponseError(AUTH_UNAVAILABLE);
             LOG_DEBUG("network", "WorldSocket::HandleAuthSession: User tries to login but his security level is not enough");
+            sScriptMgr->OnFailedAccountLogin(account.Id);
+            DelayedCloseSocket();
+            return;
+        }
+
+        // MergedWorlds m59-bank: a client without this server's player field layout (UpdateFields.h, MW_CLIENT_FLAG_BANK_WORLD3_LAYOUT) can't
+        // read its update fields, for every game: turned away as out of date.  No expected version follows, so the client shows its own
+        // version-mismatch text rather than two version numbers that may be the same
+        if ((uint8(authSession->ClientDataVersion >> MW_CLIENT_FLAGS_SHIFT) & MW_CLIENT_FLAG_BANK_WORLD3_LAYOUT) == 0)
+        {
+            SendAuthResponseError(AUTH_VERSION_MISMATCH);
+            LOG_INFO("network", "WorldSocket::HandleAuthSession: Account {} ('{}') from {} refused: its client is older than this server's player field layout (content flags 0x{:02X}, no 0x{:02X}, the bank's world 3). Update the client.",
+                account.Id, authSession->Account, address, uint8(authSession->ClientDataVersion >> MW_CLIENT_FLAGS_SHIFT), MW_CLIENT_FLAG_BANK_WORLD3_LAYOUT);
             sScriptMgr->OnFailedAccountLogin(account.Id);
             DelayedCloseSocket();
             return;

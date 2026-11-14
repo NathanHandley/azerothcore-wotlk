@@ -401,6 +401,14 @@ enum EUnitFields
     PLAYER_END                                = UNIT_END + 0x0558,
 };
 
+// MergedWorlds m59-bank: a client built for the player field layout above (world 3's vaults, PLAYER_END UNIT_END + 0x0558) sets this bit in
+// its content byte, the high byte of CMSG_AUTH_SESSION's client data version (client MWContent::CONTENT_FLAG_BANK_WORLD3_LAYOUT,
+// E:\MW\SHARED.md 5.2).  WorldSocket::HandleAuthSession turns away a client without it: an older client would read the bank bytes and every
+// field past the vaults from the wrong index, and the update mask's block count (48) is the same for both layouts, so nothing else shows it
+#define MW_CLIENT_FLAG_BANK_WORLD3_LAYOUT           0x40
+#define MW_CLIENT_FLAGS_SHIFT                       24
+static_assert(PLAYER_END == UNIT_END + 0x0558, "The player field layout changed: give it a new client layout bit (E:\\MW\\SHARED.md 5.2) and check that bit in WorldSocket::HandleAuthSession");
+
 enum EGameObjectFields
 {
     OBJECT_FIELD_CREATED_BY                   = OBJECT_END + 0x0000, // Size: 2, Type: LONG, Flags: PUBLIC
