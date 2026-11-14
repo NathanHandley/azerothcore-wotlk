@@ -674,6 +674,7 @@ public: /* SpellSC */
     void OnAfterSpellHitResult(Spell* spell, Unit* target, TargetInfo& targetInfo); // MergedWorlds
     void OnDispelSelection(Spell* spell, Unit* target, DispelChargesList& dispelList, bool& inListOrder); // MergedWorlds
     void OnSpellCalcCastTime(Spell* spell, int32& castTime); // MergedWorlds
+    void OnSpellIgnoreMinRange(Spell* spell, bool& ignoreMinRange); // MergedWorlds
     void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
     void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);

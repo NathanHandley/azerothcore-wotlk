@@ -1352,7 +1352,8 @@ class spell_pal_judgement_of_light_heal : public AuraScript
         if (!attacker)
             return;
 
-        int32 bp = int32(attacker->CountPctFromMaxHealth(aurEff->GetAmount()));
+        // MergedWorlds: a share of the attacker's unbuffed maximum health, so HP buffs (EQ's included) don't grow the heal
+        int32 bp = int32(attacker->CountPctFromUnbuffedMaxHealth(aurEff->GetAmount()));
         attacker->CastCustomSpell(attacker, SPELL_PALADIN_JUDGEMENT_OF_LIGHT_HEAL, &bp, nullptr, nullptr, true, nullptr, aurEff, GetCasterGUID());
     }
 

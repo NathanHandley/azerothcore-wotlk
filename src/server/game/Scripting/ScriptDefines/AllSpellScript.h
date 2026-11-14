@@ -44,6 +44,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_AFTER_SPELL_HIT_RESULT, // MergedWorlds
     ALLSPELLHOOK_ON_DISPEL_SELECTION, // MergedWorlds
     ALLSPELLHOOK_ON_CALC_CAST_TIME, // MergedWorlds
+    ALLSPELLHOOK_ON_SPELL_IGNORE_MIN_RANGE, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -82,6 +83,9 @@ public:
     // MergedWorlds: a spell's cast time was just worked out (Spell::prepare, after the first CheckCast), and can be replaced (mod-rowow's RO
     // skills use RO's cast time rules)
     virtual void OnSpellCalcCastTime(Spell* /*spell*/, int32& /*castTime*/) { }
+
+    // MergedWorlds: Spell::CheckRange is about to hold a cast to its minimum range; set ignoreMinRange to skip that (mod-everquest's Ranger's Focus)
+    virtual void OnSpellIgnoreMinRange(Spell* /*spell*/, bool& /*ignoreMinRange*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 
