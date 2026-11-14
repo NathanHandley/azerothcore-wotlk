@@ -1443,6 +1443,10 @@ void OpcodeTable::Initialize()
     /*0x520*/ DEFINE_SERVER_OPCODE_HANDLER(TC9_SMSG_READY_FOR_REDIRECT, STATUS_NEVER);
     /*0x521*/ DEFINE_HANDLER(CMSG_BANK_SHOW_TAB,                                                    STATUS_LOGGEDIN,   PROCESS_INPLACE,        &WorldSession::HandleBankShowTabOpcode                  ); // MergedWorlds world bank
     /*0x522*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_BANK_CURRENCY, STATUS_NEVER); // MergedWorlds world bank
+    /*0x528*/ DEFINE_SERVER_OPCODE_HANDLER(SMSG_GB_BATTLE, STATUS_NEVER); // MergedWorlds MW-GB: GunBound battle
+    // MergedWorlds MW-GB: GunBound battle input.  Taken by mod-gunbound's ServerScript::CanPacketReceive on the battle map's own update thread
+    // (thread-safe processing, logged in and in the world); Handle_NULL only logs it when the module isn't there
+    /*0x529*/ DEFINE_HANDLER(CMSG_GB_BATTLE,                                                        STATUS_LOGGEDIN,   PROCESS_THREADSAFE,     &WorldSession::Handle_NULL                              );
 
 #undef DEFINE_HANDLER
 #undef DEFINE_SERVER_OPCODE_HANDLER

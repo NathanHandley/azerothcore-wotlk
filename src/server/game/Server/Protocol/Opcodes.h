@@ -1342,7 +1342,10 @@ enum Opcodes : uint16
     TC9_SMSG_READY_FOR_REDIRECT                     = 0x520,
     CMSG_BANK_SHOW_TAB                              = 0x521, // MergedWorlds world bank
     SMSG_BANK_CURRENCY                              = 0x522, // MergedWorlds world bank
-    NUM_MSG_TYPES                                   = 0x523
+    // MergedWorlds: 0x523-0x527 are COHWOW's (ws/cohwow), 0x528-0x52F MW-GB's, 0x530-0x537 MW-M59's (E:\MW\SHARED.md section 3)
+    SMSG_GB_BATTLE                                  = 0x528, // MergedWorlds MW-GB: GunBound battle messages (u8 kind + payload; mod-gunbound)
+    CMSG_GB_BATTLE                                  = 0x529, // MergedWorlds MW-GB: GunBound battle input (u8 kind + payload; mod-gunbound)
+    NUM_MSG_TYPES                                   = 0x52A  // MergedWorlds: past the highest opcode in use on this branch (a merge keeps the highest)
 };
 
 enum OpcodeMisc : uint16
