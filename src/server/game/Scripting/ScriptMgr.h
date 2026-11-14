@@ -496,6 +496,7 @@ public: /* PlayerScript */
     void OnPlayerBankCurrencyText(Player* player, uint8 world, std::string& text); // MergedWorlds
     void OnPlayerCanGuildBankItem(Player* player, Item const* item, InventoryResult& result); // MergedWorlds
     void OnPlayerSellItemMoney(Player* player, uint32& money); // MergedWorlds
+    void OnPlayerMailPostage(Player* player, uint32& cost); // MergedWorlds
     bool OnPlayerCanBuybackItem(Player* player, Item* item); // MergedWorlds
     bool OnPlayerCanRegenerate(Player* player); // MergedWorlds
     bool OnPlayerCanUseClassAbilities(Player* player); // MergedWorlds

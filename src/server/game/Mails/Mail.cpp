@@ -150,7 +150,7 @@ void MailDraft::deleteIncludedItems(CharacterDatabaseTransaction trans, bool inD
     m_items.clear();
 }
 
-void MailDraft::SendReturnToSender(uint32 /*sender_acc*/, ObjectGuid::LowType sender_guid, ObjectGuid::LowType receiver_guid, CharacterDatabaseTransaction trans)
+void MailDraft::SendReturnToSender(uint32 /*sender_acc*/, ObjectGuid::LowType sender_guid, ObjectGuid::LowType receiver_guid, CharacterDatabaseTransaction trans, MailCheckMask keptChecked)
 {
     Player* receiver = ObjectAccessor::FindPlayerByLowGUID(receiver_guid);
 
@@ -181,7 +181,7 @@ void MailDraft::SendReturnToSender(uint32 /*sender_acc*/, ObjectGuid::LowType se
     // xinef: WowWiki: "Return mail arrives immediately."
 
     // will delete item or place to receiver mail list
-    SendMailTo(trans, MailReceiver(receiver, receiver_guid), MailSender(MAIL_NORMAL, sender_guid), MAIL_CHECK_MASK_RETURNED, 0);
+    SendMailTo(trans, MailReceiver(receiver, receiver_guid), MailSender(MAIL_NORMAL, sender_guid), MailCheckMask(MAIL_CHECK_MASK_RETURNED | keptChecked), 0);
 }
 
 void MailDraft::SendMailTo(CharacterDatabaseTransaction trans, MailReceiver const& receiver, MailSender const& sender, MailCheckMask checked, uint32 deliver_delay, uint32 custom_expiration, bool deleteMailItemsFromDB, bool sendMail)

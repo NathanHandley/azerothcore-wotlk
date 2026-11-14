@@ -1055,6 +1055,11 @@ void ScriptMgr::OnPlayerSellItemMoney(Player* player, uint32& money)
     CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_SELL_ITEM_MONEY, script->OnPlayerSellItemMoney(player, money));
 }
 
+void ScriptMgr::OnPlayerMailPostage(Player* player, uint32& cost)
+{
+    CALL_ENABLED_HOOKS(PlayerScript, PLAYERHOOK_MAIL_POSTAGE, script->OnPlayerMailPostage(player, cost));
+}
+
 bool ScriptMgr::OnPlayerCanBuybackItem(Player* player, Item* item)
 {
     CALL_ENABLED_BOOLEAN_HOOKS(PlayerScript, PLAYERHOOK_CAN_BUYBACK_ITEM, !script->OnPlayerCanBuybackItem(player, item));
