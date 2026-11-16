@@ -7381,6 +7381,10 @@ SpellCastResult Spell::CheckRange(bool strict)
     float max_range = m_caster->GetSpellMaxRangeForTarget(target, m_spellInfo);
     float min_range = m_caster->GetSpellMinRangeForTarget(target, m_spellInfo);
 
+    // MergedWorlds: a module can waive the minimum range (mod-everquest's Ranger's Focus shoots in melee)
+    bool ignoreMinRange = false;
+    sScriptMgr->OnSpellIgnoreMinRange(this, ignoreMinRange);
+
     // xinef: hack for npc shooters
     if (min_range && unitCaster && unitCaster->IsCreature() && !unitCaster->ToCreature()->GetOwnerGUID().IsPlayer() && min_range <= 6.0f)
         range_type = SPELL_RANGE_RANGED;
@@ -7390,6 +7394,8 @@ SpellCastResult Spell::CheckRange(bool strict)
 
     if (EverQuestMovementHooks::SpellRangeModifier != nullptr && unitCaster != nullptr)
         max_range = EverQuestMovementHooks::SpellRangeModifier(unitCaster, m_spellInfo, max_range);
+    // MergedWorlds: a module can change the maximum range (mod-rowow: an RO skill's, with Vulture's Eye or Snake Eye)
+    sScriptMgr->OnSpellMaxRange(this, max_range);
 
     // xinef: dont check max_range to strictly after cast
     if (range_type != SPELL_RANGE_MELEE && !strict)
@@ -7429,14 +7435,17 @@ SpellCastResult Spell::CheckRange(bool strict)
             return SPELL_FAILED_OUT_OF_RANGE;
 
         // Check min range - for ranged spells, min range is the spell's min range + melee range (no leeway)
-        if (unitCaster && range_type == SPELL_RANGE_RANGED)
+        if (ignoreMinRange == false)
         {
-            float minRangeCombined = min_range + unitCaster->GetMeleeRange(target);
-            if (unitCaster->IsWithinRange(target, minRangeCombined))
+            if (unitCaster && range_type == SPELL_RANGE_RANGED)
+            {
+                float minRangeCombined = min_range + unitCaster->GetMeleeRange(target);
+                if (unitCaster->IsWithinRange(target, minRangeCombined))
+                    return SPELL_FAILED_TOO_CLOSE;
+            }
+            else if (unitCaster && min_range > 0 && unitCaster->IsWithinCombatRange(target, min_range))
                 return SPELL_FAILED_TOO_CLOSE;
         }
-        else if (unitCaster && min_range > 0 && unitCaster->IsWithinCombatRange(target, min_range))
-            return SPELL_FAILED_TOO_CLOSE;
     }
 
     if (GameObject* goTarget = m_targets.GetGOTarget())
@@ -7451,7 +7460,7 @@ SpellCastResult Spell::CheckRange(bool strict)
     {
         if (!m_caster->IsWithinDist3d(m_targets.GetDstPos(), max_range + m_caster->GetLeewayBonusRadius()))
             return SPELL_FAILED_OUT_OF_RANGE;
-        if (min_range && m_caster->IsWithinDist3d(m_targets.GetDstPos(), min_range))
+        if (min_range && ignoreMinRange == false && m_caster->IsWithinDist3d(m_targets.GetDstPos(), min_range))
             return SPELL_FAILED_TOO_CLOSE;
     }
 

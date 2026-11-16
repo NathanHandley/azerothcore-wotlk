@@ -72,6 +72,16 @@ void ScriptMgr::OnSpellCalcCastTime(Spell* spell, int32& castTime)
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_CALC_CAST_TIME, script->OnSpellCalcCastTime(spell, castTime));
 }
 
+void ScriptMgr::OnSpellIgnoreMinRange(Spell* spell, bool& ignoreMinRange)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_SPELL_IGNORE_MIN_RANGE, script->OnSpellIgnoreMinRange(spell, ignoreMinRange));
+}
+
+void ScriptMgr::OnSpellMaxRange(Spell* spell, float& maxRange)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_SPELL_MAX_RANGE, script->OnSpellMaxRange(spell, maxRange));
+}
+
 void ScriptMgr::OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_BEFORE_AURA_RANK_FOR_LEVEL, script->OnBeforeAuraRankForLevel(spellInfo, latestSpellInfo, level));

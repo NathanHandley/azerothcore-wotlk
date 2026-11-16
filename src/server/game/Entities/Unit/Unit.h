@@ -1132,6 +1132,9 @@ public:
 
     [[nodiscard]] uint32 CountPctFromMaxHealth(int32 pct) const { return CalculatePct(GetMaxHealth(), pct); }
     [[nodiscard]] uint32 CountPctFromCurHealth(int32 pct) const { return CalculatePct(GetHealth(), pct); }
+    // MergedWorlds: maximum health without what auras add (health and stamina buffs, EQ HP buffs); gear and base stay
+    [[nodiscard]] uint32 GetUnbuffedMaxHealth() const;
+    [[nodiscard]] uint32 CountPctFromUnbuffedMaxHealth(int32 pct) const { return CalculatePct(GetUnbuffedMaxHealth(), pct); }
 
     void SetHealth(uint32 val);
     void SetMaxHealth(uint32 val);

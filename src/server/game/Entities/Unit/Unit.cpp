@@ -11813,6 +11813,27 @@ void Unit::UpdateAllDamagePctDoneMods()
         UpdateDamagePctDoneMods(WeaponAttackType(i));
 }
 
+uint32 Unit::GetUnbuffedMaxHealth() const
+{
+    // Gear and the base go in at BASE_VALUE and BASE_PCT; auras (stamina and health buffs) go in at TOTAL_VALUE and TOTAL_PCT, so leave those out
+    float value = GetFlatModifierValue(UNIT_MOD_HEALTH, BASE_VALUE);
+    if (IsPlayer() == true)
+    {
+        value += GetCreateHealth();
+        value *= GetPctModifierValue(UNIT_MOD_HEALTH, BASE_PCT);
+        float stamina = (GetFlatModifierValue(UNIT_MOD_STAT_STAMINA, BASE_VALUE) + GetCreateStat(STAT_STAMINA)) * GetPctModifierValue(UNIT_MOD_STAT_STAMINA, BASE_PCT);
+        float baseStamina = std::min(stamina, 20.0f); // Player::GetHealthBonusFromStamina
+        value += baseStamina + (stamina - baseStamina) * 10.0f;
+    }
+    else
+        value *= GetPctModifierValue(UNIT_MOD_HEALTH, BASE_PCT);
+
+    uint32 maxHealth = GetMaxHealth();
+    if (value < 1.0f)
+        return maxHealth;
+    return std::min(maxHealth, uint32(value));
+}
+
 float Unit::GetTotalStatValue(Stats stat, float additionalValue) const
 {
     UnitMods unitMod = UnitMods(static_cast<uint16>(UNIT_MOD_STAT_START) + stat);
