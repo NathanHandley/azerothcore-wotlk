@@ -49,6 +49,7 @@ enum MailCheckMask : uint8
     MAIL_CHECK_MASK_COPIED      = 0x04,                     /// This mail was copied. Do not allow making a copy of items in mail.
     MAIL_CHECK_MASK_COD_PAYMENT = 0x08,
     MAIL_CHECK_MASK_HAS_BODY    = 0x10,                     /// This mail has body text.
+    MAIL_CHECK_MASK_MW_ZENY     = 0x80,                     /// MergedWorlds: mod-rowow's, sent in the RO form, so its money is zeny (the client doesn't read it). Kept when returned
 };
 
 // gathered from Stationery.dbc
@@ -138,7 +139,8 @@ public:                                                 // modifiers
     MailDraft& AddCOD(uint32 COD) { m_COD = COD; return *this; }
 
 public:                                                 // finishers
-    void SendReturnToSender(uint32 sender_acc, ObjectGuid::LowType sender_guid, ObjectGuid::LowType receiver_guid, CharacterDatabaseTransaction trans);
+    void SendReturnToSender(uint32 sender_acc, ObjectGuid::LowType sender_guid, ObjectGuid::LowType receiver_guid, CharacterDatabaseTransaction trans,
+        MailCheckMask keptChecked = MAIL_CHECK_MASK_NONE); // MergedWorlds: keptChecked, the returned mail's flags kept (MAIL_CHECK_MASK_MW_ZENY)
     void SendMailTo(CharacterDatabaseTransaction trans, MailReceiver const& receiver, MailSender const& sender, MailCheckMask checked = MAIL_CHECK_MASK_NONE, uint32 deliver_delay = 0, uint32 custom_expiration = 0, bool deleteMailItemsFromDB = false, bool sendMail = true);
 
 private:
