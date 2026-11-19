@@ -39,10 +39,11 @@ namespace
     constexpr int TILES_PER_MAP_EDGE = VERTICES_PER_MAP_EDGE / VERTICES_PER_TILE_EDGE;
     constexpr float WALKABLE_SLOPE_ANGLE = 60.0f;
     constexpr int WALKABLE_HEIGHT = 6;
-    // What a step up may be: 3 cells, 0.8 yd (2.4 ft).  The zones' 6 (1.6 yd) let a path go over a prop a hero can't step onto: the P_Tutorial tunnel's
-    // barricade, its top plank 1.05 yd up at 17 155.5, was on the way out of the mission, and the client stopped at it (the hero has to jump).  A composed
-    // mission's stairs and curbs are under a foot a step
-    constexpr int WALKABLE_CLIMB = 3;
+    // What a step up may be: 2 cells, 0.53 yd, the cell count nearest the half yard a hero steps up on a City of Heroes map (CoH's 1.5 ft: the client's
+    // GetStepUpHeight).  The zones' 6 (1.6 yd) let a path go over a prop a hero can't step onto: the P_Tutorial tunnel's barricade, its top plank 1.05 yd up
+    // at 17 155.5, was on the way out of the mission, and the client stopped at it (the hero has to jump).  3 cells (0.8 yd) still let one over a 0.83 yd
+    // crate in the 5th Column warehouse (36.4 -1.9), whose top the rasterizer can put three cells up.  A composed mission's stairs and curbs are under a foot a step
+    constexpr int WALKABLE_CLIMB = 2;
     constexpr int WALKABLE_RADIUS = 2;
     constexpr float MAX_SIMPLIFICATION_ERROR = 1.8f;
     constexpr float BASE_UNIT_DIM = SIZE_OF_GRIDS / float(VERTICES_PER_MAP_EDGE);
