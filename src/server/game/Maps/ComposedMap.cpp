@@ -38,9 +38,11 @@ namespace
     constexpr int VERTICES_PER_TILE_EDGE = 80;
     constexpr int TILES_PER_MAP_EDGE = VERTICES_PER_MAP_EDGE / VERTICES_PER_TILE_EDGE;
     constexpr float WALKABLE_SLOPE_ANGLE = 60.0f;
-    // The head room a way needs: 8 cells, 2.13 yd, the fewest cells over a City of Heroes hero's 6 ft (entworldcoll.c tests from 1.5 to 6 ft above the
-    // feet for a ceiling).  The zones' 6 (1.6 yd) let a path run under stairs a hero doesn't fit under (Pocket D's bar stairs, 1.6 to 2.1 yd of room)
-    constexpr int WALKABLE_HEIGHT = 8;
+    // The head room a way needs: 7 cells.  Recast keeps a span only if the gap to the span above is MORE than this (rcFilterWalkableLowHeightSpans: top - bot
+    // <= walkableHeight is cut), floor rounded up and ceiling down, so 7 asks 8 cells of gap, 2.13 to 2.67 yd of room: the fewest over a City of Heroes hero's
+    // 6 ft (entworldcoll.c tests from 1.5 to 6 ft above the feet for a ceiling).  The zones' 6 (1.87 to 2.4 yd) let a path run under stairs a hero
+    // doesn't fit under (Pocket D's bar stairs, 1.6 to 2.1 yd of room); 8 (2.4 to 2.93 yd, round 12) cut rooms a hero walks under
+    constexpr int WALKABLE_HEIGHT = 7;
     // What a step up may be: 2 cells, 0.53 yd, the cell count nearest the half yard a hero steps up on a City of Heroes map (CoH's 1.5 ft: the client's
     // GetStepUpHeight).  The zones' 6 (1.6 yd) let a path go over a prop a hero can't step onto: the P_Tutorial tunnel's barricade, its top plank 1.05 yd up
     // at 17 155.5, was on the way out of the mission, and the client stopped at it (the hero has to jump).  3 cells (0.8 yd) still let one over a 0.83 yd
