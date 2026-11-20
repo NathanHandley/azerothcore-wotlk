@@ -1319,6 +1319,7 @@ void Spell::SelectImplicitConeTargets(SpellEffIndex effIndex, SpellImplicitTarge
         SearchTargets<Acore::WorldObjectListSearcher<Acore::WorldObjectSpellConeTargetCheck> >(searcher, containerTypeMask, m_caster, m_caster, radius);
 
         CallScriptObjectAreaTargetSelectHandlers(targets, effIndex, targetType);
+        sScriptMgr->OnSpellAreaTargets(this, targets, effIndex); // MergedWorlds
 
         if (!targets.empty())
         {
@@ -1414,6 +1415,7 @@ void Spell::SelectImplicitAreaTargets(SpellEffIndex effIndex, SpellImplicitTarge
     SearchAreaTargets(targets, radius, center, referer, targetType.GetObjectType(), targetType.GetCheckType(), m_spellInfo->Effects[effIndex].ImplicitTargetConditions, Acore::WorldObjectSpellAreaTargetSearchReason::Area, targetType.GetReferenceType());
 
     CallScriptObjectAreaTargetSelectHandlers(targets, effIndex, targetType);
+    sScriptMgr->OnSpellAreaTargets(this, targets, effIndex); // MergedWorlds
 
     if (!targets.empty())
     {

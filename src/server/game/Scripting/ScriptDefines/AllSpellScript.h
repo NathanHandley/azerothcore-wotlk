@@ -48,6 +48,7 @@ enum AllSpellHook
     ALLSPELLHOOK_ON_SPELL_MAX_RANGE, // MergedWorlds
     ALLSPELLHOOK_ON_CALC_POWER_COST, // MergedWorlds
     ALLSPELLHOOK_ON_MODIFY_RANGE, // MergedWorlds
+    ALLSPELLHOOK_ON_AREA_TARGETS, // MergedWorlds
     ALLSPELLHOOK_END
 };
 
@@ -101,6 +102,11 @@ public:
     // MergedWorlds: a spell's most range was just worked out for a caster, after its spell mods (the cast's range checks and SpellInfo::GetMaxRange with a
     // caster), and can be changed (mod-cityofheroes's Range enhancements and set bonuses)
     virtual void OnSpellModifyRange(WorldObject const* /*caster*/, SpellInfo const* /*spellInfo*/, float& /*range*/) { }
+
+    // MergedWorlds: an area or cone effect's targets were just found (Spell::SelectImplicitAreaTargets and SelectImplicitConeTargets, after the spell scripts'
+    // area target handlers and before the spell's most targets are picked), and can be taken out or put in order (mod-cityofheroes: the units a power's
+    // TargetRequires doesn't take aren't its targets and don't count toward its most targets, and the nearest go first)
+    virtual void OnSpellAreaTargets(Spell* /*spell*/, std::list<WorldObject*>& /*targets*/, SpellEffIndex /*effIndex*/) { }
 
     virtual void OnBeforeAuraRankForLevel(SpellInfo const* /*spellInfo*/, SpellInfo const* /*latestSpellInfo*/, uint8 /*level*/) { }
 

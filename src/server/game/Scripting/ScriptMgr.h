@@ -684,6 +684,7 @@ public: /* SpellSC */
     void OnSpellMaxRange(Spell* spell, float& maxRange); // MergedWorlds
     void OnSpellCalcPowerCost(Spell* spell, int32& powerCost); // MergedWorlds
     void OnSpellModifyRange(WorldObject const* caster, SpellInfo const* spellInfo, float& range); // MergedWorlds
+    void OnSpellAreaTargets(Spell* spell, std::list<WorldObject*>& targets, SpellEffIndex effIndex); // MergedWorlds
     void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint32 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
     void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);

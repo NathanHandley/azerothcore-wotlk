@@ -79,6 +79,12 @@ void ScriptMgr::OnSpellModifyRange(WorldObject const* caster, SpellInfo const* s
 }
 
 // MergedWorlds
+void ScriptMgr::OnSpellAreaTargets(Spell* spell, std::list<WorldObject*>& targets, SpellEffIndex effIndex)
+{
+    CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_AREA_TARGETS, script->OnSpellAreaTargets(spell, targets, effIndex));
+}
+
+// MergedWorlds
 void ScriptMgr::OnSpellCalcCastTime(Spell* spell, int32& castTime)
 {
     CALL_ENABLED_HOOKS(AllSpellScript, ALLSPELLHOOK_ON_CALC_CAST_TIME, script->OnSpellCalcCastTime(spell, castTime));
