@@ -56,6 +56,10 @@ void WorldSession::HandleSplitItemOpcode(WorldPackets::Item::SplitItem& packet)
         return;
     }
 
+    // MergedWorlds world equipment
+    if (RefuseWorldContainerPos(packet.SourceBag, packet.SourceSlot) || RefuseWorldContainerPos(packet.DestinationBag, packet.DestinationSlot, _player->GetItemByPos(packet.SourceBag, packet.SourceSlot)))
+        return;
+
     // MergedWorlds account bank
     if (IsBankPosOutOfReach(packet.SourceBag, packet.SourceSlot) || IsBankPosOutOfReach(packet.DestinationBag, packet.DestinationSlot))
     {
@@ -130,6 +134,13 @@ void WorldSession::HandleSwapItem(WorldPackets::Item::SwapItem& packet)
     if (src == dst)
         return;
 
+    // MergedWorlds world equipment: a drag on a world container is the world's module's to decide (Player::HandleClientWorldEquipmentSwap)
+    if (Player::IsWorldContainerAddress(packet.SourceBag) || Player::IsWorldContainerAddress(packet.DestinationBag))
+    {
+        _player->HandleClientWorldEquipmentSwap(packet.SourceBag, packet.SourceSlot, packet.DestinationBag, packet.DestinationSlot);
+        return;
+    }
+
     if (!_player->IsValidPos(packet.SourceBag, packet.SourceSlot, true))
     {
         _player->SendEquipError(EQUIP_ERR_ITEM_NOT_FOUND, nullptr, nullptr);
@@ -164,6 +175,10 @@ void WorldSession::HandleAutoEquipItemOpcode(WorldPackets::Item::AutoEquipItem& 
     Item* pSrcItem  = _player->GetItemByPos(packet.SourceBag, packet.SourceSlot);
     if (!pSrcItem)
         return;                                             // only at cheat
+
+    // MergedWorlds world equipment
+    if (RefuseWorldContainerPos(packet.SourceBag, packet.SourceSlot, pSrcItem))
+        return;
 
     // MergedWorlds account bank
     if (IsBankPosOutOfReach(packet.SourceBag, packet.SourceSlot))
@@ -300,6 +315,10 @@ void WorldSession::HandleDestroyItemOpcode(WorldPackets::Item::DestroyItem& pack
     //LOG_DEBUG("network.opcode", "WORLD: CMSG_DESTROYITEM");
 
     uint16 pos = (packet.Bag << 8) | packet.Slot;
+
+    // MergedWorlds world equipment: a worn item is never destroyed by the client (dragged onto the world)
+    if (RefuseWorldContainerPos(packet.Bag, packet.Slot))
+        return;
 
     // MergedWorlds account bank
     if (IsBankPosOutOfReach(packet.Bag, packet.Slot))
@@ -575,6 +594,9 @@ void WorldSession::HandleReadItem(WorldPackets::Item::ReadItem& packet)
     //LOG_DEBUG("network.opcode", "WORLD: CMSG_READ_ITEM");
 
     //LOG_DEBUG("network.opcode", "STORAGE: Read bag = {}, slot = {}", bag, slot);
+    if (RefuseWorldContainerPos(packet.Bag, packet.Slot))     // MergedWorlds world equipment
+        return;
+
     Item* pItem = _player->GetItemByPos(packet.Bag, packet.Slot);
     if (IsBankPosOutOfReach(packet.Bag, packet.Slot))   // MergedWorlds account bank
         pItem = nullptr;
@@ -1008,8 +1030,20 @@ void WorldSession::SendListInventory(ObjectGuid vendorGuid, uint32 vendorEntry)
 void WorldSession::HandleAutoStoreBagItemOpcode(WorldPackets::Item::AutoStoreBagItem& packet)
 {
     //LOG_DEBUG("network.opcode", "WORLD: CMSG_AUTOSTORE_BAG_ITEM");
+    // MergedWorlds world equipment: a worn item dropped on a bag's button is the world's module's to decide.  A world container as the
+    // destination is refused below (IsBankPosOutOfReach)
+    if (Player::IsWorldContainerAddress(packet.SourceBag))
+    {
+        _player->HandleClientWorldEquipmentAutoStore(packet.SourceBag, packet.SourceSlot, packet.DestinationBag);
+        return;
+    }
+
     Item* pItem = _player->GetItemByPos(packet.SourceBag, packet.SourceSlot);
     if (!pItem)
+        return;
+
+    // MergedWorlds world equipment: never a destination for a stock autostore
+    if (RefuseWorldContainerPos(packet.DestinationBag, NULL_SLOT, pItem))
         return;
 
     // MergedWorlds account bank
@@ -1137,6 +1171,10 @@ void WorldSession::HandleWrapItemOpcode(WorldPackets::Item::WrapItem& packet)
     LOG_DEBUG("network", "Received opcode CMSG_WRAP_ITEM");
 
     LOG_DEBUG("network", "WRAP: receive GiftBag = {}, GiftSlot = {}, ItemBag = {}, ItemSlot = {}", packet.GiftBag, packet.GiftSlot, packet.ItemBag, packet.ItemSlot);
+
+    // MergedWorlds world equipment
+    if (RefuseWorldContainerPos(packet.GiftBag, packet.GiftSlot) || RefuseWorldContainerPos(packet.ItemBag, packet.ItemSlot))
+        return;
 
     Item* gift = _player->GetItemByPos(packet.GiftBag, packet.GiftSlot);
     // MergedWorlds account bank: out of reach, or in the account bank at all (wrapping there would tie it to this character)

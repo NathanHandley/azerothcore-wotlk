@@ -98,6 +98,7 @@ DumpTable const DumpTables[] =
     { "character_glyphs",               DTT_CHAR_TABLE   },
     { "character_homebind",             DTT_CHAR_TABLE   },
     { "character_inventory",            DTT_INVENTORY    },
+    { "character_world_item",           DTT_WORLD_ITEM   }, // MergedWorlds world equipment: its items come with item_instance (by owner)
     { "character_pet",                  DTT_PET          },
     { "character_pet_declinedname",     DTT_PET          },
     { "character_queststatus",          DTT_CHAR_TABLE   },
@@ -313,6 +314,12 @@ void PlayerDump::InitializeTables()
 
             MarkDependentColumn(t, "guid", GUID_TYPE_CHAR);
             MarkDependentColumn(t, "bag", GUID_TYPE_ITEM);
+            MarkDependentColumn(t, "item", GUID_TYPE_ITEM);
+            break;
+        case DTT_WORLD_ITEM:
+            MarkWhereField(t, "guid");
+
+            MarkDependentColumn(t, "guid", GUID_TYPE_CHAR);
             MarkDependentColumn(t, "item", GUID_TYPE_ITEM);
             break;
         case DTT_MAIL:

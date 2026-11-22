@@ -222,6 +222,11 @@ bool LoginQueryHolder::Initialize()
     stmt->SetData(0, _accountId);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS, stmt);
 
+    // MergedWorlds world containers
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_WORLD_ITEMS);
+    stmt->SetData(0, rawGUID);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WORLD_ITEMS, stmt);
+
     return res;
 }
 
