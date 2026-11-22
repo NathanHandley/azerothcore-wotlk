@@ -23,6 +23,7 @@
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
 #include "ArenaSeasonMgr.h"
+#include "Bag.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
 #include "BattlefieldWG.h"
@@ -296,6 +297,16 @@ Player::Player(WorldSession* session): Unit(), m_mover(this), _cinematicMgr(*thi
     m_accountBankSettingsChanged = 0;
     m_bankTabShowing = 0;
     m_bankBagPage = WORLD_BANK_ACCOUNT;
+    for (uint8 block = 0; block < MAX_WORLD_CONTAINER_BLOCK; ++block)
+    {
+        for (uint8 world = 0; world <= WORLD_CONTAINER_WORLD_COUNT; ++world)
+        {
+            m_worldContainers[block][world] = nullptr;
+            m_worldContainerSetKeys[block][world] = 0;
+            m_worldContainerHasSet[block][world] = false;
+        }
+    }
+    m_worldEquipmentLoaded = false;
 
     for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_forced_speed_changes[i] = 0;
@@ -444,6 +455,8 @@ Player::~Player()
 
     for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
         delete bag;
+
+    _DeleteWorldEquipment();                // MergedWorlds world equipment: its containers, what they hold and the sets put away
 
     for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
         delete itr->second;
@@ -1768,6 +1781,9 @@ void Player::AddToWorld()
 
     for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
         bag->AddToWorld();
+
+    for (Bag* container : _GetWorldContainers()) // MergedWorlds world equipment
+        container->AddToWorld();
 }
 
 void Player::RemoveFromWorld()
@@ -1797,6 +1813,9 @@ void Player::RemoveFromWorld()
 
     for (Item* bag : _GetHiddenBankBags()) // MergedWorlds world bank
         bag->RemoveFromWorld();
+
+    for (Bag* container : _GetWorldContainers()) // MergedWorlds world equipment
+        container->RemoveFromWorld();
 
     for (ItemMap::iterator iter = mMitems.begin(); iter != mMitems.end(); ++iter)
         iter->second->RemoveFromWorld();
@@ -4057,6 +4076,9 @@ void Player::BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target)
         // MergedWorlds world bank: and the bags of the pages not in the slots, so a page turn is only the slot fields
         for (Item* bag : _GetHiddenBankBags())
             bag->BuildCreateUpdateBlockForPlayer(data, target);
+        // MergedWorlds world equipment: the containers (each sends what it holds), found by the client by their fixed GUIDs
+        for (Bag* container : _GetWorldContainers())
+            container->BuildCreateUpdateBlockForPlayer(data, target);
     }
 
     Unit::BuildCreateUpdateBlockForPlayer(data, target);
@@ -4100,6 +4122,8 @@ void Player::DestroyForPlayer(Player* target, bool onDeath) const
         }
         for (Item* bag : _GetHiddenBankBags())
             bag->DestroyForPlayer(target);
+        for (Bag* container : _GetWorldContainers())
+            container->DestroyForPlayer(target);
     }
 }
 
@@ -4323,6 +4347,11 @@ void Player::DeleteFromDB(ObjectGuid::LowType lowGuid, uint32 accountId, bool up
                 trans->Append(stmt);
 
                 stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY);
+                stmt->SetData(0, lowGuid);
+                trans->Append(stmt);
+
+                // MergedWorlds world equipment: its items go with CHAR_DEL_ITEM_INSTANCE_BY_OWNER
+                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_WORLD_ITEMS);
                 stmt->SetData(0, lowGuid);
                 trans->Append(stmt);
 

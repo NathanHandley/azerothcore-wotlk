@@ -55,7 +55,19 @@ void WorldSession::ClearPlayerBanker()
 
 bool WorldSession::IsBankPosOutOfReach(uint8 bag, uint8 slot) const
 {
+    // MergedWorlds world equipment: a world container is never a place the stock item handlers may name (only the drags handed to the world's
+    // module, HandleSwapItem and HandleAutoStoreBagItemOpcode, which check before this)
+    if (Player::IsWorldContainerAddress(bag))
+        return true;
     return bag != NULL_BAG && Player::IsBankPos(bag, slot) && !CanUseBank();
+}
+
+bool WorldSession::RefuseWorldContainerPos(uint8 bag, uint8 slot, Item* lockedItem)
+{
+    if (!Player::IsWorldContainerAddress(bag))
+        return false;
+    _player->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, lockedItem ? lockedItem : _player->GetItemByPos(bag, slot), nullptr);
+    return true;
 }
 
 void WorldSession::HandleBankerActivateOpcode(WorldPacket& recvData)
@@ -88,7 +100,10 @@ void WorldSession::HandleAutoBankItemOpcode(WorldPackets::Bank::AutoBankItem& pa
         return;
     }
 
-    Item* item = _player->GetItemByPos(packet.Bag, packet.Slot);
+    if (RefuseWorldContainerPos(packet.Bag, packet.Slot))     // MergedWorlds world equipment
+        return;
+
+    Item* item = IsBankPosOutOfReach(packet.Bag, packet.Slot) ? nullptr : _player->GetItemByPos(packet.Bag, packet.Slot);   // MergedWorlds
     if (!item)
         return;
 
@@ -130,7 +145,10 @@ void WorldSession::HandleAutoStoreBankItemOpcode(WorldPackets::Bank::AutoStoreBa
         return;
     }
 
-    Item* item = _player->GetItemByPos(packet.Bag, packet.Slot);
+    if (RefuseWorldContainerPos(packet.Bag, packet.Slot))     // MergedWorlds world equipment
+        return;
+
+    Item* item = IsBankPosOutOfReach(packet.Bag, packet.Slot) ? nullptr : _player->GetItemByPos(packet.Bag, packet.Slot);   // MergedWorlds
     if (!item)
         return;
 

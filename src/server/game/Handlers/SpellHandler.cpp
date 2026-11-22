@@ -78,6 +78,9 @@ void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
         return;
     }
 
+    if (RefuseWorldContainerPos(bagIndex, slot))     // MergedWorlds world equipment
+        return;
+
     Item* pItem = pUser->GetUseableItemByPos(bagIndex, slot);
     // MergedWorlds account bank: out of reach, or in the account bank (using it there could bind it while it stays shared)
     if (IsBankPosOutOfReach(bagIndex, slot) || Player::IsAccountBankPos(bagIndex, slot))
@@ -219,6 +222,9 @@ void WorldSession::HandleOpenItemOpcode(WorldPacket& recvPacket)
     recvPacket >> bagIndex >> slot;
 
     LOG_DEBUG("network.opcode", "bagIndex: {}, slot: {}", bagIndex, slot);
+
+    if (RefuseWorldContainerPos(bagIndex, slot))     // MergedWorlds world equipment
+        return;
 
     Item* item = pUser->GetItemByPos(bagIndex, slot);
     // MergedWorlds account bank: out of reach, or in the account bank (opening binds to the character)

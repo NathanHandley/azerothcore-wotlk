@@ -42,6 +42,7 @@
 #include "TradeData.h"
 #include "Unit.h"
 #include "WorldSession.h"
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -778,6 +779,48 @@ enum WorldBankWorld : uint8
 #define ACCOUNT_BANK_DB_BAG_SLOT_START      ACCOUNT_BANK_ITEM_SLOT_COUNT
 #define WORLD_BANK_VAULTS_PER_WORLD         2
 
+// MergedWorlds world containers (E:\MW\SHARED.md): hidden 36 slot bags in no player slot, found by a bag address of their own, that hold a game
+// world's worn equipment (PlayerWorldEquipment.cpp).  Worlds are SHARED.md's world ids 1-32.  Block 0 is a world's equipment in use, block 1
+// a set staged for showing.  The client computes the same addresses and fixed GUIDs (MergedWorldClient Player.h)
+#define WORLD_CONTAINER_WORLD_COUNT                 32
+#define WORLD_CONTAINER_SIZE                        36
+#define WORLD_CONTAINER_GUID_OFFSET                 32      // fixed GUID counters sit this far and more below the top of the item range
+#define WORLD_CONTAINER_OWN_SLOT                    250     // a container's own slot: no player slot, so no classifier accepts it
+#define WORLD_CONTAINER_ADDRESS_EQUIPMENT           147     // bag bytes 147-178: world W's equipment in use is 146 + W
+#define WORLD_CONTAINER_ADDRESS_EQUIPMENT_STAGING   179     // bag bytes 179-210: world W's staged set is 178 + W
+#define WORLD_CONTAINER_KIND_EQUIPMENT              0       // character_world_item.kind
+
+enum WorldContainerBlock : uint8
+{
+    WORLD_CONTAINER_EQUIPMENT           = 0,
+    WORLD_CONTAINER_EQUIPMENT_STAGING   = 1,
+    MAX_WORLD_CONTAINER_BLOCK           = 2
+};
+
+// What a world's module decides when the client drags on its equipment (Player::RegisterWorldEquipment).  The core has checked only what it
+// owns (the item is the player's, is where the packet says, isn't a bag, looted or in a trade); the module checks the rest and moves the items
+// with the Player's world equipment calls.  Called on the map thread with the player's session.  Return EQUIP_ERR_OK after moving, or the
+// error to show (nothing moved)
+class Player;
+
+class WorldEquipmentHandler
+{
+public:
+    virtual ~WorldEquipmentHandler() = default;
+    // A carried item dropped on slot of a world container (block 0 the set in use, 1 the staged set)
+    virtual InventoryResult OnClientWear(Player* player, uint8 world, uint8 block, uint8 slot, Item* item) = 0;
+    // A worn item dropped on the carried bags: bag/bagSlot, or anywhere in bag when bagSlot is NULL_SLOT
+    virtual InventoryResult OnClientTakeOff(Player* player, uint8 world, uint8 block, uint8 slot, uint8 bag, uint8 bagSlot) = 0;
+    // A worn item dropped on another slot of the same world's containers
+    virtual InventoryResult OnClientMove(Player* player, uint8 world, uint8 fromBlock, uint8 fromSlot, uint8 toBlock, uint8 toSlot) = 0;
+};
+
+// A set put away: its items detached (in no slot, not in the world)
+struct WorldEquipmentSet
+{
+    Item* Items[WORLD_CONTAINER_SIZE] = {};
+};
+
 enum EquipmentSetUpdateState
 {
     EQUIPMENT_SET_UNCHANGED = 0,
@@ -946,6 +989,8 @@ enum PlayerLoginQueryIndex
     // MergedWorlds account bank
     PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK                 = 39,
     PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS           = 40,
+    // MergedWorlds world containers
+    PLAYER_LOGIN_QUERY_LOAD_WORLD_ITEMS                  = 41,
     MAX_PLAYER_LOGIN_QUERY
 };
 
@@ -1358,6 +1403,55 @@ public:
     static void SetWorldBankEnabled(uint8 world, bool enabled);
     static bool IsWorldBankEnabled(uint8 world);
     static uint8 GetWorldBankEnabledMask();                 // Bit (world - 1) for each world that's on
+
+    // MergedWorlds world equipment (PlayerWorldEquipment.cpp, E:\MW\SHARED.md).  A world's module registers at startup, before any session
+    // exists: how many slots its equipment has (at most WORLD_CONTAINER_SIZE) and who decides the client's drags.  Unregistered worlds have
+    // none, and their saved rows are left alone
+    static void RegisterWorldEquipment(uint8 world, uint8 slotCount, WorldEquipmentHandler* handler);
+    static uint8 GetWorldEquipmentSlotCount(uint8 world);
+    static WorldEquipmentHandler* GetWorldEquipmentHandler(uint8 world);
+    // The bag byte of a world's container (NULL_BAG if none), and back
+    static uint8 GetWorldContainerAddress(uint8 block, uint8 world);
+    static bool GetWorldContainerOfAddress(uint8 bag, uint8& block, uint8& world);
+    static bool IsWorldContainerAddress(uint8 bag);
+    static bool IsWorldEquipmentPos(uint16 pos) { return IsWorldEquipmentPos(pos >> 8, pos & 255); }
+    static bool IsWorldEquipmentPos(uint8 bag, uint8 slot);
+    static ObjectGuid::LowType GetWorldContainerGuidCounter(uint8 block, uint8 world);
+
+    // A world's sets: the one in use (its equipment container), the one staged (shown, not worn) and the rest put away.  A set is created on
+    // first use; the module picks its keys.  All of it is ready once the character is loaded
+    [[nodiscard]] bool IsWorldEquipmentLoaded() const { return m_worldEquipmentLoaded; }   // every call below fails cleanly before this
+    bool GetWorldEquipmentSet(uint8 world, uint32& key) const;          // the set in use; false if none
+    bool GetStagedWorldEquipmentSet(uint8 world, uint32& key) const;
+    std::vector<uint32> GetWorldEquipmentSetKeys(uint8 world) const;    // the sets put away
+    InventoryResult ActivateWorldEquipmentSet(uint8 world, uint32 key); // puts the set in use (the one in use is put away)
+    void DeactivateWorldEquipmentSet(uint8 world);                      // puts the set in use away
+    InventoryResult StageWorldEquipmentSet(uint8 world, uint32 key);    // not the set in use
+    void UnstageWorldEquipmentSet(uint8 world);
+    void DestroyWorldEquipmentSet(uint8 world, uint32 key);             // destroys its items (a character slot deleted)
+    // Any set, by key.  Wear: a carried item into an empty slot.  Swap: a carried item with what's worn (worn goes to its place).  TakeOff: to
+    // the carried bags (bag NULL_BAG anywhere, bagSlot NULL_SLOT anywhere in bag).  Remove: out of the world in trans, for the caller to put
+    // somewhere (a mail).  Put: an item in no slot into an empty slot
+    Item* GetWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot) const;
+    InventoryResult WearWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot, Item* item);
+    InventoryResult SwapWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot, Item* item);
+    InventoryResult TakeOffWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot, uint8 bag = NULL_BAG, uint8 bagSlot = NULL_SLOT);
+    InventoryResult MoveWorldEquipmentSetItem(uint8 world, uint32 fromKey, uint8 fromSlot, uint32 toKey, uint8 toSlot);
+    Item* RemoveWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot, CharacterDatabaseTransaction trans);
+    InventoryResult PutWorldEquipmentSetItem(uint8 world, uint32 key, uint8 slot, Item* item);
+    // The same for the set in use
+    Item* GetWorldEquipmentItem(uint8 world, uint8 slot) const;
+    Item* GetWorldEquipmentItemByGuid(uint8 world, ObjectGuid guid) const;
+    InventoryResult WearWorldEquipmentItem(uint8 world, uint8 slot, Item* item);
+    InventoryResult SwapWorldEquipmentItem(uint8 world, uint8 slot, Item* item);
+    InventoryResult TakeOffWorldEquipmentItem(uint8 world, uint8 slot, uint8 bag = NULL_BAG, uint8 bagSlot = NULL_SLOT);
+    InventoryResult MoveWorldEquipmentItem(uint8 world, uint8 fromSlot, uint8 toSlot);
+    Item* RemoveWorldEquipmentItem(uint8 world, uint8 slot, CharacterDatabaseTransaction trans);
+    InventoryResult PutWorldEquipmentItem(uint8 world, uint8 slot, Item* item);
+    // The client's drags on a world container (WorldSession::HandleSwapItem, HandleAutoStoreBagItemOpcode)
+    void HandleClientWorldEquipmentSwap(uint8 srcBag, uint8 srcSlot, uint8 dstBag, uint8 dstSlot);
+    void HandleClientWorldEquipmentAutoStore(uint8 srcBag, uint8 srcSlot, uint8 dstBag);
+    [[nodiscard]] std::vector<Bag*> _GetWorldContainers() const;
     // EQWOW light source slot: whether an item may go in it, which only the module knows
     typedef bool (*LightSourceItemCheck)(uint32 itemEntry);
     static void SetLightSourceItemCheck(LightSourceItemCheck check) { s_lightSourceItemCheck = check; }
@@ -2908,6 +3002,26 @@ protected:
     static bool IsProfileSwapItemSlot(uint8 slot) { return slot < EQUIPMENT_SLOT_END || slot == LIGHT_SOURCE_SLOT; }
     void _LoadAccountBank(PreparedQueryResult settingsResult, PreparedQueryResult itemsResult, uint32 timeDiff);
     bool _CreateAccountBankVaults();
+    // MergedWorlds world equipment (PlayerWorldEquipment.cpp)
+    void _LoadWorldEquipment(PreparedQueryResult result, uint32 timeDiff);
+    void _SaveWorldEquipment(CharacterDatabaseTransaction trans);
+    bool _GetWorldEquipmentDBPosition(Item const* item, uint8& world, uint32& key, uint8& slot) const;
+    void _DeleteWorldEquipment();
+    Bag* _GetWorldContainer(uint8 block, uint8 world) const;
+    Bag* _CreateWorldContainer(uint8 block, uint8 world);
+    int8 _GetWorldEquipmentSetBlock(uint8 world, uint32 key) const;
+    bool _IsWorldEquipmentSetUsable(uint8 world, uint8 slot) const;
+    Item* _DetachWorldEquipmentItem(uint8 world, uint32 key, uint8 slot);
+    void _AttachWorldEquipmentItem(uint8 world, uint32 key, uint8 slot, Item* item, bool isRowChanged);
+    InventoryResult _CanPutInWorldEquipment(Item* item) const;
+    InventoryResult _CanTakeFromWorldEquipment(Item* item) const;
+    WorldEquipmentSet& _GetOrAddWorldEquipmentSet(uint8 world, uint32 key);
+    InventoryResult _PutWorldContainerSet(uint8 block, uint8 world, uint32 key);
+    void _TakeWorldContainerSet(uint8 block, uint8 world);
+    void _TakeFromBagsForWorldEquipment(Item* item);
+    Item* _StoreFromWorldEquipment(ItemPosCountVec const& dest, Item* item);
+    InventoryResult _CanStoreInCarriedBags(uint8 bag, uint8 bagSlot, ItemPosCountVec& dest, Item* item, bool swap) const;
+    bool _GetWorldContainerDragSet(uint8 bag, uint8 slot, uint8& block, uint8& world, uint32& key) const;
     void _LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mailItemsResult);
     static Item* _LoadMailedItem(ObjectGuid const& playerGuid, Player* player, uint32 mailId, Mail* mail, Field* fields);
     void _LoadQuestStatus(PreparedQueryResult result);
@@ -3002,6 +3116,13 @@ protected:
     uint8 m_bankTabShowing;
     uint8 m_bankBagPage;
     Item* m_hiddenBankBags[MAX_WORLD_BANK_WORLD + 1][MAX_ACCOUNT_BANK_BAG_SLOT_COUNT]; // By world and bag slot.  A tab's bags while they aren't in the slots
+    // MergedWorlds world equipment, by block and world (index 0 unused)
+    Bag* m_worldContainers[MAX_WORLD_CONTAINER_BLOCK][WORLD_CONTAINER_WORLD_COUNT + 1];
+    uint32 m_worldContainerSetKeys[MAX_WORLD_CONTAINER_BLOCK][WORLD_CONTAINER_WORLD_COUNT + 1];
+    bool m_worldContainerHasSet[MAX_WORLD_CONTAINER_BLOCK][WORLD_CONTAINER_WORLD_COUNT + 1];
+    std::map<uint32, WorldEquipmentSet> m_worldEquipmentSets[WORLD_CONTAINER_WORLD_COUNT + 1];  // the sets put away, by world and key
+    std::vector<Item*> m_worldEquipmentRemovedItems;        // destroyed while put away: their rows go in the next save
+    bool m_worldEquipmentLoaded;
 
     uint32 m_ExtraFlags;
 

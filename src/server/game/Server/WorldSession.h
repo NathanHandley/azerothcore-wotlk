@@ -1289,8 +1289,12 @@ private:
 
     bool CanUseBank(ObjectGuid bankerGUID = ObjectGuid::Empty) const;
 
-    // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client)
+    // MergedWorlds account bank: a bank or account bank position while no banker is in reach (only possible with a modified client).  Also any
+    // world container position (world equipment), which no stock handler may touch
     bool IsBankPosOutOfReach(uint8 bag, uint8 slot) const;
+    // MergedWorlds world equipment: true for a world container position, after sending the equip error that unlocks the item on the client
+    // (lockedItem, else the item at that position).  First in every stock handler that takes a position from a packet
+    bool RefuseWorldContainerPos(uint8 bag, uint8 slot, Item* lockedItem = nullptr);
     // MergedWorlds: a guild vault in reach, or the player itself after SendShowGuildBank
     bool CanUseGuildBank(ObjectGuid bankerGUID) const;
 

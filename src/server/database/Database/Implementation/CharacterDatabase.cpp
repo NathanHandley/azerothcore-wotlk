@@ -668,6 +668,13 @@ void CharacterDatabaseConnection::DoPrepareStatements()
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_INSTANCES_BY_ACCOUNT, "DELETE ii FROM item_instance ii JOIN account_bank_item abi ON abi.item = ii.guid WHERE abi.account = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK_ITEMS_BY_ACCOUNT, "DELETE FROM account_bank_item WHERE account = ?", CONNECTION_ASYNC);
     PrepareStatement(CHAR_DEL_ACCOUNT_BANK, "DELETE FROM account_bank WHERE account = ?", CONNECTION_ASYNC);
+    // MergedWorlds world containers (PlayerWorldEquipment.cpp).  The first 15 columns are CHAR_SEL_CHARACTER_INVENTORY's, for Player::_LoadItem
+    PrepareStatement(CHAR_SEL_CHAR_WORLD_ITEMS, "SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, "
+        "world, slot, item, itemEntry, kind, set_key FROM character_world_item cwi JOIN item_instance ii ON cwi.item = ii.guid "
+        "WHERE cwi.guid = ? AND ii.owner_guid = cwi.guid ORDER BY kind, world, set_key, slot", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_REP_CHAR_WORLD_ITEM, "REPLACE INTO character_world_item (guid, kind, world, set_key, slot, item) VALUES (?, ?, ?, ?, ?, ?)", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_CHAR_WORLD_ITEM_BY_ITEM, "DELETE FROM character_world_item WHERE item = ?", CONNECTION_ASYNC);
+    PrepareStatement(CHAR_DEL_CHAR_WORLD_ITEMS, "DELETE FROM character_world_item WHERE guid = ?", CONNECTION_ASYNC);
 }
 
 CharacterDatabaseConnection::CharacterDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo)
