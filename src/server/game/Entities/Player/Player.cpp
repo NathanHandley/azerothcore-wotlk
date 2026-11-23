@@ -10892,7 +10892,7 @@ void Player::InitDisplayIds()
         return;
     }
 
-    uint8 gender = getGender();
+    uint8 gender = GetNativeGender(); // MergedWorlds: the character's own, not a look's
     switch (gender)
     {
         case GENDER_FEMALE:

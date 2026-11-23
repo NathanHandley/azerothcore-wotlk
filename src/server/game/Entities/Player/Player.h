@@ -2413,6 +2413,9 @@ public:
 
     void SetDrunkValue(uint8 newDrunkValue, uint32 itemId = 0);
     [[nodiscard]] uint8 GetDrunkValue() const { return GetByteValue(PLAYER_BYTES_3, 1); }
+    // MergedWorlds (Nathan 2026-11-22): the character's own sex.  getGender() is the shown display's (Unit::SetDisplayId sets it from the
+    // model's creature_model_info), so under an opposite sex look it's the look's: whatever picks a look or asks the character's sex uses this
+    [[nodiscard]] uint8 GetNativeGender() const { return GetByteValue(PLAYER_BYTES_3, PLAYER_BYTES_3_OFFSET_GENDER); }
     [[nodiscard]] int32 GetFakeDrunkValue() const { return GetInt32Value(PLAYER_FAKE_INEBRIATION); }
     void UpdateInvisibilityDrunkDetect();
     static DrunkenState GetDrunkenstateByValue(uint8 value);

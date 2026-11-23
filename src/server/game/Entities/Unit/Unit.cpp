@@ -16822,6 +16822,12 @@ float Unit::GetCollisionRadius() const
 float Unit::GetCollisionHeight() const
 {
     float scaleMod = GetObjectScale(); // 99% sure about this
+    // MergedWorlds (Nathan 2026-11-22): a player's collision box is never scaled below its native size, as the client's isn't
+    // (CGUnit_C::GetScaledModelScale clamps the object scale to at least 1, and floats a swimmer 0.75 x that height under the surface).
+    // Shrunk under 0.75 (an EQ illusion or identity: Dark Elf, Wood Elf, Dwarf, Halfling, Gnome; or Shrink), a player swimming at the
+    // surface was still "under water" here, and got no breath back until it jumped out
+    if (IsPlayer() && scaleMod < 1.0f)
+        scaleMod = 1.0f;
     float defaultHeight = DEFAULT_COLLISION_HEIGHT * scaleMod;
 
     CreatureDisplayInfoEntry const* displayInfo = sCreatureDisplayInfoStore.AssertEntry(GetNativeDisplayId());

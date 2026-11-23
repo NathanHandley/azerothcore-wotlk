@@ -2910,6 +2910,12 @@ void Map::ProcessCreatureRespawn(ObjectGuid::LowType spawnId)
             RemoveCreatureRespawnTime(spawnId);
             return;
         }
+        // MergedWorlds (Nathan 2026-11-22): a dead creature still on the map that respawns in place (mod-rowow's RO monsters set this on
+        // the creature, while their spawn group 0 isn't a compatibility one) brings itself back, and Creature::Respawn clears the saved
+        // time.  Building another here made a second one (two Atroce, two Dragon Fly): any rank 1+ monster, whose death saves a time.
+        // The saved time stays, so the monster's timer outlives a restart
+        if (itr->second->IsRespawnCompatibilityMode())
+            return;
     }
 
     // A spawn whose BossAI bound it to a DONE encounter stays down, as BossAI::CanRespawn keeps
