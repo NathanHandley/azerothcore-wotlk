@@ -35,6 +35,7 @@
 #include "InstanceSaveMgr.h"
 #include "Language.h"
 #include "Log.h"
+#include "MapWorlds.h"
 #include "MapMgr.h"
 #include "Metric.h"
 #include "MotdMgr.h"
@@ -221,6 +222,11 @@ bool LoginQueryHolder::Initialize()
     stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ACCOUNT_BANK_ITEMS);
     stmt->SetData(0, _accountId);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS, stmt);
+
+    // MergedWorlds world containers
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_WORLD_ITEMS);
+    stmt->SetData(0, rawGUID);
+    res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_WORLD_ITEMS, stmt);
 
     return res;
 }
@@ -970,10 +976,16 @@ void WorldSession::HandlePlayerLoginFromDB(LoginQueryHolder const& holder)
 
         if (ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(pCurrChar->getClass()))
         {
-            if (cEntry->CinematicSequence)
+            // MergedWorlds (Nathan 2026-11-22): a character who starts in another game's world (Norrath, Midgard, ...) gets no race or class
+            // intro, which shows Azeroth; they see their character at once
+            bool const startsInAzeroth = MapWorlds::GetWorldOfMap(pCurrChar->GetMapId()) == MAP_WORLD_AZEROTH;
+            if (startsInAzeroth && cEntry->CinematicSequence)
                 pCurrChar->GetCinematicMgr().StartCinematic(cEntry->CinematicSequence);
-            else if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(pCurrChar->getRace()))
-                pCurrChar->GetCinematicMgr().StartCinematic(rEntry->CinematicSequence);
+            else if (startsInAzeroth)
+            {
+                if (ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(pCurrChar->getRace()))
+                    pCurrChar->GetCinematicMgr().StartCinematic(rEntry->CinematicSequence);
+            }
 
             // send new char string if not empty
             std::string_view newCharString = sWorld->getStringConfig(CONFIG_NEW_CHAR_STRING);

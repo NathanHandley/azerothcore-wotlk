@@ -34,6 +34,8 @@ enum DumpTableType
 
     DTT_INVENTORY,      //    -> item guids collection      // character_inventory
 
+    DTT_WORLD_ITEM,     // <- guid, item guids              // character_world_item (MergedWorlds world equipment)
+
     DTT_MAIL,           //    -> mail ids collection        // mail
                         //    -> item_text
 

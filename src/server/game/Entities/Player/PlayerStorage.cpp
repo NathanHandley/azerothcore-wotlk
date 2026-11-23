@@ -474,6 +474,11 @@ Bag* Player::GetBagByPos(uint8 bag) const
         || (bag >= ACCOUNT_BANK_BAG_SLOT_START && bag < WORLD_BANK_VAULT_SLOT_END && bag != LIGHT_SOURCE_SLOT)) // MergedWorlds: not the light source slot between
         if (Item* item = m_items[bag])
             return item->ToBag();
+    // MergedWorlds world equipment: a world's containers, by their bag address (PlayerWorldEquipment.cpp)
+    uint8 block;
+    uint8 world;
+    if (GetWorldContainerOfAddress(bag, block, world))
+        return m_worldContainers[block][world];
     return nullptr;
 }
 
@@ -661,6 +666,11 @@ bool Player::IsBagPos(uint16 pos)
 
 bool Player::IsValidPos(uint8 bag, uint8 slot, bool explicit_pos)
 {
+    // MergedWorlds world equipment: never a place a packet may name for the stock handlers.  The drags that may are handed to the world's
+    // module before this (WorldSession::HandleSwapItem, HandleAutoStoreBagItemOpcode)
+    if (IsWorldContainerAddress(bag))
+        return false;
+
     // post selected
     if (bag == NULL_BAG && !explicit_pos)
         return true;
@@ -1179,6 +1189,14 @@ InventoryResult Player::CanStoreItem_InInventorySlots(uint8 slot_begin, uint8 sl
 InventoryResult Player::CanStoreItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, uint32 entry, uint32 count, Item* pItem, bool swap, uint32* no_space_count) const
 {
     LOG_DEBUG("entities.player.items", "STORAGE: CanStoreItem bag = {}, slot = {}, item = {}, count = {}", bag, slot, entry, count);
+
+    // MergedWorlds world equipment: only its own calls store there, never a generic store (loot, buy, split, autostore)
+    if (IsWorldContainerAddress(bag))
+    {
+        if (no_space_count)
+            *no_space_count = count;
+        return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+    }
 
     ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(entry);
     if (!pProto)
@@ -2178,6 +2196,10 @@ InventoryResult Player::CanUnequipItem(uint16 pos, bool swap) const
 
 InventoryResult Player::CanBankItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, Item* pItem, bool swap, bool not_loading, bool isBagExchange) const
 {
+    // MergedWorlds world equipment: never a bank destination
+    if (IsWorldContainerAddress(bag))
+        return EQUIP_ERR_ITEM_DOESNT_GO_TO_SLOT;
+
     // MergedWorlds account bank: an account bank destination has its own rules
     if (bag != NULL_BAG && IsAccountBankPos(bag, slot))
         return CanAccountBankItem(bag, slot, dest, pItem, swap);
@@ -3162,6 +3184,13 @@ Item* Player::_StoreItem(uint16 pos, Item* pItem, uint32 count, bool clone, bool
     uint8 slot = pos & 255;
 
     LOG_DEBUG("entities.player.items", "STORAGE: StoreItem bag = {}, slot = {}, item = {}, count = {}, {}", bag, slot, pItem->GetEntry(), count, pItem->GetGUID().ToString());
+
+    // MergedWorlds world equipment: a world address with no container must never fall through to m_items below
+    if (IsWorldContainerAddress(bag) && !GetBagByPos(bag))
+    {
+        LOG_ERROR("entities.player.items", "Player::_StoreItem: {} has no world container at bag {} for item {}", GetName(), bag, pItem->GetGUID().ToString());
+        return nullptr;
+    }
 
     Item* pItem2 = GetItemByPos(bag, slot);
 
@@ -6068,6 +6097,10 @@ bool Player::LoadFromDB(ObjectGuid playerGuid, CharacterDatabaseQueryHolder cons
     // MergedWorlds account bank
     _LoadAccountBank(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK), holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_BANK_ITEMS), time_diff);
 
+    // MergedWorlds world equipment: after everything else that holds items, so a stale row loses to the place the item really is.  Its sets
+    // are put away; each world's module puts one in use
+    _LoadWorldEquipment(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_WORLD_ITEMS), time_diff);
+
     // update items with duration and realtime
     UpdateItemDuration(time_diff, true);
 
@@ -8855,6 +8888,9 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
     for (EnchantDurationList::iterator itr = m_enchantDuration.begin(); itr != m_enchantDuration.end(); ++itr)
         itr->item->SetEnchantmentDuration(itr->slot, itr->leftduration, this);
 
+    // MergedWorlds world equipment: the sets put away are outside the queue
+    _SaveWorldEquipment(trans);
+
     // if no changes
     if (m_itemUpdateQueue.empty())
         return;
@@ -8883,7 +8919,8 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                 // according to the test that was just performed nothing should be in this slot, delete
                 // (MergedWorlds account bank: not by position for its slots - the vaults are hidden from GetItemByPos, so that would
                 // hit a character_inventory row at bag 0 - but the item's own rows, from both tables)
-                if (!IsAccountBankPos(item->GetBagSlot(), item->GetSlot()))
+                // (MergedWorlds world equipment: nor for a world container's, whose address is no player slot)
+                if (!IsAccountBankPos(item->GetBagSlot(), item->GetSlot()) && !IsWorldContainerAddress(item->GetBagSlot()))
                 {
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_BAG_SLOT);
                     stmt->SetData(0, bagTestGUID);
@@ -8898,6 +8935,10 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                     trans->Append(stmt);
 
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_WORLD_ITEM_BY_ITEM);
                     stmt->SetData(0, item->GetGUID().GetCounter());
                     trans->Append(stmt);
                 }
@@ -8941,11 +8982,43 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
         ObjectGuid::LowType accountBankBagGuid = 0;
         uint8 accountBankSlot = 0;
         bool isInAccountBank = item->GetState() != ITEM_REMOVED && _GetAccountBankDBPosition(item, accountBankWorld, accountBankBagGuid, accountBankSlot);
+        // MergedWorlds world equipment: or in character_world_item, for an item in a world container
+        uint8 worldEquipmentWorld = 0;
+        uint32 worldEquipmentKey = 0;
+        uint8 worldEquipmentSlot = 0;
+        bool isInWorldEquipment = item->GetState() != ITEM_REMOVED && !isInAccountBank
+            && _GetWorldEquipmentDBPosition(item, worldEquipmentWorld, worldEquipmentKey, worldEquipmentSlot);
 
         switch (item->GetState())
         {
             case ITEM_NEW:
             case ITEM_CHANGED:
+                if (isInWorldEquipment)
+                {
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_CHAR_WORLD_ITEM);
+                    stmt->SetData(0, GetGUID().GetCounter());
+                    stmt->SetData(1, uint8(WORLD_CONTAINER_KIND_EQUIPMENT));
+                    stmt->SetData(2, worldEquipmentWorld);
+                    stmt->SetData(3, worldEquipmentKey);
+                    stmt->SetData(4, worldEquipmentSlot);
+                    stmt->SetData(5, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_INVENTORY_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+
+                    stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
+                    stmt->SetData(0, item->GetGUID().GetCounter());
+                    trans->Append(stmt);
+                    break;
+                }
+
+                // MergedWorlds world equipment: an item that left it has no row there any more
+                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_WORLD_ITEM_BY_ITEM);
+                stmt->SetData(0, item->GetGUID().GetCounter());
+                trans->Append(stmt);
+
                 if (isInAccountBank)
                 {
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_REP_ACCOUNT_BANK_ITEM);
@@ -8982,6 +9055,11 @@ void Player::_SaveInventory(CharacterDatabaseTransaction trans)
                 stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ACCOUNT_BANK_ITEM_BY_ITEM);
                 stmt->SetData(0, item->GetGUID().GetCounter());
                 trans->Append(stmt);
+
+                stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_CHAR_WORLD_ITEM_BY_ITEM);
+                stmt->SetData(0, item->GetGUID().GetCounter());
+                trans->Append(stmt);
+                [[fallthrough]];
             case ITEM_UNCHANGED:
                 break;
         }

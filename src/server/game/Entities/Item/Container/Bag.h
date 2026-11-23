@@ -47,6 +47,11 @@ public:
     [[nodiscard]] uint32 GetFreeSlots() const;
     [[nodiscard]] uint32 GetBagSize() const { return GetUInt32Value(CONTAINER_FIELD_NUM_SLOTS); }
 
+    // MergedWorlds world containers: a bag in no player slot is found by a bag address of its own, which its items report as their bag
+    // (Item::GetBagSlot).  Every other bag's address is its slot
+    void SetBagAddress(uint8 address) { m_bagAddress = address; }
+    [[nodiscard]] uint8 GetBagAddress() const { return m_bagAddress ? m_bagAddress : GetSlot(); }
+
     // DB operations
     // overwrite virtual Item::SaveToDB
     void SaveToDB(CharacterDatabaseTransaction trans) override;
@@ -62,6 +67,7 @@ public:
 protected:
     // Bag Storage space
     Item* m_bagslot[MAX_BAG_SIZE];
+    uint8 m_bagAddress = 0;
 };
 
 inline Item* NewItemOrBag(ItemTemplate const* proto)

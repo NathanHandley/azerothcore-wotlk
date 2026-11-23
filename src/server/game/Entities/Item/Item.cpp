@@ -16,6 +16,7 @@
  */
 
 #include "Item.h"
+#include "Bag.h"
 #include "Common.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
@@ -801,7 +802,7 @@ void Item::RemoveFromUpdateQueueOf(Player* player)
 
 uint8 Item::GetBagSlot() const
 {
-    return m_container ? m_container->GetSlot() : uint8(INVENTORY_SLOT_BAG_0);
+    return m_container ? m_container->GetBagAddress() : uint8(INVENTORY_SLOT_BAG_0);
 }
 
 bool Item::IsEquipped() const

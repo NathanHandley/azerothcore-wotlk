@@ -25,6 +25,7 @@
 #include "DatabaseEnv.h"
 #include "Chat.h"
 #include "CommandScript.h"
+#include "Config.h"
 #include "GridNotifiersImpl.h"
 #include "GuildMgr.h"
 #include "ItemTemplate.h"
@@ -33,6 +34,7 @@
 #include "Log.h"
 #include "LootMgr.h"
 #include "M2Stores.h"
+#include "Mail.h"
 #include "MapMgr.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
@@ -78,8 +80,24 @@ public:
             { "setphaseshift",  HandleDebugSendSetPhaseShiftCommand,   rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
             { "spellfail",      HandleDebugSendSpellFailCommand,       rbac::RBAC_PERM_COMMAND_DEBUG_COSMETIC, Console::No }
         };
+        // MergedWorlds world equipment (PlayerWorldEquipment.cpp): the core's calls, for tests
+        static ChatCommandTable debugWorldEquipCommandTable =
+        {
+            { "status",         HandleDebugWorldEquipStatusCommand,     rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "activate",       HandleDebugWorldEquipActivateCommand,   rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "deactivate",     HandleDebugWorldEquipDeactivateCommand, rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "stage",          HandleDebugWorldEquipStageCommand,      rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "unstage",        HandleDebugWorldEquipUnstageCommand,    rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "wear",           HandleDebugWorldEquipWearCommand,       rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "takeoff",        HandleDebugWorldEquipTakeOffCommand,    rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "move",           HandleDebugWorldEquipMoveCommand,       rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "mail",           HandleDebugWorldEquipMailCommand,       rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "destroy",        HandleDebugWorldEquipDestroyCommand,    rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
+            { "put",            HandleDebugWorldEquipPutCommand,        rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No }
+        };
         static ChatCommandTable debugCommandTable =
         {
+            { "worldequip",     debugWorldEquipCommandTable },
             { "setbit",         HandleDebugSet32BitCommand,            rbac::RBAC_PERM_COMMAND_DEBUG,          Console::No },
             { "threat",         HandleDebugThreatListCommand,          rbac::RBAC_PERM_COMMAND_DEBUG_INFO,     Console::No },
             { "threatinfo",     HandleDebugThreatInfoCommand,          rbac::RBAC_PERM_COMMAND_DEBUG_INFO,     Console::No },
@@ -1982,9 +2000,179 @@ public:
 
         return true;
     }
+
+    // MergedWorlds world equipment
+    static void SendWorldEquipResult(ChatHandler* handler, char const* what, InventoryResult result)
+    {
+        handler->PSendSysMessage("worldequip {}: {}", what, result == EQUIP_ERR_OK ? std::string("ok") : Acore::StringFormat("refused (InventoryResult {})", uint32(result)));
+    }
+
+    static void SendWorldEquipSet(ChatHandler* handler, Player* player, uint8 world, uint32 key, char const* label)
+    {
+        std::string line = Acore::StringFormat("  {} set {}:", label, key);
+        for (uint8 slot = 0; slot < Player::GetWorldEquipmentSlotCount(world); ++slot)
+        {
+            Item* item = player->GetWorldEquipmentSetItem(world, key, slot);
+            if (!item)
+                continue;
+            if (item->GetSlot() == NULL_SLOT)
+                line += Acore::StringFormat(" [{}] {} (guid {}, put away)", slot, item->GetEntry(), item->GetGUID().GetCounter());
+            else
+                line += Acore::StringFormat(" [{}] {} (guid {}, bag {} slot {})", slot, item->GetEntry(), item->GetGUID().GetCounter(), item->GetBagSlot(), item->GetSlot());
+        }
+        handler->SendSysMessage(line);
+    }
+
+    static bool HandleDebugWorldEquipStatusCommand(ChatHandler* handler, uint8 world)
+    {
+        Player* player = handler->GetPlayer();
+        handler->PSendSysMessage("worldequip world {}: {} slots, handler {}", world, Player::GetWorldEquipmentSlotCount(world), Player::GetWorldEquipmentHandler(world) ? "registered" : "none");
+        uint32 key;
+        if (player->GetWorldEquipmentSet(world, key))
+            SendWorldEquipSet(handler, player, world, key, "in use");
+        if (player->GetStagedWorldEquipmentSet(world, key))
+            SendWorldEquipSet(handler, player, world, key, "staged");
+        for (uint32 putAwayKey : player->GetWorldEquipmentSetKeys(world))
+            SendWorldEquipSet(handler, player, world, putAwayKey, "put away");
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipActivateCommand(ChatHandler* handler, uint8 world, uint32 key)
+    {
+        SendWorldEquipResult(handler, "activate", handler->GetPlayer()->ActivateWorldEquipmentSet(world, key));
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipDeactivateCommand(ChatHandler* handler, uint8 world)
+    {
+        handler->GetPlayer()->DeactivateWorldEquipmentSet(world);
+        SendWorldEquipResult(handler, "deactivate", EQUIP_ERR_OK);
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipStageCommand(ChatHandler* handler, uint8 world, uint32 key)
+    {
+        SendWorldEquipResult(handler, "stage", handler->GetPlayer()->StageWorldEquipmentSet(world, key));
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipUnstageCommand(ChatHandler* handler, uint8 world)
+    {
+        handler->GetPlayer()->UnstageWorldEquipmentSet(world);
+        SendWorldEquipResult(handler, "unstage", EQUIP_ERR_OK);
+        return true;
+    }
+
+    // A carried item (by guid) into the set in use; what is worn there goes to its place
+    static bool HandleDebugWorldEquipWearCommand(ChatHandler* handler, uint8 world, uint8 slot, uint32 itemGuid)
+    {
+        Player* player = handler->GetPlayer();
+        Item* item = player->GetItemByGuid(ObjectGuid::Create<HighGuid::Item>(itemGuid));
+        SendWorldEquipResult(handler, "wear", item ? player->SwapWorldEquipmentItem(world, slot, item) : EQUIP_ERR_ITEM_NOT_FOUND);
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipTakeOffCommand(ChatHandler* handler, uint8 world, uint8 slot)
+    {
+        SendWorldEquipResult(handler, "takeoff", handler->GetPlayer()->TakeOffWorldEquipmentItem(world, slot));
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipMoveCommand(ChatHandler* handler, uint8 world, uint8 fromSlot, uint8 toSlot)
+    {
+        SendWorldEquipResult(handler, "move", handler->GetPlayer()->MoveWorldEquipmentItem(world, fromSlot, toSlot));
+        return true;
+    }
+
+    // Out of the set in use and into a mail to the player, in one transaction
+    static bool HandleDebugWorldEquipMailCommand(ChatHandler* handler, uint8 world, uint8 slot)
+    {
+        Player* player = handler->GetPlayer();
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        Item* item = player->RemoveWorldEquipmentItem(world, slot, trans);
+        if (!item)
+        {
+            SendWorldEquipResult(handler, "mail", EQUIP_ERR_ITEM_NOT_FOUND);
+            return true;
+        }
+        item->SaveToDB(trans);
+        MailDraft("World equipment", "Mailed by .debug worldequip mail").AddItem(item).SendMailTo(trans, MailReceiver(player, player->GetGUID().GetCounter()), MailSender(player, MAIL_STATIONERY_GM), MAIL_CHECK_MASK_COPIED);
+        CharacterDatabase.CommitTransaction(trans);
+        SendWorldEquipResult(handler, "mail", EQUIP_ERR_OK);
+        return true;
+    }
+
+    static bool HandleDebugWorldEquipDestroyCommand(ChatHandler* handler, uint8 world, uint32 key)
+    {
+        handler->GetPlayer()->DestroyWorldEquipmentSet(world, key);
+        SendWorldEquipResult(handler, "destroy", EQUIP_ERR_OK);
+        return true;
+    }
+
+    // A new item made straight into a set (as a module's migration does)
+    static bool HandleDebugWorldEquipPutCommand(ChatHandler* handler, uint8 world, uint32 key, uint8 slot, uint32 itemEntry)
+    {
+        Player* player = handler->GetPlayer();
+        Item* item = Item::CreateItem(itemEntry, 1, player);
+        if (!item)
+        {
+            SendWorldEquipResult(handler, "put", EQUIP_ERR_ITEM_NOT_FOUND);
+            return true;
+        }
+        InventoryResult result = player->PutWorldEquipmentSetItem(world, key, slot, item);
+        if (result != EQUIP_ERR_OK)
+            delete item;
+        SendWorldEquipResult(handler, "put", result);
+        return true;
+    }
+};
+
+// MergedWorlds world equipment: a test world (MergedWorlds.WorldEquipment.TestWorld, 0 for none) whose drags are all allowed, so the core's
+// containers and the client's world container slots can be tested before a game's module uses them.  Never set on a live server
+class WorldEquipmentTestHandler : public WorldEquipmentHandler
+{
+public:
+    static bool GetBlockSet(Player* player, uint8 world, uint8 block, uint32& key)
+    {
+        return block == WORLD_CONTAINER_EQUIPMENT ? player->GetWorldEquipmentSet(world, key) : player->GetStagedWorldEquipmentSet(world, key);
+    }
+
+    InventoryResult OnClientWear(Player* player, uint8 world, uint8 block, uint8 slot, Item* item) override
+    {
+        uint32 key;
+        return GetBlockSet(player, world, block, key) ? player->SwapWorldEquipmentSetItem(world, key, slot, item) : EQUIP_ERR_CANT_DO_RIGHT_NOW;
+    }
+
+    InventoryResult OnClientTakeOff(Player* player, uint8 world, uint8 block, uint8 slot, uint8 bag, uint8 bagSlot) override
+    {
+        uint32 key;
+        if (!GetBlockSet(player, world, block, key))
+            return EQUIP_ERR_CANT_DO_RIGHT_NOW;
+        // Dropped on a carried item: the two change places
+        if (bagSlot != NULL_SLOT)
+            if (Item* bagItem = player->GetItemByPos(bag, bagSlot))
+                return player->SwapWorldEquipmentSetItem(world, key, slot, bagItem);
+        return player->TakeOffWorldEquipmentSetItem(world, key, slot, bag, bagSlot);
+    }
+
+    InventoryResult OnClientMove(Player* player, uint8 world, uint8 fromBlock, uint8 fromSlot, uint8 toBlock, uint8 toSlot) override
+    {
+        uint32 fromKey;
+        uint32 toKey;
+        if (!GetBlockSet(player, world, fromBlock, fromKey) || !GetBlockSet(player, world, toBlock, toKey))
+            return EQUIP_ERR_CANT_DO_RIGHT_NOW;
+        return player->MoveWorldEquipmentSetItem(world, fromKey, fromSlot, toKey, toSlot);
+    }
 };
 
 void AddSC_debug_commandscript()
 {
     new debug_commandscript();
+
+    if (uint32 testWorld = sConfigMgr->GetOption<uint32>("MergedWorlds.WorldEquipment.TestWorld", 0, false))
+    {
+        static WorldEquipmentTestHandler testHandler;
+        Player::RegisterWorldEquipment(uint8(testWorld), WORLD_CONTAINER_SIZE, &testHandler);
+        LOG_WARN("server.loading", "MergedWorlds world equipment: test world {} is registered (MergedWorlds.WorldEquipment.TestWorld)", testWorld);
+    }
 }
