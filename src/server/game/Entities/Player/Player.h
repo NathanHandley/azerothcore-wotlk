@@ -2568,6 +2568,10 @@ public:
 
     // MergedWorlds EQ levitation: under one of EQ's Levitate spells (their Hover effect is marked with MiscValue 57)
     [[nodiscard]] bool IsEQLevitating() const;
+    // MergedWorlds: a map with no air anywhere (EQ's The Grey), set by the module on every map change.  The breath bar runs there as if the
+    // player were under water, so they drown without water breathing
+    void SetInAirlessZone(bool isAirless);
+    [[nodiscard]] bool IsInAirlessZone() const { return _isInAirlessZone; }
     // MergedWorlds EQ levitation: floating lifts a player into the exit trigger next to many zone-in points (see HandleAreaTriggerOpcode), so
     // a player who has just arrived counts as still at the zone-in until they have moved a little
     // The client reports a trigger only once, so one ignored there gets looked at again when they have moved off the spot
@@ -3298,6 +3302,7 @@ private:
     bool _profileSwapSaveBlocked = false; // MergedWorlds live profile swap: the database is ahead of this object, which must not be written over it
     float _mapArrivalMovementLeft = 0.0f; // MergedWorlds EQ levitation
     uint32 _ignoredArrivalTriggerID = 0;  // MergedWorlds EQ levitation
+    bool _isInAirlessZone = false;        // MergedWorlds airless zones
     uint8 m_MirrorTimerFlags;
     uint8 m_MirrorTimerFlagsLast;
     bool m_isInWater;

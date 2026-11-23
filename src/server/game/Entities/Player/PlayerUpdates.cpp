@@ -350,7 +350,10 @@ void Player::Update(uint32 p_time)
 
     UpdateAdditionalSaves(p_time);
 
-    // Handle Water/drowning
+    // Handle Water/drowning.  MergedWorlds: in an airless zone the player is always out of air, whatever liquid is around them.  The terrain
+    // update clears the state again when it runs, so it's set back on every update before the breath timer is ticked
+    if (_isInAirlessZone)
+        m_MirrorTimerFlags |= UNDERWATER_INWATER;
     HandleDrowning(p_time);
 
     if (GetDrunkValue())
@@ -2342,6 +2345,20 @@ bool Player::IsEQLevitating() const
         if (hover->GetMiscValue() == 57)
             return true;
     return false;
+}
+
+void Player::SetInAirlessZone(bool isAirless)
+{
+    if (_isInAirlessZone == isAirless)
+        return;
+    _isInAirlessZone = isAirless;
+
+    // Leaving one, the breath state goes back to whatever liquid the player is in now, so the bar refills unless they're under water
+    if (isAirless == false)
+    {
+        m_MirrorTimerFlags &= ~UNDERWATER_INWATER;
+        ProcessTerrainStatusUpdate();
+    }
 }
 
 void Player::ProcessTerrainStatusUpdate()

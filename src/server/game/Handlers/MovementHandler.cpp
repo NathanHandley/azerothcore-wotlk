@@ -790,6 +790,11 @@ void WorldSession::HandleSetActiveMoverOpcode(WorldPacket& recvData)
         if (_player->m_mover->GetGUID() != guid)
             LOG_ERROR("network.opcode", "HandleSetActiveMoverOpcode: incorrect mover guid: mover is {} and should be {}",
                 guid.ToString(), _player->m_mover->GetGUID().ToString());
+
+        // MergedWorlds: the client sends this once it's in the world and takes control.  At login the player is added to the map, and a breath
+        // bar started then (an airless zone, or logging in under water), while the client is still loading, which drops it.  Send the running
+        // mirror timers again now
+        _player->UpdateMirrorTimers();
     }
 }
 
