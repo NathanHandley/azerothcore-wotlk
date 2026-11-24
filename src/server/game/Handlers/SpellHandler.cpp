@@ -55,6 +55,25 @@ void WorldSession::HandleClientCastFlags(WorldPacket& recvPacket, uint8 castFlag
     }
 }
 
+// MergedWorlds: a key that can be worn (Ring of the Shissar) opens its lock from a bag too, as long as opening is all it's used for (every on
+// use spell of the item is cast)
+static bool IsWearableKeyOpeningUse(ItemTemplate const* proto, uint32 spellId)
+{
+    constexpr uint32 KEY_OPENING_SPELL_ID = 3366; // The converter's ITEMS_KEY_OPENING_SPELL_ID
+    if (spellId != KEY_OPENING_SPELL_ID)
+        return false;
+    bool opensLocks = false;
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+    {
+        if (proto->Spells[i].SpellId <= 0 || proto->Spells[i].SpellTrigger != ITEM_SPELLTRIGGER_ON_USE)
+            continue;
+        if (uint32(proto->Spells[i].SpellId) != KEY_OPENING_SPELL_ID)
+            return false;
+        opensLocks = true;
+    }
+    return opensLocks;
+}
+
 void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
 {
     /// @todo: add targets.read() check
@@ -143,7 +162,7 @@ void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
     }
 
     // some item classes can be used only in equipped state
-    if (proto->InventoryType != INVTYPE_NON_EQUIP && !pItem->IsEquipped())
+    if (proto->InventoryType != INVTYPE_NON_EQUIP && !pItem->IsEquipped() && !IsWearableKeyOpeningUse(proto, spellId))
     {
         pUser->SendEquipError(EQUIP_ERR_ITEM_NOT_FOUND, pItem, nullptr);
         return;
