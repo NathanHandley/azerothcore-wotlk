@@ -38,7 +38,7 @@ namespace
     constexpr uint32 EQ_ZONE_MAP_BVH_MAX_DEPTH = 40;
     constexpr float EQ_ZONE_MAP_BEST_Z_START_ADJUST = 0.5f; // Yards above the given height a best Z search starts down from
     constexpr float EQ_ZONE_MAP_LIQUID_JOIN_GAP = 0.01f;
-    constexpr float EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE = 0.1f; // EQ starts dungeon liquid exactly at the floor, so liquid starting this little over a point holds it
+    constexpr float EQ_ZONE_MAP_LIQUID_FLOOR_TOLERANCE = 0.25f; // EQ starts dungeon liquid at the floor, or up to half an EQ unit over it in Ssraeshza Temple's lift tubes, so liquid starting this little over a point holds it
     constexpr float EQ_ZONE_MAP_LIQUID_SEARCH_ABOVE = 2000.0f;
 
     // Orders triangles by their center on one axis
