@@ -67,6 +67,7 @@ public:
             { "customize",      HandleCharacterCustomizeCommand,        rbac::RBAC_PERM_COMMAND_CHARACTER_CUSTOMIZE,      Console::Yes },
             { "changefaction",  HandleCharacterChangeFactionCommand,    rbac::RBAC_PERM_COMMAND_CHARACTER_CHANGEFACTION,  Console::Yes },
             { "changerace",     HandleCharacterChangeRaceCommand,       rbac::RBAC_PERM_COMMAND_CHARACTER_CHANGERACE,     Console::Yes },
+            { "changeraceall",  HandleCharacterChangeRaceAllCommand,    SEC_ADMINISTRATOR,                                Console::Yes },
             { "changeaccount",  HandleCharacterChangeAccountCommand,    rbac::RBAC_PERM_COMMAND_CHARACTER_CHANGEACCOUNT,  Console::Yes },
             { "check",          characterCheckCommandTable },
             { "erase",          HandleCharacterEraseCommand,            rbac::RBAC_PERM_COMMAND_CHARACTER_ERASE,          Console::Yes },
@@ -530,6 +531,27 @@ public:
             CharacterDatabase.Execute(stmt);
         }
 
+        return true;
+    }
+
+    // MergedWorlds: every character there is gets a race change, which its player takes from the character screen
+    static bool HandleCharacterChangeRaceAllCommand(ChatHandler* handler)
+    {
+        CharacterDatabase.Execute("UPDATE characters SET at_login = at_login | {} WHERE deleteDate IS NULL", uint16(AT_LOGIN_CHANGE_RACE));
+
+        // A save writes the flags the player has in memory
+        uint32 onlineCount = 0;
+        {
+            std::shared_lock<std::shared_mutex> lock(*HashMapHolder<Player>::GetLock());
+            for (auto const& [playerGuid, player] : ObjectAccessor::GetPlayers())
+            {
+                player->SetAtLoginFlag(AT_LOGIN_CHANGE_RACE);
+                ChatHandler(player->GetSession()).SendSysMessage("You have been given a race change. It's beside your character on the character screen.");
+                ++onlineCount;
+            }
+        }
+
+        handler->PSendSysMessage("Every character has been given a race change ({} of them online).", onlineCount);
         return true;
     }
 
